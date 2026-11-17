@@ -9,6 +9,7 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 - **No hace falta saber leer.** Todo son iconos y las instrucciones se dicen en voz alta (Web Speech API, voz es-ES). El botón 🔊 repite el reto.
 - **Sin cronómetro ni penalización.** Un fallo no quita nada: se explica qué ha pasado y, al segundo fallo, aparece una pista para que nunca se quede atascado.
 - **El nivel sube solo**, una estrella cada vez. En ajustes (🗣️) el adulto elige de dónde parten los retos: fácil, medio o difícil.
+- **Los ajustes son para el adulto.** El panel 🗣️ es lo único con texto, así que se abre con una multiplicación (como la zona de padres de Mini Juegos) para que el niño no cambie la voz o el nivel sin querer. La voz se elige sola: la mejor española instalada.
 
 ## Retos (botón ⭐)
 

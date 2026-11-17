@@ -327,8 +327,8 @@ function beep(f,d=.08,type='square',vol=.05){try{audio();
 function oink(){beep(260,.12,'sawtooth',.06);setTimeout(()=>beep(200,.15,'sawtooth',.06),110)}
 function fanfare(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'square',.06),i*110))}
 let voice=null;
-const vcfg={name:'',rate:.95,pitch:1.1};
-try{Object.assign(vcfg,JSON.parse(localStorage.getItem('bloquesVoz'))||{})}catch(e){}
+const vcfg={name:'',rate:.95,pitch:1}; // tono natural: subirlo hace que las voces buenas (mejoradas, premium) suenen raras
+try{Object.assign(vcfg,JSON.parse(localStorage.getItem('bloquesVoz'))||{});if(vcfg.pitch===1.1)vcfg.pitch=1}catch(e){}
 // puntúa las voces instaladas (igual que en Mini Juegos): primero español de España y calidad alta; fuera las que suenan a robot
 function voiceScore(v){
   const lang=(v.lang||'').replace('_','-').toLowerCase();if(!lang.startsWith('es'))return -1;
@@ -351,7 +351,7 @@ function renderVoz(){
     b.textContent=label;b.setAttribute('aria-pressed',cur===val);b.onclick=()=>{elige(val);renderVoz()};el.appendChild(b)})};
   const cfg=key=>val=>{vcfg[key]=val;saveVoz();sample()};
   row('vozRate',[['🐢 Lenta',.75],['Normal',.95],['🐇 Rápida',1.15]],vcfg.rate,cfg('rate'));
-  row('vozPitch',[['Grave',.8],['Normal',1.1],['Aguda',1.4]],vcfg.pitch,cfg('pitch'));
+  row('vozPitch',[['Grave',.8],['Normal',1],['Aguda',1.4]],vcfg.pitch,cfg('pitch'));
   // nivel del que parten los retos: marca el tramo en el que está ahora y, al tocar otro, los retos siguen desde ahí
   row('vozNivel',[['🌱 Fácil',0],['🌿 Medio',4],['🌳 Difícil',8]],tier()*4,
     val=>{level=val;save();say(['Retos fáciles.','Retos de nivel medio.','Retos difíciles.'][val/4],false)});
@@ -398,7 +398,10 @@ $('tNew').onclick=e=>{
     confirmTimer=setTimeout(()=>{confirmNew=false;b.classList.remove('ask')},3500);return}
   confirmNew=false;b.classList.remove('ask');closeReto();genWorld();camC=COLS/2-W/S/2;clampCam();beep(880,.1);setTimeout(()=>beep(1100,.12),100);say('¡Mundo nuevo!')};
 
-$('vozBtn').onclick=()=>{$('voz').hidden=false;renderVoz()};
+// puerta sencilla, como en Mini Juegos: el panel es todo texto y es para el adulto; así el niño no cambia la voz o el nivel sin querer
+$('vozBtn').onclick=()=>{const a=3+rand(7),b=3+rand(7);
+  if(Number(prompt(`Ajustes (para mayores): ¿cuánto es ${a} × ${b}?`))!==a*b)return;
+  $('voz').hidden=false;renderVoz()};
 $('vozClose').onclick=()=>{$('voz').hidden=true};
 $('voz').addEventListener('click',e=>{if(e.target===$('voz'))$('voz').hidden=true});
 
