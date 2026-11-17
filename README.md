@@ -11,6 +11,12 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 - **El nivel sube solo**, una estrella cada vez. En ajustes (🗣️) el adulto elige de dónde parten los retos: fácil, medio o difícil.
 - **Los ajustes son para el adulto.** El panel 🗣️ es lo único con texto, así que se abre con una multiplicación (como la zona de padres de Mini Juegos) para que el niño no cambie la voz o el nivel sin querer. La voz se elige sola: la mejor española instalada.
 
+## Cómo se toca
+
+- **Un toque = un bloque.** Con 🧱 un toque pone un bloque en un hueco vacío; con ⛏️ quita uno. De uno en uno, que además es como se cuentan en los retos.
+- **Lo que ya está puesto no se cambia de un toque.** Si el hueco está ocupado suena un golpe sordo y la voz recuerda que para quitarlo está el pico (que se ilumina). Si lo ocupa un cerdito, salta y gruñe.
+- **Arrastrar mueve el mundo**, no pinta: deslizar el dedo desplaza el paisaje a los lados. Las flechas ◀ ▶ hacen lo mismo manteniéndolas pulsadas.
+
 ## Retos (botón ⭐)
 
 | Reto | Qué trabaja | Fallo y pista |

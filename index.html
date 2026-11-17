@@ -290,6 +290,7 @@ function genWorld(){
     else if(r()<.15)grid[idx(x,top-1)]=11;
   }
   pigs=[];addPig(COLS/2-3|0);addPig(COLS/2+2|0);
+  camC=COLS/2-W/S/2;clampCam(); // empieza mirando al centro, donde están los cerditos
   save();
 }
 function addPig(x,y){
@@ -396,7 +397,7 @@ $('tNew').onclick=e=>{
   const b=e.currentTarget;
   if(!confirmNew){confirmNew=true;b.classList.add('ask');say('¿Mundo nuevo? Toca otra vez.');clearTimeout(confirmTimer);
     confirmTimer=setTimeout(()=>{confirmNew=false;b.classList.remove('ask')},3500);return}
-  confirmNew=false;b.classList.remove('ask');closeReto();genWorld();camC=COLS/2-W/S/2;clampCam();beep(880,.1);setTimeout(()=>beep(1100,.12),100);say('¡Mundo nuevo!')};
+  confirmNew=false;b.classList.remove('ask');closeReto();genWorld();beep(880,.1);setTimeout(()=>beep(1100,.12),100);say('¡Mundo nuevo!')};
 
 // puerta sencilla, como en Mini Juegos: el panel es todo texto y es para el adulto; así el niño no cambia la voz o el nivel sin querer
 $('vozBtn').onclick=()=>{const a=3+rand(7),b=3+rand(7);
@@ -696,8 +697,7 @@ $('rHard').onclick=()=>{if(!reto)return;const max=reto.kind==='torre'?8:(reto.ki
   if(reto.n>=max){say('¡Ya es el más difícil!');return}
   reto.n=Math.min(max,reto.n+2);reto.slots=reto.n;renderReto();reto.shown=progress(reto);say('¡Más difícil! '+phrase(reto))};
 
-// --- toques: poner / picar arrastrando el dedo ---
-let painting=false,lastCell=null;
+// --- toques: un toque = un bloque (o un picotazo); arrastrar el dedo mueve el mundo, no pinta ---
 function cellAt(e){const r=cv.getBoundingClientRect();return{x:Math.floor((e.clientX-r.left)/S+camC),y:Math.floor((e.clientY-r.top-offY)/S)}}
 function pigIn(x,y){return pigs.some(p=>Math.floor(p.x+.5)===x&&Math.floor(p.y+.5)===y)}
 const HOUSE=[[0,0,4,0,0],[0,4,4,4,0],[4,4,4,4,4],[8,9,8,8,8],[8,8,8,-1,8],[8,8,8,-1,8]];
@@ -710,7 +710,6 @@ function stampHouse(x,y){
 }
 function act(e){
   const {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
-  const key=x+','+y;if(key===lastCell)return;lastCell=key;
   const i=idx(x,y);
   if(mode==='pig'){ // tocar un cerdo lo hace saltar; tocar un hueco añade uno
     const p=pigs.find(p=>Math.abs(p.x-x)<1&&Math.abs(p.y-y)<1);
@@ -720,7 +719,14 @@ function act(e){
     addPig(x,y);pigs[pigs.length-1].joy=30;oink();if(reto)reto.added++;
   }else if(mode==='house'){stampHouse(x,y)}
   else if(enCopia(x,y)===1){say('Ese es el modelo. Haz uno igual en el cuadro amarillo.');return} // el modelo no se toca
-  else if(mode==='put'){if(grid[i]===current||pigIn(x,y))return;
+  else if(mode==='put'){
+    const pg=pigs.find(p=>Math.floor(p.x+.5)===x&&Math.floor(p.y+.5)===y);
+    if(pg){pg.vy=-.175;pg.joy=30;oink();return} // el hueco lo ocupa un cerdito: salta y gruñe, para que se vea por qué no entra el bloque
+    if(grid[i]){ // un bloque solo entra en un hueco vacío: lo que ya está puesto no se cambia de un toque, se quita con el pico
+      beep(170,.09,'triangle',.07);
+      if(Date.now()-ocupadoT>8000){ocupadoT=Date.now();say('Ahí ya hay un bloque. Si quieres quitarlo, usa el pico.');
+        const b=$('tDig');b.classList.add('ask');setTimeout(()=>b.classList.remove('ask'),1500)}
+      return}
     const g=reto&&!reto.won&&reto.ghost&&reto.ghost.find(g=>g.x===x&&g.y===y);
     if(g&&current!==g.b){ // no encaja en la serie o en la copia: se explica, no se castiga; a la segunda aparece una pista
       g.miss++;burst(x,y,current);beep(220,.1,'triangle',.06);
@@ -732,9 +738,17 @@ function act(e){
   checkReto();save();
 }
 function burst(x,y,id){for(let k=0;k<8;k++)particles.push({x:x+.5,y:y+.5,vx:(Math.random()-.5)*.12,vy:-Math.random()*.12,life:30,id})}
-cv.addEventListener('pointerdown',e=>{painting=true;lastCell=null;try{cv.setPointerCapture(e.pointerId)}catch(_){}act(e)});
-cv.addEventListener('pointermove',e=>{if(painting&&(mode==='put'||mode==='dig'))act(e)});
-['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,()=>{painting=false;lastCell=null}));
+// Cada dedo se sigue por separado. Si se levanta sin haberse movido es un toque y actúa donde se posó;
+// si se desliza más de un tercio de bloque es un arrastre: mueve el mundo de lado y no pone ni pica nada.
+const dedos=new Map();let panId=null,ocupadoT=0;
+cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  dedos.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY,cam:camC,drag:false})});
+cv.addEventListener('pointermove',e=>{const d=dedos.get(e.pointerId);if(!d)return;
+  if(!d.drag&&Math.hypot(e.clientX-d.clientX,e.clientY-d.clientY)>Math.max(12,S*.33)){
+    d.drag=true;if(panId===null){panId=e.pointerId;camGoal=null;d.clientX=e.clientX;d.cam=camC}}
+  if(panId===e.pointerId){camC=d.cam-(e.clientX-d.clientX)/S;clampCam()}});
+['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,e=>{const d=dedos.get(e.pointerId);if(!d)return;dedos.delete(e.pointerId);
+  if(panId===e.pointerId){panId=null;save()}else if(!d.drag&&ev==='pointerup')act(d)}));
 
 // --- dibujo ---
 function drawPig(p,asleep){
@@ -825,7 +839,7 @@ function tick(){
 
 window.addEventListener('resize',resize);
 resize();
-if(!load()){genWorld();camC=COLS/2-W/S/2}
+if(!load())genWorld();
 clampCam();$('starN').textContent=stars;$('tNight').textContent=night?'☀️':'🌙';
 requestAnimationFrame(tick);
 
