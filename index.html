@@ -721,7 +721,8 @@ function act(e){
   else if(enCopia(x,y)===1){say('Ese es el modelo. Haz uno igual en el cuadro amarillo.');return} // el modelo no se toca
   else if(mode==='put'){
     const pg=pigs.find(p=>Math.floor(p.x+.5)===x&&Math.floor(p.y+.5)===y);
-    if(pg){pg.vy=-.175;pg.joy=30;oink();return} // el hueco lo ocupa un cerdito: salta y gruñe, para que se vea por qué no entra el bloque
+    // el hueco lo ocupa un cerdito: salta, gruñe y echa a andar (aunque duerma) hacia el lado por el que antes sale, y así deja el sitio libre
+    if(pg){const lado=pg.x>=x?1:-1;pg.vy=-.175;pg.joy=60;pg.vx=Math.abs(pg.vx)*(solid(x+lado,y)&&!solid(x-lado,y)?-lado:lado);oink();return}
     if(grid[i]){ // un bloque solo entra en un hueco vacío: lo que ya está puesto no se cambia de un toque, se quita con el pico
       beep(170,.09,'triangle',.07);
       if(Date.now()-ocupadoT>8000){ocupadoT=Date.now();say('Ahí ya hay un bloque. Si quieres quitarlo, usa el pico.');
