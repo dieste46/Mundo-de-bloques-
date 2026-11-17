@@ -15,8 +15,10 @@ const ASSETS = [
 self.addEventListener('install', e => e.waitUntil(
   caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
 ));
+// Solo se borran las cachés viejas de este juego: en GitHub Pages todos los proyectos de la cuenta comparten
+// dominio (y por tanto cachés), y no hay que llevarse por delante la de Mini Juegos.
 self.addEventListener('activate', e => e.waitUntil(
-  caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())
+  caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('bloques-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())
 ));
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
