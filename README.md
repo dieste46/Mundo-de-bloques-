@@ -35,6 +35,8 @@ icon.svg, *.png       iconos (los PNG salen del SVG)
 fonts/                Press Start 2P alojada en el repo (licencia OFL en fonts/OFL.txt)
 ```
 
+Los gráficos no son imágenes: las texturas de los bloques (16×16), el cerdito (16×12), la flor, la antorcha y la manzana se dibujan por código al arrancar, en la sección "texturas pixeladas generadas" de `index.html`. Los que tienen forma se escriben como dibujos de letras, una letra por color.
+
 El progreso (mundo, estrellas, nivel, voz) se guarda solo en el dispositivo (`localStorage`).
 
 Un tipo de reto nuevo se añade en cuatro sitios de `index.html`: `startReto` (lo prepara), `phrase` (lo que dice la voz), `progress` (cuánto lleva) y `winText` (lo que dice al ganar).

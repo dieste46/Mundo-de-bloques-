@@ -84,7 +84,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #tabGrid .c canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
 #tabGrid .c.meta canvas{width:70%;height:70%}
 #tabPig{position:absolute;left:0;top:0;width:var(--c);height:var(--c);pointer-events:none;transition:transform .45s ease-in-out}
-#tabPig canvas{width:100%;height:100%;display:block}
+#tabPig canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
 #tabPig.feliz canvas{animation:salto .5s ease-out 3}
 @keyframes salto{50%{transform:translateY(-25%)}}
 #fila{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;max-width:max(calc(var(--c)*var(--cols)),148px)}
@@ -183,7 +183,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 
 <script>
 (()=>{
-const T=8, COLS=48, ROWS=16, MAXPIGS=20;
+const T=16, COLS=48, ROWS=16, MAXPIGS=20;
 const BLOCKS=[
   {id:1,name:'Hierba'},{id:2,name:'Tierra'},{id:3,name:'Piedra'},{id:4,name:'Madera'},
   {id:5,name:'Hojas'},{id:6,name:'Arena'},{id:7,name:'Agua'},{id:8,name:'Ladrillo'},
@@ -194,40 +194,69 @@ const PLURAL={2:'bloques de tierra',3:'bloques de piedra',4:'bloques de madera',
 const NUM=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte'];
 const NOSOLID={7:1,11:1,13:1}, TRANSP={7:.8,9:.55};
 
-// --- texturas pixeladas generadas ---
+// --- texturas pixeladas generadas (16×16) ---
 function rng(s){return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}}
 function shade(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;
   r=Math.max(0,Math.min(255,r*f|0));g=Math.max(0,Math.min(255,g*f|0));b=Math.max(0,Math.min(255,b*f|0));return`rgb(${r},${g},${b})`}
-function noiseTex(c,base,amt,seed){const r=rng(seed);for(let y=0;y<T;y++)for(let x=0;x<T;x++){c.fillStyle=shade(base,1+(r()-.5)*amt);c.fillRect(x,y,1,1)}}
+function lienzo(w,h){const cv=document.createElement('canvas');cv.width=w;cv.height=h;return cv}
+// ruido en dos capas (manchas de 2×2 y grano fino encima) para que no parezca la nieve de un televisor
+function noiseTex(c,base,amt,seed){const r=rng(seed),m=[];for(let i=0;i<T*T/4;i++)m.push(r());
+  for(let y=0;y<T;y++)for(let x=0;x<T;x++){c.fillStyle=shade(base,1+((m[(y>>1)*(T/2)+(x>>1)]-.5)*.7+(r()-.5)*.5)*amt);c.fillRect(x,y,1,1)}}
+function rects(c,col,list){c.fillStyle=col;list.forEach(([x,y,w,h])=>c.fillRect(x,y,w||1,h||1))}
+// dibujo hecho con letras: cada letra es un color de la paleta y el punto, transparente
+function sprite(rows,pal){const cv=lienzo(rows[0].length,rows.length),c=cv.getContext('2d');
+  rows.forEach((row,y)=>[...row].forEach((ch,x)=>{if(pal[ch]){c.fillStyle=pal[ch];c.fillRect(x,y,1,1)}}));return cv}
 const tex={};
 function makeTex(id){
-  const cv=document.createElement('canvas');cv.width=cv.height=T;const c=cv.getContext('2d');
+  const cv=lienzo(T,T),c=cv.getContext('2d'),r=rng(id*97+1);
+  const motas=(col,n)=>{c.fillStyle=col;for(let i=0;i<n;i++)c.fillRect(r()*T|0,r()*T|0,1,1)};
   switch(id){
-    case 1: noiseTex(c,'#8a5a36',.35,1);{const r=rng(9);for(let x=0;x<T;x++){const h=2+(r()*2|0);for(let y=0;y<h;y++){c.fillStyle=shade('#5cb83a',1+(r()-.5)*.35);c.fillRect(x,y,1,1)}}}break;
-    case 2: noiseTex(c,'#8a5a36',.4,2);break;
-    case 3: noiseTex(c,'#8b8f94',.3,3);c.fillStyle='#6e7276';c.fillRect(1,2,2,1);c.fillRect(5,5,2,1);c.fillRect(4,1,1,1);break;
-    case 4: for(let x=0;x<T;x++){c.fillStyle=x%3==0?'#6b4626':'#9c6a3c';c.fillRect(x,0,1,T)}c.fillStyle='#5a3a1e';c.fillRect(2,3,1,2);c.fillRect(6,5,1,1);break;
-    case 5: noiseTex(c,'#3f9a34',.55,5);{const r=rng(55);for(let i=0;i<6;i++){c.fillStyle='#2b6e24';c.fillRect(r()*T|0,r()*T|0,1,1)}}break;
-    case 6: noiseTex(c,'#e9d79a',.18,6);break;
-    case 7: noiseTex(c,'#3a7fd9',.15,7);c.fillStyle='#7fb6f0';c.fillRect(1,1,3,1);c.fillRect(4,5,3,1);break;
-    case 8: c.fillStyle='#c7c2b8';c.fillRect(0,0,T,T);{const r=rng(8);for(let row=0;row<4;row++){const off=row%2?2:0;for(let b=-1;b<2;b++){c.fillStyle=shade('#b34a33',1+(r()-.5)*.3);c.fillRect(b*4+off,row*2,3,1)}}}break;
-    case 9: c.fillStyle='#cdeefa';c.fillRect(0,0,T,T);c.fillStyle='#ffffff';c.fillRect(1,1,1,3);c.fillRect(2,1,1,1);c.fillStyle='#8cc7dc';c.fillRect(0,0,T,1);c.fillRect(0,T-1,T,1);c.fillRect(0,0,1,T);c.fillRect(T-1,0,1,T);break;
-    case 10: noiseTex(c,'#f2c230',.25,10);c.fillStyle='#fff3a6';c.fillRect(1,1,2,1);c.fillRect(5,4,1,2);c.fillStyle='#b8860b';c.fillRect(3,6,2,1);break;
-    case 11: c.fillStyle='#3f9a34';c.fillRect(3,4,1,4);c.fillRect(4,6,1,1);c.fillStyle='#e8414b';c.fillRect(2,1,3,3);c.fillStyle='#ffd43b';c.fillRect(3,2,1,1);break;
-    case 12: noiseTex(c,'#f4f8fb',.08,12);c.fillStyle='#d6e4ee';c.fillRect(2,3,1,1);c.fillRect(6,6,1,1);break;
-    case 13: c.fillStyle='#6b4626';c.fillRect(3,3,2,5);c.fillStyle='#ff7a1a';c.fillRect(3,0,1,1);c.fillRect(2,1,4,2);c.fillStyle='#ffd43b';c.fillRect(3,1,2,2);c.fillStyle='#fff3a6';c.fillRect(3,2,1,1);break;
+    case 1: noiseTex(c,'#8a5a36',.35,1); // hierba: tierra con un manto verde de borde irregular
+      for(let x=0;x<T;x++){const h=4+(r()*3|0);for(let y=0;y<h;y++){c.fillStyle=shade('#5cb83a',(y===0?1.12:y===h-1?.8:1)+(r()-.5)*.22);c.fillRect(x,y,1,1)}}break;
+    case 2: noiseTex(c,'#8a5a36',.38,2);rects(c,'#6f4628',[[2,3,2],[10,1,2],[6,8,2],[13,11,2],[3,13,2],[9,5]]);rects(c,'#a87044',[[5,2],[12,6],[1,9],[8,12],[14,3]]);break;
+    case 3: noiseTex(c,'#8b8f94',.2,3);rects(c,'#6e7276',[[1,3,4],[9,2,3],[5,7,5],[12,9,3],[2,11,3],[8,13,4],[0,6],[15,5]]);rects(c,'#a6aaae',[[2,2,3],[6,6,3],[9,12,3],[13,8,2]]);break;
+    case 4:{const veta=[.72,1,1.06,.96,1,.74,1.04,.98,1,1.05,.72,1,.95,1.04,1,.76]; // madera: vetas verticales y surcos de corteza
+      for(let x=0;x<T;x++)for(let y=0;y<T;y++){c.fillStyle=shade('#9c6a3c',veta[x]*(1+(r()-.5)*.1));c.fillRect(x,y,1,1)}
+      rects(c,'#5a3a1e',[[3,3,1,3],[12,8,1,4],[7,12,1,3],[13,1,1,2],[2,10,1,2]])}break;
+    case 5: noiseTex(c,'#3f9a34',.45,5);motas('#2b6e24',18);motas('#5cc04a',12);break;
+    case 6: noiseTex(c,'#e9d79a',.13,6);motas('#cdbb7e',10);motas('#f6e8b4',6);break;
+    case 7: noiseTex(c,'#3a7fd9',.1,7);rects(c,'#7fb6f0',[[1,2,5],[9,4,5],[3,8,6],[11,11,4],[1,13,4]]);rects(c,'#2f6cc0',[[2,3,4],[10,5,4],[4,9,5],[12,12,3]]);break;
+    case 8: c.fillStyle='#c7c2b8';c.fillRect(0,0,T,T); // ladrillos de 7×3 con junta, una hilera sí y otra no desplazada
+      for(let row=0;row<4;row++)for(let b=-1;b<3;b++){const x=b*8+(row%2?4:0),y=row*4,f=1+(r()-.5)*.25;
+        rects(c,shade('#b34a33',f),[[x,y,7,3]]);rects(c,shade('#b34a33',f*1.14),[[x,y,7,1]]);rects(c,shade('#b34a33',f*.84),[[x,y+2,7,1]])}break;
+    case 9: c.fillStyle='#cdeefa';c.fillRect(0,0,T,T);rects(c,'#8cc7dc',[[0,0,T,1],[0,T-1,T,1],[0,0,1,T],[T-1,0,1,T]]);
+      rects(c,'#ffffff',[[5,2,2],[4,3,2],[3,4,2],[2,5,2],[12,9],[11,10],[10,11],[9,12]]);break;
+    case 10: noiseTex(c,'#f2c230',.2,10);rects(c,'#ffe27a',[[0,0,T,1],[0,0,1,T]]);rects(c,'#b8860b',[[0,T-1,T,1],[T-1,0,1,T]]);
+      rects(c,'#fff3a6',[[4,3],[3,4,3],[4,5],[11,9],[10,10,3],[11,11]]);rects(c,'#c9981a',[[8,5,3],[4,9,2],[6,12,3],[12,4,2]]);break;
+    case 11: tex[id]=sprite([
+      '................','......RRRR......','.....RRRRRR.....','....RRRYYRRR....','....RRYyyYRR....','....RRYyyYRR....','....rRRYYRRr....','.....rrRRrr.....',
+      '......rrrr......','.......Gg.......','.......Gg.......','...GG..Gg.......','....GGGGg.gG....','.......GgGG.....','.......Gg.......','.......Gg.......'],
+      {R:'#e8414b',r:'#c22f3a',Y:'#ffd43b',y:'#f2a71b',G:'#3f9a34',g:'#2b6e24'});return;
+    case 12: noiseTex(c,'#f4f8fb',.05,12);rects(c,'#d6e4ee',[[2,3],[6,6],[11,2],[13,9],[4,11],[9,13],[7,9,2]]);break;
+    case 13: tex[id]=sprite([
+      '.......O........','......OOO.......','......OYO.......','.....OYYYO......','.....OYWYO......','......OWO.......','......BBb.......','......BBb.......',
+      '.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......'],
+      {O:'#ff7a1a',Y:'#ffd43b',W:'#fff3a6',B:'#8a5a36',b:'#6b4626'});return;
   }
   tex[id]=cv;
 }
 BLOCKS.forEach(b=>makeTex(b.id));
 // la manzana que busca el cerdito en el reto de las flechas
-{const cv=document.createElement('canvas');cv.width=cv.height=T;const c=cv.getContext('2d');
-  c.fillStyle='#e8414b';c.fillRect(1,2,6,5);c.fillRect(0,3,8,3);c.fillRect(2,7,4,1);
-  c.fillStyle='#b8323b';c.fillRect(6,5,2,1);c.fillRect(5,6,2,1);c.fillRect(4,7,2,1);
-  c.fillStyle='#ffb3b8';c.fillRect(1,3,1,2);
-  c.fillStyle='#6b4626';c.fillRect(4,0,1,3);
-  c.fillStyle='#5cb83a';c.fillRect(5,0,2,1);c.fillRect(5,1,1,1);
-  tex.manzana=cv}
+tex.manzana=sprite([
+  '................','.........GG.....','.......B.GGg....','.......B..g.....','....RRRBRRRR....','...RRRRRRRRRR...','..RRWRRRRRRRRr..','..RWWRRRRRRRRr..',
+  '..RWRRRRRRRRrr..','..RRRRRRRRRRrr..','..RRRRRRRRRrrr..','...RRRRRRRrrr...','...RRRRRRrrrr...','....RRRRrrrr....','.....RRr.rr.....','................'],
+  {R:'#e8414b',r:'#b8323b',W:'#ffb3b8',B:'#6b4626',G:'#5cb83a',g:'#3f9a34'});
+// cerdito de 16×12: dos pasos al andar y dormido, mirando a la derecha y a la izquierda
+const pigTex={};
+{const pal={P:'#f2a0b0',p:'#e68a9c',H:'#f5b0be',h:'#eba3b3',E:'#d8798a',N:'#e68a9c',n:'#b8566a',K:'#2a1d14',W:'#ffffff',T:'#e68a9c',L:'#d8798a',l:'#c76a7b',D:'#b8566a',d:'#a04a5c'};
+  const cuerpo=['........EE....EE','........HHHHHHHH','........HHWKHHHH','.PPPPPPPHHWKHHNN','TPPPPPPPHHHHHHNn','TTPPPPPPHHHHHHNN','.PPPPPPPPhhhhhh.','.PPPPPPPPPPPPP..','.pppppppppppp...'];
+  const patas=[['..LLll...llLL...','..LLll...llLL...','..DDdd...ddDD...'],['..LLll...llLL...','..LLdd...ddLL...','..DD.......DD...']];
+  const pon=(s,x,t)=>s.slice(0,x)+t+s.slice(x+t.length);
+  [0,1].forEach(leg=>[0,1].forEach(zz=>{const rows=cuerpo.concat(patas[leg]);
+    if(zz){rows[2]=pon(rows[2],10,'HH');rows[3]=pon(rows[3],10,'KK')} // ojo cerrado
+    const a=sprite(rows,pal),b=lienzo(16,12),bc=b.getContext('2d');bc.translate(16,0);bc.scale(-1,1);bc.drawImage(a,0,0);
+    pigTex[`${leg}${zz}0`]=a;pigTex[`${leg}${zz}1`]=b}))}
+const pigImg=(izq,leg,dormido)=>pigTex[`${leg?1:0}${dormido?1:0}${izq?1:0}`];
 
 // --- estado ---
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('world');
@@ -474,13 +503,13 @@ function renderTab(){
     else if(x===r.fx&&y===r.fy&&!r.ok){c.classList.add('meta');c.appendChild(texCanvas('manzana'))}
     gr.appendChild(c)}
   const p=document.createElement('div');p.id='tabPig';if(r.ok)p.className='feliz';
-  const pc=document.createElement('canvas');pc.width=pc.height=64;p.appendChild(pc);gr.appendChild(p);
+  const pc=document.createElement('canvas');pc.width=pc.height=T;p.appendChild(pc);gr.appendChild(p);
   pigTo(r.x,r.y);drawFila();
 }
 function pigTo(x,y,d){ // coloca el cerdito del tablero; al cambiar de casilla se desliza solo (transición CSS)
   const r=reto,p=$('tabPig');if(!r||!p)return;
   if(d&&d.dx)r.izq=d.dx<0;
-  const c=p.firstChild.getContext('2d');c.clearRect(0,0,64,64);pigPx(c,0,0,64,r.izq,0,false);
+  const c=p.firstChild.getContext('2d');c.clearRect(0,0,T,T);c.drawImage(pigImg(r.izq,0,false),0,4);
   p.style.transform=`translate(${x*tabC}px,${y*tabC}px)`;
 }
 function pista(r){ // tras el segundo intento fallido: las flechas que faltan, marcadas en los huecos de la fila
@@ -705,17 +734,9 @@ cv.addEventListener('pointermove',e=>{if(painting&&(mode==='put'||mode==='dig'))
 ['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,()=>{painting=false;lastCell=null}));
 
 // --- dibujo ---
-function pigPx(c,x,y,sz,f,leg,asleep){ // cerdito pixelado de sz×sz con la esquina de arriba a la izquierda en x,y
-  const s=sz/8;y+=sz*.25;
-  const px=(a,b,w,h,col)=>{c.fillStyle=col;c.fillRect(f?x+sz-(a+w)*s:x+a*s,y+b*s*.75,w*s,h*s*.75)};
-  px(1,6,1,2,'#d8798a');px(5,6,1,2,'#d8798a');px(2,6,1,2-leg,'#c76a7b');px(6,6,1,2-leg,'#c76a7b');
-  px(0,2,7,4,'#f2a0b0');px(4,0,4,4,'#f5b0be');px(4,0,1,1,'#d8798a');px(7,0,1,1,'#d8798a');
-  px(7,2,1,2,'#e68a9c');px(0,3,1,1,'#e68a9c');
-  if(asleep)px(5,1,2,.5,'#2a1d14');else px(5,1,1,1,'#2a1d14');
-}
 function drawPig(p,asleep){
   const x=p.x*S,y=p.y*S+S*.25;
-  pigPx(ctx,x,p.y*S,S,p.vx<0,(!asleep&&Math.floor(p.t/8)%2)?1:0,asleep);
+  ctx.drawImage(pigImg(p.vx<0,!asleep&&Math.floor(p.t/8)%2,asleep),x,y,S,S*.75);
   if(p.joy>0){ctx.fillStyle='#e8414b';ctx.font=`${S*.4}px system-ui`;ctx.fillText('❤',x+S*.3,y-S*.2-(40-Math.min(40,p.joy))*.5)}
   else if(asleep){ctx.fillStyle='#fff6e0';ctx.font=`${S*.28}px "Press Start 2P",monospace`;ctx.fillText('z',x+S*.75,y-S*.1-Math.sin((fr+p.t)/25)*3)}
 }
