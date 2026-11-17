@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#3b2a1e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bloques">
+<title>Mundo de Bloques</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="fonts/press-start-2p.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Layout: mundo ancho con flechas para explorar; arriba el reto con dibujos; abajo bloques y herramientas solo con iconos (no hace falta leer) */
+@font-face{font-family:"Press Start 2P";src:url(fonts/press-start-2p.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+:root{
+  --sky:#7ec8f2; --panel:#3b2a1e; --panel-2:#5a3f2b; --slot:#2a1d14; --ink:#fff6e0; --sel:#ffd43b; --sel-edge:#b8860b;
+  --glass:rgba(42,29,20,.82);
+  --pixel:"Press Start 2P", ui-monospace, monospace;
+  color-scheme: dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--panel);color:var(--ink);font-family:var(--pixel);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+/* viewport-fit=cover: el juego se queda dentro de la zona segura (muesca, esquinas) y el marco se pinta del color del panel */
+#app{display:flex;flex-direction:column;height:100%;box-sizing:border-box;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
+#world{flex:1;min-height:0;position:relative;background:var(--sky);touch-action:none;overflow:hidden}
+#cv{display:block;width:100%;height:100%;image-rendering:pixelated}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+
+/* flechas para moverse por el mundo */
+.nav{position:absolute;top:50%;transform:translateY(-50%);width:52px;height:72px;border:4px solid var(--slot);
+  background:var(--glass);font-size:22px;padding:0;display:grid;place-items:center}
+#navL{left:8px}#navR{right:8px}
+
+/* estrellas ganadas */
+#stars{position:absolute;left:10px;top:10px;background:var(--glass);padding:8px 10px;font-size:12px;display:flex;gap:8px;align-items:center}
+#stars .e{font-family:system-ui;font-size:16px}
+
+/* ajustes de voz y nivel (para el adulto) */
+#vozBtn{position:absolute;left:10px;top:52px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
+#voz{position:fixed;inset:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
+#vozCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,420px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
+  font-family:system-ui,sans-serif;font-size:15px;overflow-y:auto;touch-action:pan-y}
+#vozCard h2{margin:0;font-family:var(--pixel);font-size:13px}
+#vozCard p{margin:0;line-height:1.4}
+#vozList{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:52px;touch-action:pan-y}
+.vrow{display:flex;gap:6px}
+.vopt{flex:1;min-width:0;min-height:44px;background:var(--panel-2);border:3px solid var(--slot);padding:8px 10px;text-align:left;font-family:system-ui,sans-serif;font-size:15px}
+.vrow .vopt{text-align:center}
+.vopt small{opacity:.7}
+.vopt[aria-pressed="true"]{background:var(--sel);border-color:var(--sel-edge);color:var(--slot)}
+.vlabel{font-size:12px;opacity:.8;margin-bottom:-6px}
+
+/* reto: dibujo + casillas que se van llenando; debajo, el tablero del cerdito cuando toca programarlo */
+#hud{position:absolute;left:16px;right:16px;top:10px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+#hud>*{pointer-events:auto}
+/* el reto deja libre la columna de la izquierda (estrellas y ajustes); en pantallas anchas se centra dejando lo mismo a la derecha */
+#reto{box-sizing:border-box;margin-left:64px;max-width:calc(100% - 64px);background:var(--glass);border:4px solid var(--sel);padding:8px;display:flex;align-items:center;gap:8px}
+@media (min-width:700px){#reto{margin:0 64px;max-width:calc(100% - 128px)}}
+/* en móvil: botones arriba y casillas debajo, para que diez casillas no ocupen media pantalla */
+@media (max-width:519px){#reto{flex-wrap:wrap;justify-content:center}#retoSlots{order:5;flex-basis:100%}#retoSlots.torre{align-items:center}}
+#reto .rb{flex:0 0 auto;width:44px;height:44px;border:3px solid var(--slot);background:var(--panel-2);padding:0;font-size:20px;font-family:system-ui}
+#retoIco{flex:0 0 auto;font-size:22px;font-family:system-ui}
+#retoSlots{display:flex;flex-wrap:wrap;gap:4px;min-width:0;justify-content:center}
+#retoSlots.torre{flex-direction:column-reverse;flex-wrap:nowrap}
+#retoSlots .s{width:22px;height:22px;opacity:.28;display:grid;place-items:center;font-family:system-ui;font-size:16px;outline:2px dashed var(--ink);outline-offset:-2px}
+#retoSlots .s canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
+#retoSlots .s.on{opacity:1;outline:2px solid var(--sel)}
+#retoSlots .s.ask{opacity:1}
+#retoSlots .s.quita{transform:scale(.75);outline-style:dotted}
+#reto.done{background:var(--sel);color:var(--slot)}
+
+/* tablero del cerdito: cuadrícula, y debajo la fila de flechas que se va llenando */
+#tab{box-sizing:border-box;max-width:100%;background:var(--glass);border:4px solid var(--slot);padding:8px;display:flex;flex-direction:column;align-items:center;gap:8px}
+#tabGrid{position:relative;display:grid;grid-template-columns:repeat(var(--cols),var(--c));grid-auto-rows:var(--c);border:4px solid #9c6a3c}
+#tabGrid .c{display:grid;place-items:center;background:#6fbe4f}
+#tabGrid .c.alt{background:#62ad45}
+#tabGrid .c canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+#tabGrid .c.meta canvas{width:70%;height:70%}
+#tabPig{position:absolute;left:0;top:0;width:var(--c);height:var(--c);pointer-events:none;transition:transform .45s ease-in-out}
+#tabPig canvas{width:100%;height:100%;display:block}
+#tabPig.feliz canvas{animation:salto .5s ease-out 3}
+@keyframes salto{50%{transform:translateY(-25%)}}
+#fila{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;max-width:max(calc(var(--c)*var(--cols)),148px)}
+#fila .f{box-sizing:border-box;width:34px;height:34px;display:grid;place-items:center;font-family:system-ui;font-size:20px;border:2px dashed var(--ink);opacity:.45}
+#fila .f.on{opacity:1;border-style:solid;background:var(--panel-2)}
+#fila .f.pista{opacity:.8;border-color:var(--sel);animation:late 1.2s ease-in-out infinite}
+#fila .f.now{background:var(--sel);border-color:var(--sel-edge)}
+#fila .f.mal{border:3px dashed var(--sel);animation:tiembla .35s 2}
+/* pantallas bajas (móvil tumbado): la fila de flechas no se parte en dos y todo va más apretado, para que quepa */
+@media (max-height:520px){#tab{padding:4px;gap:4px}#fila{max-width:none}#fila .f{width:28px;height:28px;font-size:16px}
+  #world.prog #toast{display:none}} /* ahí el texto taparía el tablero; la instrucción se sigue diciendo en voz alta */
+@keyframes late{50%{opacity:.4}}
+@keyframes tiembla{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+
+#bar{background:var(--panel);border-top:4px solid var(--panel-2);padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));
+  display:flex;flex-direction:column;gap:10px}
+#blocks{display:flex;gap:8px;overflow-x:auto;padding:4px 0 2px;scrollbar-width:none;touch-action:pan-x}
+#blocks::-webkit-scrollbar{display:none}
+.slot{flex:0 0 auto;width:54px;height:54px;border:4px solid var(--slot);background:var(--slot);padding:0}
+.slot canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+.slot[aria-pressed="true"]{border-color:var(--sel);transform:translateY(-4px)}
+/* mientras se programa al cerdito, las flechas ocupan el sitio de los bloques (misma altura, el mundo no se mueve) */
+#flechas{display:flex;gap:8px;padding:4px 0 2px}
+.fl{flex:1;min-width:0;height:54px;background:var(--panel-2);border:4px solid var(--slot);padding:0;font-size:24px;font-family:system-ui}
+#fGo{background:#5cb83a;border-color:#2b6e24;color:#fff}
+#tools{display:flex;gap:6px}
+.tool{flex:1;min-width:0;height:52px;background:var(--panel-2);border:4px solid var(--slot);padding:0;font-size:24px;font-family:system-ui}
+.tool[aria-pressed="true"],.tool.ask{background:var(--sel);border-color:var(--sel-edge)}
+#tReto.call{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{background:var(--sel);border-color:var(--sel-edge)}}
+#toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--glass);color:var(--ink);
+  font-size:11px;line-height:1.5;padding:10px 14px;pointer-events:none;opacity:0;transition:opacity .3s;max-width:calc(100% - 32px);text-align:center}
+#toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.slot[aria-pressed="true"]{transform:none}#toast{transition:none}#tReto.call{animation:none}
+  #tabPig{transition:none}#tabPig.feliz canvas,#fila .f.pista,#fila .f.mal{animation:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="world">
+    <canvas id="cv"></canvas>
+    <div id="stars" aria-label="Estrellas ganadas"><span class="e">⭐</span><span id="starN">0</span></div>
+    <div id="hud">
+      <div id="reto" hidden>
+        <button class="rb" id="rSay" aria-label="Repetir el reto">🔊</button>
+        <span id="retoIco"></span>
+        <div id="retoSlots"></div>
+        <button class="rb" id="rHard" aria-label="Más difícil">💪</button>
+        <button class="rb" id="rClose" aria-label="Dejar el reto">✖</button>
+      </div>
+      <div id="tab" hidden>
+        <div id="tabGrid" aria-label="Tablero del cerdito"></div>
+        <div id="fila" aria-label="Fila de flechas"></div>
+      </div>
+    </div>
+    <button class="nav" id="navL" aria-label="Ir a la izquierda">◀</button>
+    <button class="nav" id="navR" aria-label="Ir a la derecha">▶</button>
+    <button id="vozBtn" aria-label="Ajustes: voz y nivel de los retos">🗣️</button>
+    <div id="toast"></div>
+  </div>
+  <div id="voz" hidden>
+    <div id="vozCard" role="dialog" aria-label="Ajustes del juego">
+      <h2>Ajustes</h2>
+      <div class="vlabel">Voz</div>
+      <div id="vozList"></div>
+      <div class="vlabel">Velocidad</div>
+      <div class="vrow" id="vozRate"></div>
+      <div class="vlabel">Tono</div>
+      <div class="vrow" id="vozPitch"></div>
+      <div class="vlabel">Nivel de los retos (luego sube solo con cada estrella)</div>
+      <div class="vrow" id="vozNivel"></div>
+      <button class="vopt" id="vozClose" style="text-align:center">Cerrar</button>
+    </div>
+  </div>
+  <div id="bar">
+    <div id="blocks" role="toolbar" aria-label="Bloques"></div>
+    <div id="flechas" role="toolbar" aria-label="Flechas para el cerdito" hidden>
+      <button class="fl" data-d="1" aria-label="Izquierda">⬅️</button>
+      <button class="fl" data-d="2" aria-label="Arriba">⬆️</button>
+      <button class="fl" data-d="3" aria-label="Abajo">⬇️</button>
+      <button class="fl" data-d="0" aria-label="Derecha">➡️</button>
+      <button class="fl" id="fDel" aria-label="Borrar la última flecha">🧽</button>
+      <button class="fl" id="fGo" aria-label="¡En marcha!">▶</button>
+    </div>
+    <div id="tools">
+      <button class="tool" id="tPut" aria-label="Poner bloques" aria-pressed="true">🧱</button>
+      <button class="tool" id="tDig" aria-label="Picar" aria-pressed="false">⛏️</button>
+      <button class="tool" id="tPig" aria-label="Cerditos" aria-pressed="false">🐷</button>
+      <button class="tool" id="tHouse" aria-label="Casa" aria-pressed="false">🏠</button>
+      <button class="tool" id="tNight" aria-label="Día y noche">🌙</button>
+      <button class="tool call" id="tReto" aria-label="Reto nuevo">⭐</button>
+      <button class="tool" id="tNew" aria-label="Mundo nuevo">🌍</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+const T=8, COLS=48, ROWS=16, MAXPIGS=20;
+const BLOCKS=[
+  {id:1,name:'Hierba'},{id:2,name:'Tierra'},{id:3,name:'Piedra'},{id:4,name:'Madera'},
+  {id:5,name:'Hojas'},{id:6,name:'Arena'},{id:7,name:'Agua'},{id:8,name:'Ladrillo'},
+  {id:9,name:'Cristal'},{id:10,name:'Oro'},{id:11,name:'Flor'},{id:12,name:'Nieve'},{id:13,name:'Antorcha'}
+];
+const PLURAL={2:'bloques de tierra',3:'bloques de piedra',4:'bloques de madera',6:'bloques de arena',8:'ladrillos',9:'cristales',
+  10:'bloques de oro',11:'flores',12:'bloques de nieve',13:'antorchas'};
+const NUM=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte'];
+const NOSOLID={7:1,11:1,13:1}, TRANSP={7:.8,9:.55};
+
+// --- texturas pixeladas generadas ---
+function rng(s){return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}}
+function shade(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;
+  r=Math.max(0,Math.min(255,r*f|0));g=Math.max(0,Math.min(255,g*f|0));b=Math.max(0,Math.min(255,b*f|0));return`rgb(${r},${g},${b})`}
+function noiseTex(c,base,amt,seed){const r=rng(seed);for(let y=0;y<T;y++)for(let x=0;x<T;x++){c.fillStyle=shade(base,1+(r()-.5)*amt);c.fillRect(x,y,1,1)}}
+const tex={};
+function makeTex(id){
+  const cv=document.createElement('canvas');cv.width=cv.height=T;const c=cv.getContext('2d');
+  switch(id){
+    case 1: noiseTex(c,'#8a5a36',.35,1);{const r=rng(9);for(let x=0;x<T;x++){const h=2+(r()*2|0);for(let y=0;y<h;y++){c.fillStyle=shade('#5cb83a',1+(r()-.5)*.35);c.fillRect(x,y,1,1)}}}break;
+    case 2: noiseTex(c,'#8a5a36',.4,2);break;
+    case 3: noiseTex(c,'#8b8f94',.3,3);c.fillStyle='#6e7276';c.fillRect(1,2,2,1);c.fillRect(5,5,2,1);c.fillRect(4,1,1,1);break;
+    case 4: for(let x=0;x<T;x++){c.fillStyle=x%3==0?'#6b4626':'#9c6a3c';c.fillRect(x,0,1,T)}c.fillStyle='#5a3a1e';c.fillRect(2,3,1,2);c.fillRect(6,5,1,1);break;
+    case 5: noiseTex(c,'#3f9a34',.55,5);{const r=rng(55);for(let i=0;i<6;i++){c.fillStyle='#2b6e24';c.fillRect(r()*T|0,r()*T|0,1,1)}}break;
+    case 6: noiseTex(c,'#e9d79a',.18,6);break;
+    case 7: noiseTex(c,'#3a7fd9',.15,7);c.fillStyle='#7fb6f0';c.fillRect(1,1,3,1);c.fillRect(4,5,3,1);break;
+    case 8: c.fillStyle='#c7c2b8';c.fillRect(0,0,T,T);{const r=rng(8);for(let row=0;row<4;row++){const off=row%2?2:0;for(let b=-1;b<2;b++){c.fillStyle=shade('#b34a33',1+(r()-.5)*.3);c.fillRect(b*4+off,row*2,3,1)}}}break;
+    case 9: c.fillStyle='#cdeefa';c.fillRect(0,0,T,T);c.fillStyle='#ffffff';c.fillRect(1,1,1,3);c.fillRect(2,1,1,1);c.fillStyle='#8cc7dc';c.fillRect(0,0,T,1);c.fillRect(0,T-1,T,1);c.fillRect(0,0,1,T);c.fillRect(T-1,0,1,T);break;
+    case 10: noiseTex(c,'#f2c230',.25,10);c.fillStyle='#fff3a6';c.fillRect(1,1,2,1);c.fillRect(5,4,1,2);c.fillStyle='#b8860b';c.fillRect(3,6,2,1);break;
+    case 11: c.fillStyle='#3f9a34';c.fillRect(3,4,1,4);c.fillRect(4,6,1,1);c.fillStyle='#e8414b';c.fillRect(2,1,3,3);c.fillStyle='#ffd43b';c.fillRect(3,2,1,1);break;
+    case 12: noiseTex(c,'#f4f8fb',.08,12);c.fillStyle='#d6e4ee';c.fillRect(2,3,1,1);c.fillRect(6,6,1,1);break;
+    case 13: c.fillStyle='#6b4626';c.fillRect(3,3,2,5);c.fillStyle='#ff7a1a';c.fillRect(3,0,1,1);c.fillRect(2,1,4,2);c.fillStyle='#ffd43b';c.fillRect(3,1,2,2);c.fillStyle='#fff3a6';c.fillRect(3,2,1,1);break;
+  }
+  tex[id]=cv;
+}
+BLOCKS.forEach(b=>makeTex(b.id));
+// la manzana que busca el cerdito en el reto de las flechas
+{const cv=document.createElement('canvas');cv.width=cv.height=T;const c=cv.getContext('2d');
+  c.fillStyle='#e8414b';c.fillRect(1,2,6,5);c.fillRect(0,3,8,3);c.fillRect(2,7,4,1);
+  c.fillStyle='#b8323b';c.fillRect(6,5,2,1);c.fillRect(5,6,2,1);c.fillRect(4,7,2,1);
+  c.fillStyle='#ffb3b8';c.fillRect(1,3,1,2);
+  c.fillStyle='#6b4626';c.fillRect(4,0,1,3);
+  c.fillStyle='#5cb83a';c.fillRect(5,0,2,1);c.fillRect(5,1,1,1);
+  tex.manzana=cv}
+
+// --- estado ---
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('world');
+const light=document.createElement('canvas'),lctx=light.getContext('2d');
+let S=40,W=300,H=300,offY=0,camC=COLS/2-4,grid=[],pigs=[],clouds=[],particles=[];
+let night=false,nightAmt=0,stars=0,level=0,fr=0,scrollDir=0;
+const tier=()=>level<4?0:level<8?1:2; // tramo de dificultad de los retos: fácil, medio, difícil
+const skyStars=(()=>{const r=rng(77);return Array.from({length:40},()=>({x:r(),y:r()*.6,s:r()<.2?3:2,p:r()*6}))})();
+function idx(x,y){return y*COLS+x}
+function get(x,y){return(x<0||x>=COLS||y<0||y>=ROWS)?3:grid[idx(x,y)]}
+function solid(x,y){const v=get(x,y);return v&&!NOSOLID[v]}
+function topOf(x){let y=0;while(y<ROWS&&!grid[idx(x,y)])y++;return y}
+
+function genWorld(){
+  grid=new Array(COLS*ROWS).fill(0);
+  const r=rng(Date.now()&0xffff);
+  let h=10;
+  for(let x=0;x<COLS;x++){
+    if(r()<.35)h+=r()<.5?-1:1;h=Math.max(9,Math.min(12,h));
+    for(let y=h;y<ROWS;y++)grid[idx(x,y)]=y==h?1:(y<h+3?2:3);
+    if(r()<.15)grid[idx(x,ROWS-1)]=10;
+  }
+  // una charca con arena
+  const px=6+(r()*(COLS-14)|0);
+  for(let dx=0;dx<3;dx++){const t=topOf(px+dx);grid[idx(px+dx,t)]=7;if(t+1<ROWS)grid[idx(px+dx,t+1)]=6}
+  // árboles y flores
+  for(let x=2;x<COLS-2;x++){
+    const top=topOf(x);if(grid[idx(x,top)]!==1)continue;
+    if(r()<.14){for(let i=1;i<=3;i++)grid[idx(x,top-i)]=4;
+      for(let dx=-1;dx<=1;dx++)for(let dy=4;dy<=5;dy++)if(!grid[idx(x+dx,top-dy)])grid[idx(x+dx,top-dy)]=5;x+=2}
+    else if(r()<.15)grid[idx(x,top-1)]=11;
+  }
+  pigs=[];addPig(COLS/2-3|0);addPig(COLS/2+2|0);
+  save();
+}
+function addPig(x,y){
+  if(y===undefined){y=0;while(y<ROWS-1&&!solid(x,y+1))y++}
+  pigs.push({x,y,vx:(Math.random()<.5?-1:1)*.015,vy:0,t:0,joy:0});
+}
+
+// --- guardado (solo en este navegador) ---
+function save(){try{localStorage.setItem('bloques2',JSON.stringify({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,stars,level,camC}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));
+  if(d&&Array.isArray(d.grid)&&d.grid.length===COLS*ROWS){grid=d.grid;pigs=[];(d.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));
+    night=!!d.night;nightAmt=night?1:0;stars=d.stars|0;level=d.level|0;if(typeof d.camC==='number')camC=d.camC;return true}}catch(e){}return false}
+
+function resize(){
+  W=wrap.clientWidth;H=wrap.clientHeight;const dpr=window.devicePixelRatio||1;
+  S=Math.max(32,Math.min(56,Math.round(Math.min(W,H)/9)));S=Math.max(S,Math.ceil(W/COLS));
+  offY=H-ROWS*S;
+  cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;
+  light.width=Math.max(1,W);light.height=Math.max(1,H);
+  clampCam();
+  if(reto&&reto.kind==='programa')renderTab();
+}
+function clampCam(){camC=Math.max(0,Math.min(COLS-W/S,camC))}
+
+// --- sonido y voz ---
+let ac=null;
+function beep(f,d=.08,type='square',vol=.05){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+  const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.value=vol;
+  g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+function oink(){beep(260,.12,'sawtooth',.06);setTimeout(()=>beep(200,.15,'sawtooth',.06),110)}
+function fanfare(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'square',.06),i*110))}
+let voice=null;
+const vcfg={name:'',rate:.95,pitch:1.1};
+try{Object.assign(vcfg,JSON.parse(localStorage.getItem('bloquesVoz'))||{})}catch(e){}
+function esVoices(){try{const es=v=>/^es[-_]ES/i.test(v.lang)?1:0;return speechSynthesis.getVoices().filter(v=>/^es/i.test(v.lang)).sort((a,b)=>es(b)-es(a))}catch(e){return[]}}
+function pickVoice(){const vs=esVoices();voice=vs.find(v=>v.name===vcfg.name)||vs[0]||null;if(!document.getElementById('voz').hidden)renderVoz()}
+function renderVoz(){
+  const list=document.getElementById('vozList'),vs=esVoices();list.textContent='';
+  if(!vs.length){const p=document.createElement('p');p.textContent='Este dispositivo no tiene voces en español. Instala una en los ajustes del sistema (Accesibilidad, texto a voz) y vuelve a abrir el juego.';list.appendChild(p)}
+  vs.forEach(v=>{const b=document.createElement('button');b.className='vopt';b.setAttribute('aria-pressed',voice===v);
+    b.textContent=v.name+' ';const sm=document.createElement('small');sm.textContent=v.lang;b.appendChild(sm);
+    b.onclick=()=>{voice=v;vcfg.name=v.name;saveVoz();renderVoz();sample()};list.appendChild(b)});
+  const row=(id,opts,cur,elige)=>{const el=document.getElementById(id);el.textContent='';opts.forEach(([label,val])=>{const b=document.createElement('button');b.className='vopt';
+    b.textContent=label;b.setAttribute('aria-pressed',cur===val);b.onclick=()=>{elige(val);renderVoz()};el.appendChild(b)})};
+  const cfg=key=>val=>{vcfg[key]=val;saveVoz();sample()};
+  row('vozRate',[['🐢 Lenta',.75],['Normal',.95],['🐇 Rápida',1.15]],vcfg.rate,cfg('rate'));
+  row('vozPitch',[['Grave',.8],['Normal',1.1],['Aguda',1.4]],vcfg.pitch,cfg('pitch'));
+  // nivel del que parten los retos: marca el tramo en el que está ahora y, al tocar otro, los retos siguen desde ahí
+  row('vozNivel',[['🌱 Fácil',0],['🌿 Medio',4],['🌳 Difícil',8]],tier()*4,
+    val=>{level=val;save();say(['Retos fáciles.','Retos de nivel medio.','Retos difíciles.'][val/4],false)});
+}
+function saveVoz(){try{localStorage.setItem('bloquesVoz',JSON.stringify(vcfg))}catch(e){}}
+function sample(){say('A ver si eres capaz de poner tres bloques de oro.',false)}
+try{pickVoice();speechSynthesis.addEventListener('voiceschanged',pickVoice)}catch(e){}
+function say(t,show=true){
+  if(show)toast(t);
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='es-ES';if(voice)u.voice=voice;u.rate=vcfg.rate;u.pitch=vcfg.pitch;speechSynthesis.speak(u)}catch(e){}
+}
+let toastT;function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),Math.max(1200,t.length*70))}
+
+// --- barra de bloques y herramientas ---
+let current=1,mode='put';
+const $=id=>document.getElementById(id);
+const blocksEl=$('blocks');
+function texCanvas(id){const c=document.createElement('canvas');c.width=c.height=T;c.getContext('2d').drawImage(tex[id],0,0);return c}
+BLOCKS.forEach(b=>{
+  const btn=document.createElement('button');btn.className='slot';btn.id='b'+b.id;btn.setAttribute('aria-label',b.name);
+  btn.setAttribute('aria-pressed',b.id===current);btn.appendChild(texCanvas(b.id));
+  btn.onclick=()=>{current=b.id;setMode('put');document.querySelectorAll('.slot').forEach(s=>s.setAttribute('aria-pressed',s===btn));beep(660,.05);say(b.name)};
+  blocksEl.appendChild(btn);
+});
+const MODES={put:'tPut',dig:'tDig',pig:'tPig',house:'tHouse'};
+function setMode(m){mode=m;for(const k in MODES)$(MODES[k]).setAttribute('aria-pressed',m===k)}
+$('tPut').onclick=()=>{setMode('put');beep(500,.05);say('Poner')};
+$('tDig').onclick=()=>{setMode('dig');beep(400,.05);say('¡A picar!')};
+$('tPig').onclick=()=>{setMode('pig');oink();say('Toca para poner un cerdito')};
+$('tHouse').onclick=()=>{setMode('house');beep(520,.06);say('Toca para poner una casa')};
+$('tNight').onclick=()=>{night=!night;$('tNight').textContent=night?'☀️':'🌙';beep(night?330:660,.15,'triangle',.07);say(night?'Buenas noches':'Buenos días');save()};
+let confirmNew=false,confirmTimer;
+$('tNew').onclick=e=>{
+  const b=e.currentTarget;
+  if(!confirmNew){confirmNew=true;b.classList.add('ask');say('¿Mundo nuevo? Toca otra vez.');clearTimeout(confirmTimer);
+    confirmTimer=setTimeout(()=>{confirmNew=false;b.classList.remove('ask')},3500);return}
+  confirmNew=false;b.classList.remove('ask');closeReto();genWorld();camC=COLS/2-W/S/2;clampCam();beep(880,.1);setTimeout(()=>beep(1100,.12),100);say('¡Mundo nuevo!')};
+
+$('vozBtn').onclick=()=>{$('voz').hidden=false;renderVoz()};
+$('vozClose').onclick=()=>{$('voz').hidden=true};
+$('voz').addEventListener('click',e=>{if(e.target===$('voz'))$('voz').hidden=true});
+
+// flechas: mantener pulsado para moverse
+[['navL',-1],['navR',1]].forEach(([id,d])=>{const b=$(id);
+  b.addEventListener('pointerdown',e=>{e.preventDefault();scrollDir=d});
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>{if(scrollDir===d){scrollDir=0;save()}}))});
+document.addEventListener('contextmenu',e=>e.preventDefault());
+
+// --- retos: sin tiempo, sin fallos, con casillas que se llenan y números en voz alta ---
+let reto=null,lastKind='',camGoal=null;
+const NAME={};BLOCKS.forEach(b=>NAME[b.id]=b.name.toLowerCase());
+const SING={4:'bloque de madera',6:'bloque de arena',8:'ladrillo',9:'cristal',10:'bloque de oro',12:'bloque de nieve'};
+// para explicar un fallo al copiar: "Eso es un ladrillo" / "ahí va el oro"
+const UN={1:'hierba',2:'tierra',3:'piedra',4:'madera',5:'hojas',6:'arena',7:'agua',8:'un ladrillo',9:'un cristal',10:'oro',11:'una flor',12:'nieve',13:'una antorcha'};
+const DEF={4:'la madera',6:'la arena',8:'el ladrillo',9:'el cristal',10:'el oro',12:'la nieve'};
+const EDU=[10,8,9,12,6,4];
+const pick=a=>a[Math.random()*a.length|0];
+const rand=n=>Math.random()*n|0;
+function countOf(b){let n=0;for(let i=0;i<grid.length;i++)if(grid[i]===b)n++;return n}
+function visTop(){return Math.max(0,Math.ceil(-offY/S))}
+function skyTop(){return Math.max(visTop()+2,Math.ceil(((W<520?120:84)-offY)/S))} // primera fila que queda por debajo del reto (en móvil ocupa dos líneas)
+function findSky(w,rows){ // hueco libre en el cielo, lo más cerca posible de lo que se ve
+  const centre=camC+W/S/2-w/2;let best=null;
+  for(let cs=1;cs<=COLS-w-1;cs++){let mt=ROWS;for(let x=cs;x<cs+w;x++)mt=Math.min(mt,topOf(x));
+    const base=mt-2;if(base-(rows-1)<skyTop())continue;
+    const d=Math.abs(cs-centre);if(!best||d<best.d)best={cs,base,d}}
+  return best;
+}
+function findGround(k){ // columna con suelo firme y sitio para una torre de k
+  const centre=camC+W/S/2;let best=null;
+  for(let c=2;c<COLS-2;c++){const t=topOf(c);if(t>=ROWS||NOSOLID[grid[idx(c,t)]]||t-(k+1)<skyTop())continue;
+    const d=Math.abs(c-centre);if(!best||d<best.d)best={c,t,d}}
+  return best;
+}
+function lookAt(cs,w){camGoal=Math.max(0,Math.min(COLS-W/S,cs+w/2-W/S/2))}
+function stampFrame(spot,count,b,rows){for(let i=0;i<count;i++)grid[idx(spot.cs+i%5,spot.base-(rows-1)+Math.floor(i/5))]=b}
+
+// "copia el modelo": construcciones pequeñas por tramo de dificultad; cada letra es un bloque distinto y el punto, un hueco
+const MODELOS=[
+  [['AA','BB'],['AB','AB'],['AB','BA'],['A','B','A']],
+  [['A.','AA'],['.A.','BBB'],['A.A','BBB'],['AB','BA','AB'],['A.','AB','AA']],
+  [['.A.','ABA','BBB'],['A..','AB.','ABC'],['ACA','B.B','BBB'],['AB','BA','AB','BA'],['.A','AB','BC','CC']]
+];
+function makeModelo(){ // planta el modelo en el cielo y deja al lado, tras una columna libre, la zona donde copiarlo
+  const wmax=Math.max(1,Math.floor((W/S-1-120/S)/2)); // que quepan modelo y copia entre las flechas de los lados
+  const ids=EDU.slice().sort(()=>Math.random()-.5);
+  if(ids.indexOf(9)<3&&ids.indexOf(12)<3)ids.splice(ids.indexOf(12),1); // cristal y nieve juntos se confunden
+  for(let t=tier();t>=0;t--){
+    const opts=MODELOS[t].filter(m=>m[0].length<=wmax).sort(()=>Math.random()-.5);
+    for(const m of opts){
+      const w=m[0].length,h=m.length,spot=findSky(w*2+1,h);if(!spot)continue;
+      const y0=spot.base-h+1,zx=spot.cs+w+1,ghost=[];
+      m.forEach((row,ry)=>[...row].forEach((ch,rx)=>{if(ch==='.')return;const b=ids[ch.charCodeAt(0)-65];
+        grid[idx(spot.cs+rx,y0+ry)]=b;ghost.push({x:zx+rx,y:y0+ry,b,miss:0,mx:spot.cs+rx,my:y0+ry})}));
+      return{ghost,cs:spot.cs,zx,y0,w,h};
+    }
+  }
+  return null;
+}
+function enCopia(x,y){ // 1 = casilla del modelo, 2 = casilla de la zona de copia, 0 = fuera
+  const r=reto;if(!r||r.won||r.kind!=='copia'||y<r.y0||y>=r.y0+r.h)return 0;
+  return x>=r.cs&&x<r.cs+r.w?1:x>=r.zx&&x<r.zx+r.w?2:0;
+}
+
+// "programa al cerdito": un tablero pequeño, el cerdito, una manzana y una fila de flechas que el cerdito sigue paso a paso
+const DIRS=[{dx:1,dy:0,ico:'➡️',name:'derecha'},{dx:-1,dy:0,ico:'⬅️',name:'izquierda'},{dx:0,dy:-1,ico:'⬆️',name:'arriba'},{dx:0,dy:1,ico:'⬇️',name:'abajo'}];
+let tabC=48;
+const choca=(t,x,y)=>x<0||y<0||x>=t.cols||y>=t.rows||t.rocas.has(x+','+y);
+function ruta(t,sx,sy){ // camino más corto hasta la manzana (búsqueda en anchura): lista de direcciones, o null si no hay
+  const prev=new Map([[sx+','+sy,null]]),q=[[sx,sy]];
+  while(q.length){const [x,y]=q.shift();
+    if(x===t.fx&&y===t.fy){const out=[];let k=x+','+y,p;while((p=prev.get(k))){out.unshift(p.d);k=p.k}return out}
+    DIRS.forEach((d,di)=>{const nx=x+d.dx,ny=y+d.dy,k=nx+','+ny;if(choca(t,nx,ny)||prev.has(k))return;prev.set(k,{d:di,k:x+','+y});q.push([nx,ny])})}
+  return null;
+}
+function makeTablero(){ // fácil: en línea recta; medio: con una esquina y una piedra; difícil: tablero mayor y varias piedras
+  const tr=tier(),cols=tr<2?4:5,rows=3;
+  for(let n=0;n<300;n++){
+    const t={cols,rows,rocas:new Set(),sx:rand(cols),sy:rand(rows),fx:rand(cols),fy:rand(rows)};
+    const dx=Math.abs(t.fx-t.sx),dy=Math.abs(t.fy-t.sy);
+    if(tr===0){if(dx&&dy)continue}
+    else{if(!dx||!dy)continue;
+      for(let k=0;k<(tr===1?1:3);k++){const rx=rand(cols),ry=rand(rows);if((rx!==t.sx||ry!==t.sy)&&(rx!==t.fx||ry!==t.fy))t.rocas.add(rx+','+ry)}}
+    const path=ruta(t,t.sx,t.sy);
+    if(!path||path.length<[2,3,4][tr]||path.length>7)continue;
+    return{...t,path,max:Math.min(8,path.length+tr)};
+  }
+  const t={cols:4,rows:3,rocas:new Set(),sx:0,sy:1,fx:2,fy:1};return{...t,path:ruta(t,0,1),max:2};
+}
+function progUI(on){$('tab').hidden=!on;$('flechas').hidden=!on;$('blocks').hidden=on;wrap.classList.toggle('prog',on)}
+function renderTab(){
+  const r=reto,tab=$('tab'),gr=$('tabGrid');
+  const libre=H-$('reto').offsetHeight-108; // alto que queda bajo el reto, quitando bordes, valla y la fila de flechas
+  tabC=Math.max(24,Math.min(56,Math.floor(Math.min((W-160)/r.cols,libre/r.rows))));
+  tab.style.setProperty('--c',tabC+'px');tab.style.setProperty('--cols',r.cols);gr.textContent='';
+  for(let y=0;y<r.rows;y++)for(let x=0;x<r.cols;x++){const c=document.createElement('div');c.className='c'+((x+y)%2?' alt':'');
+    if(r.rocas.has(x+','+y))c.appendChild(texCanvas(3));
+    else if(x===r.fx&&y===r.fy&&!r.ok){c.classList.add('meta');c.appendChild(texCanvas('manzana'))}
+    gr.appendChild(c)}
+  const p=document.createElement('div');p.id='tabPig';if(r.ok)p.className='feliz';
+  const pc=document.createElement('canvas');pc.width=pc.height=64;p.appendChild(pc);gr.appendChild(p);
+  pigTo(r.x,r.y);drawFila();
+}
+function pigTo(x,y,d){ // coloca el cerdito del tablero; al cambiar de casilla se desliza solo (transición CSS)
+  const r=reto,p=$('tabPig');if(!r||!p)return;
+  if(d&&d.dx)r.izq=d.dx<0;
+  const c=p.firstChild.getContext('2d');c.clearRect(0,0,64,64);pigPx(c,0,0,64,r.izq,0,false);
+  p.style.transform=`translate(${x*tabC}px,${y*tabC}px)`;
+}
+function pista(r){ // tras el segundo intento fallido: las flechas que faltan, marcadas en los huecos de la fila
+  const out=[];if(r.fails<2)return out;
+  let x=r.sx,y=r.sy;for(const di of r.prog){x+=DIRS[di].dx;y+=DIRS[di].dy;if(choca(r,x,y))return out}
+  const p=ruta(r,x,y);if(p&&r.prog.length+p.length<=r.max)p.forEach((d,j)=>out[r.prog.length+j]=d);
+  return out;
+}
+function drawFila(){
+  const r=reto,el=$('fila'),g=pista(r);el.textContent='';
+  for(let i=0;i<r.max;i++){const s=document.createElement('div'),d=r.prog[i];
+    s.className='f'+(d!==undefined?' on':'')+(i===r.now?' now':'')+(i===r.bad?' mal':'');
+    if(d!==undefined)s.textContent=DIRS[d].ico;else if(g[i]!==undefined){s.textContent=DIRS[g[i]].ico;s.classList.add('pista')}
+    el.appendChild(s)}
+}
+const progLibre=()=>reto&&reto.kind==='programa'&&!reto.won&&!reto.running?reto:null;
+function progAdd(d){
+  const r=progLibre();if(!r)return;
+  if(r.prog.length>=r.max){say('Ya no caben más flechas. Toca el botón verde, o borra con la esponja.');return}
+  r.bad=-1;r.prog.push(d);beep(440+d*60,.06);say(DIRS[d].name,false);drawFila();
+}
+function progDel(){
+  const r=progLibre();if(!r)return;
+  if(!r.prog.length){say('Borrar',false);return}
+  r.bad=-1;r.prog.pop();beep(300,.06);say('Borrar',false);drawFila();
+}
+function progGo(){ // el cerdito sigue las flechas una a una; si no llega no pasa nada: se explica y vuelve a la salida
+  const r=progLibre();if(!r)return;
+  if(!r.prog.length){say('Primero pon las flechas para el cerdito.');return}
+  r.running=true;r.bad=-1;r.izq=false;let i=0;
+  const vivo=()=>reto===r;
+  const fin=(txt,ayuda)=>{
+    r.fails++;const marca=r.fails>=2;
+    if(marca){r.prog=[];r.bad=-1} // a la segunda se despeja la fila y aparecen marcadas las flechas del camino
+    say(txt+' '+(marca?'Mira, te marco las flechas del camino. Ponlas tú y toca el botón verde.':ayuda));
+    r.now=-1;drawFila();
+    setTimeout(()=>{if(!vivo())return;r.x=r.sx;r.y=r.sy;r.izq=false;pigTo(r.x,r.y);r.running=false},900);
+  };
+  const paso=()=>{
+    if(!vivo())return;
+    if(i>=r.prog.length){const f=ruta(r,r.x,r.y).length;
+      return fin(`El cerdito se ha quedado sin flechas. ${f===1?'Le falta un paso':'Le faltan '+NUM[f]+' pasos'} para llegar a la manzana.`,
+        r.prog.length<r.max?'Pon más flechas y prueba otra vez.':'Borra con la esponja y prueba otro camino.')}
+    const di=r.prog[i],d=DIRS[di],nx=r.x+d.dx,ny=r.y+d.dy;r.now=i;
+    if(choca(r,nx,ny)){ // amaga el paso y rebota; la flecha que no vale queda la última, que es la que borra la esponja
+      const roca=r.rocas.has(nx+','+ny);r.bad=i;r.prog.length=i+1;drawFila();pigTo(r.x+d.dx*.3,r.y+d.dy*.3,d);beep(150,.12,'triangle',.08);
+      setTimeout(()=>vivo()&&pigTo(r.x,r.y),220);
+      return setTimeout(()=>vivo()&&fin(roca?'¡Pum! Ahí hay una piedra y el cerdito no puede pasar.':'¡Uy! Por ahí se acaba el corral.',
+        'Borra esa flecha con la esponja y pon otra.'),600)}
+    drawFila();r.x=nx;r.y=ny;i++;pigTo(nx,ny,d);beep(440+di*60,.06);say(d.name,false);
+    if(nx===r.fx&&ny===r.fy)return setTimeout(()=>{if(!vivo())return; // ¡ñam!
+      r.running=false;r.now=-1;r.ok=true;r.used=i;oink();renderTab();checkReto()},550);
+    setTimeout(paso,700);
+  };
+  pigTo(r.x,r.y);setTimeout(paso,250);
+}
+document.querySelectorAll('#flechas [data-d]').forEach(b=>b.onclick=()=>progAdd(+b.dataset.d));
+$('fDel').onclick=progDel;$('fGo').onclick=progGo;
+
+function startReto(){
+  const kinds=['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa'].filter(k=>k!==lastKind);
+  let kind=pick(kinds),r=null;
+  const base=grid.slice();
+  if(kind==='serie'){
+    const spot=findSky(6,1);
+    if(spot){const pat=pick(level<4?['AB']:['AB','AAB','ABB','ABC']),ids=EDU.slice().sort(()=>Math.random()-.5);
+      const at=i=>ids[pat.charCodeAt(i%pat.length)-65],seq=[],ghost=[];
+      for(let i=0;i<4;i++){grid[idx(spot.cs+i,spot.base)]=at(i);seq.push(at(i))}
+      for(let i=4;i<6;i++)ghost.push({x:spot.cs+i,y:spot.base,b:at(i),miss:0});
+      r={kind,b:0,n:2,seq,ghost};lookAt(spot.cs,6)}
+  }else if(kind==='suma'){
+    const n=Math.min(10,3+Math.floor(level/2)),k=1+rand(n-1),rows=Math.ceil(k/5),spot=findSky(5,rows);
+    if(spot){const b=pick(EDU);stampFrame(spot,k,b,rows);r={kind,b,n,k};lookAt(spot.cs,5)}
+  }else if(kind==='resta'){
+    const n0=Math.min(10,4+Math.floor(level/2)),d=1+rand(Math.min(3,1+Math.floor(level/3))),rows=Math.ceil(n0/5),spot=findSky(5,rows);
+    if(spot){const b=pick(EDU);stampFrame(spot,n0,b,rows);r={kind,b,n:n0-d,n0,slots:n0};lookAt(spot.cs,5)}
+  }else if(kind==='alta'){
+    const k=Math.min(6,2+Math.floor(level/3)),g=findGround(k);
+    if(g){const a=pick(EDU),b=pick(EDU.filter(v=>v!==a));for(let i=1;i<=k;i++)grid[idx(g.c,g.t-i)]=a;r={kind,b,n:k+1,k,a};lookAt(g.c,1)}
+  }else if(kind==='copia'){
+    const m=makeModelo();
+    if(m){r={kind,b:0,n:m.ghost.length,...m};lookAt(m.cs,m.w*2+1)}
+  }else if(kind==='programa'){
+    const t=makeTablero();
+    r={kind,b:0,n:1,...t,x:t.sx,y:t.sy,prog:[],fails:0,now:-1,bad:-1};
+  }
+  if(!r){ // retos de siempre (y recurso si no hay sitio en el cielo)
+    if(!['pon','torre','pica','cerdos'].includes(kind))kind='pon';
+    let n=Math.min(10,2+Math.floor(level/2)),b=0;
+    if(kind==='cerdos'){n=Math.min(n,5);if(pigs.length+n>MAXPIGS)kind='pon'}
+    if(kind==='pica'){b=pick([3,2]);if(countOf(b)<12)kind='pon'}
+    if(kind==='torre'){b=pick([8,9,12,6,10]);n=Math.max(3,Math.min(n,7))}
+    if(kind==='pon')b=pick([10,8,9,12,6,11,13,4]);
+    r={kind,b,n};
+  }
+  r.base=base;r.dug=0;r.added=0;r.slots=r.slots||r.n;
+  lastKind=r.kind;reto=r;r.shown=progress(r);
+  $('tReto').classList.remove('call');
+  renderReto();say(phrase(r));save();
+}
+function phrase(r){
+  const p='A ver si eres capaz de ';
+  if(r.kind==='pon')return p+`poner ${NUM[r.n]} ${PLURAL[r.b]}.`;
+  if(r.kind==='torre')return p+`hacer una torre de ${NUM[r.n]} ${PLURAL[r.b]}, uno encima de otro.`;
+  if(r.kind==='pica')return p+`picar ${NUM[r.n]} ${PLURAL[r.b]}.`;
+  if(r.kind==='serie')return p+`seguir la serie: ${r.seq.map(i=>NAME[i]).join(', ')}. ¿Qué toca ahora?`;
+  if(r.kind==='suma')return `Hay ${r.k===1?'un '+SING[r.b]:NUM[r.k]+' '+PLURAL[r.b]}. `+p+`que haya ${NUM[r.n]}.`;
+  if(r.kind==='resta')return `Hay ${NUM[r.n0]} ${PLURAL[r.b]}. `+p+`dejar solo ${NUM[r.n]}. Usa el pico.`;
+  if(r.kind==='alta')return `Esta torre tiene ${NUM[r.k]} ${PLURAL[r.a]}. `+p+`hacer una más alta con ${PLURAL[r.b]}.`;
+  if(r.kind==='copia')return p+'hacer una construcción igual que esta en el cuadro amarillo.';
+  if(r.kind==='programa')return p+'llevar al cerdito hasta la manzana. Pon las flechas y toca el botón verde.';
+  return p+`poner ${NUM[r.n]} cerditos.`;
+}
+function winText(r){
+  const cap=s=>s[0].toUpperCase()+s.slice(1);
+  if(r.kind==='serie')return '¡Has seguido la serie!';
+  if(r.kind==='suma')return `${cap(NUM[r.k])} y ${NUM[r.n-r.k]} son ${NUM[r.n]}.`;
+  if(r.kind==='resta')return `${cap(NUM[r.n0])} menos ${NUM[r.n0-r.n]} ${r.n===1?'es':'son'} ${NUM[r.n]}.`;
+  if(r.kind==='alta')return `Tu torre tiene ${NUM[r.n]} y la otra ${NUM[r.k]}. ${cap(NUM[r.n])} es más que ${NUM[r.k]}.`;
+  if(r.kind==='copia')return `Las dos construcciones son iguales: ${NUM[r.n]} bloques, cada uno en su sitio.`;
+  if(r.kind==='programa')return `El cerdito ha llegado a la manzana con ${r.used===1?'una flecha':NUM[r.used]+' flechas'}.`;
+  return `${cap(NUM[r.n])} ${r.kind==='cerdos'?'cerditos':PLURAL[r.b]}.`;
+}
+function progress(r){
+  if(r.kind==='pica')return r.dug;
+  if(r.kind==='cerdos')return r.added;
+  if(r.kind==='programa')return r.ok?1:0;
+  if(r.ghost)return r.ghost.filter(g=>grid[idx(g.x,g.y)]===g.b).length; // serie y copia: casillas marcadas con el bloque que toca
+  const isNew=i=>grid[i]===r.b&&r.base[i]!==r.b;
+  if(r.kind==='torre'||r.kind==='alta'){let best=0;for(let x=0;x<COLS;x++){let run=0;for(let y=0;y<ROWS;y++){if(isNew(idx(x,y))){run++;if(run>best)best=run}else run=0}}return best}
+  let n=0;for(let i=0;i<grid.length;i++)if(isNew(i))n++;return n;
+}
+function drawSlots(){
+  const r=reto,sl=$('retoSlots'),raw=progress(r);sl.textContent='';
+  for(let i=0;i<r.slots;i++){const s=document.createElement('div');let on=i<raw;
+    if(r.ghost){const g=r.ghost[i];on=grid[idx(g.x,g.y)]===g.b;if(on||r.kind==='copia')s.appendChild(texCanvas(g.b));else s.textContent='❓'}
+    else if(r.kind==='cerdos')s.textContent='🐷';else s.appendChild(texCanvas(r.kind==='programa'?'manzana':r.b));
+    s.className='s'+(on?' on':'')+(r.kind==='serie'&&!on?' ask':'')+(r.kind==='resta'&&i>=r.n?' quita':'');sl.appendChild(s)}
+}
+function renderReto(){
+  const el=$('reto');el.hidden=false;el.classList.remove('done');
+  $('retoIco').textContent={pon:'🧱',torre:'🗼',pica:'⛏️',cerdos:'🐷',serie:'➡️',suma:'➕',resta:'➖',alta:'🗼',copia:'👀',programa:'🐷'}[reto.kind];
+  $('retoSlots').className=(reto.kind==='torre'||reto.kind==='alta')?'torre':'';
+  drawSlots();
+  $('rHard').hidden=!['pon','torre','pica','cerdos'].includes(reto.kind);$('rSay').hidden=false;$('rClose').hidden=false;
+  const prog=reto.kind==='programa';progUI(prog);if(prog)renderTab();
+}
+function checkReto(){
+  if(!reto||reto.won)return;
+  const r=reto,raw=progress(r);
+  if(raw===r.shown)return;
+  const up=raw>r.shown;r.shown=raw;drawSlots();
+  if(r.kind==='resta'){
+    if(raw===r.n)return winReto();
+    if(raw<r.n)say(raw?`Ahora hay ${NUM[raw]}. Pon ${NUM[r.n-raw]} más.`:`No queda ninguno. Pon ${NUM[r.n]}.`,false);
+    else if(NUM[raw])say(NUM[raw],false);
+    return;
+  }
+  if(raw>=r.n)return winReto();
+  if(r.ghost)return;
+  if(up&&raw>0){say(NUM[raw],false);beep(500+raw*60,.07)}
+}
+function winReto(){
+  const r=reto;r.won=true;stars++;level++;$('starN').textContent=stars;
+  $('reto').classList.add('done');$('rHard').hidden=true;$('rSay').hidden=true;$('rClose').hidden=true;
+  fanfare();fireworks();pigs.forEach(p=>{p.vy=-.17;p.joy=60});
+  say(`¡Lo has conseguido! ${winText(r)} ¡Una estrella!`);
+  save();setTimeout(()=>{if(reto===r)closeReto()},4200);
+}
+function closeReto(){reto=null;$('reto').hidden=true;progUI(false);$('tReto').classList.add('call')}
+function fireworks(){
+  const cols=['#ffd43b','#e8414b','#5cb83a','#3a7fd9','#fff6e0','#f2a0b0'];
+  for(let k=0;k<4;k++){const cx=camC+W/S*(.2+Math.random()*.6),cy=(-offY+H*(.2+Math.random()*.3))/S;
+    for(let i=0;i<22;i++){const a=Math.random()*6.283,v=.04+Math.random()*.12;
+      particles.push({x:cx,y:cy,vx:Math.cos(a)*v,vy:Math.sin(a)*v-.05,life:50+Math.random()*30,col:cols[(k+i)%cols.length]})}}
+}
+$('tReto').onclick=()=>{if(reto&&!reto.won){say(phrase(reto));return}if(!reto)startReto()};
+$('rSay').onclick=()=>reto&&say(phrase(reto));
+$('rClose').onclick=()=>{closeReto();beep(300,.06)};
+$('rHard').onclick=()=>{if(!reto)return;const max=reto.kind==='torre'?8:(reto.kind==='cerdos'?Math.min(8,reto.n+MAXPIGS-pigs.length):10);
+  if(reto.n>=max){say('¡Ya es el más difícil!');return}
+  reto.n=Math.min(max,reto.n+2);reto.slots=reto.n;renderReto();reto.shown=progress(reto);say('¡Más difícil! '+phrase(reto))};
+
+// --- toques: poner / picar arrastrando el dedo ---
+let painting=false,lastCell=null;
+function cellAt(e){const r=cv.getBoundingClientRect();return{x:Math.floor((e.clientX-r.left)/S+camC),y:Math.floor((e.clientY-r.top-offY)/S)}}
+function pigIn(x,y){return pigs.some(p=>Math.floor(p.x+.5)===x&&Math.floor(p.y+.5)===y)}
+const HOUSE=[[0,0,4,0,0],[0,4,4,4,0],[4,4,4,4,4],[8,9,8,8,8],[8,8,8,-1,8],[8,8,8,-1,8]];
+function stampHouse(x,y){
+  while(y<ROWS-1&&!solid(x,y+1))y++;           // baja hasta el suelo
+  while(y>6&&solid(x,y))y--;                    // o sube si has tocado dentro de la tierra
+  HOUSE.forEach((row,ry)=>row.forEach((v,rx)=>{const cx=x-2+rx,cy=y-(HOUSE.length-1)+ry;
+    if(!v||cx<0||cx>=COLS||cy<0||cy>=ROWS||pigIn(cx,cy)||enCopia(cx,cy))return;grid[idx(cx,cy)]=v<0?0:v}));
+  [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
+}
+function act(e){
+  const {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
+  const key=x+','+y;if(key===lastCell)return;lastCell=key;
+  const i=idx(x,y);
+  if(mode==='pig'){ // tocar un cerdo lo hace saltar; tocar un hueco añade uno
+    const p=pigs.find(p=>Math.abs(p.x-x)<1&&Math.abs(p.y-y)<1);
+    if(p){p.vy=-.175;p.joy=40;oink();return}
+    if(solid(x,y))return;
+    if(pigs.length>=MAXPIGS){say('¡Ya hay muchos cerditos!');return}
+    addPig(x,y);pigs[pigs.length-1].joy=30;oink();if(reto)reto.added++;
+  }else if(mode==='house'){stampHouse(x,y)}
+  else if(enCopia(x,y)===1){say('Ese es el modelo. Haz uno igual en el cuadro amarillo.');return} // el modelo no se toca
+  else if(mode==='put'){if(grid[i]===current||pigIn(x,y))return;
+    const g=reto&&!reto.won&&reto.ghost&&reto.ghost.find(g=>g.x===x&&g.y===y);
+    if(g&&current!==g.b){ // no encaja en la serie o en la copia: se explica, no se castiga; a la segunda aparece una pista
+      g.miss++;burst(x,y,current);beep(220,.1,'triangle',.06);
+      say(reto.kind==='serie'?`Mira la serie: ${reto.seq.map(i=>NAME[i]).join(', ')}. ¿Qué toca ahora?`
+        :g.miss<2?`Eso es ${UN[current]}. Mira el modelo: en ese sitio va otro bloque.`:`Mira el modelo: ahí va ${DEF[g.b]}.`);return}
+    if(!g&&enCopia(x,y)){beep(220,.1,'triangle',.06);say('En el modelo ese hueco está vacío. Ahí no va nada.');return}
+    grid[i]=current;beep(300+current*40,.06);if(g)say(NAME[current],false)}
+  else{if(!grid[i])return;const v=grid[i];burst(x,y,v);grid[i]=0;beep(150,.07,'triangle',.08);if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
+  checkReto();save();
+}
+function burst(x,y,id){for(let k=0;k<8;k++)particles.push({x:x+.5,y:y+.5,vx:(Math.random()-.5)*.12,vy:-Math.random()*.12,life:30,id})}
+cv.addEventListener('pointerdown',e=>{painting=true;lastCell=null;try{cv.setPointerCapture(e.pointerId)}catch(_){}act(e)});
+cv.addEventListener('pointermove',e=>{if(painting&&(mode==='put'||mode==='dig'))act(e)});
+['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,()=>{painting=false;lastCell=null}));
+
+// --- dibujo ---
+function pigPx(c,x,y,sz,f,leg,asleep){ // cerdito pixelado de sz×sz con la esquina de arriba a la izquierda en x,y
+  const s=sz/8;y+=sz*.25;
+  const px=(a,b,w,h,col)=>{c.fillStyle=col;c.fillRect(f?x+sz-(a+w)*s:x+a*s,y+b*s*.75,w*s,h*s*.75)};
+  px(1,6,1,2,'#d8798a');px(5,6,1,2,'#d8798a');px(2,6,1,2-leg,'#c76a7b');px(6,6,1,2-leg,'#c76a7b');
+  px(0,2,7,4,'#f2a0b0');px(4,0,4,4,'#f5b0be');px(4,0,1,1,'#d8798a');px(7,0,1,1,'#d8798a');
+  px(7,2,1,2,'#e68a9c');px(0,3,1,1,'#e68a9c');
+  if(asleep)px(5,1,2,.5,'#2a1d14');else px(5,1,1,1,'#2a1d14');
+}
+function drawPig(p,asleep){
+  const x=p.x*S,y=p.y*S+S*.25;
+  pigPx(ctx,x,p.y*S,S,p.vx<0,(!asleep&&Math.floor(p.t/8)%2)?1:0,asleep);
+  if(p.joy>0){ctx.fillStyle='#e8414b';ctx.font=`${S*.4}px system-ui`;ctx.fillText('❤',x+S*.3,y-S*.2-(40-Math.min(40,p.joy))*.5)}
+  else if(asleep){ctx.fillStyle='#fff6e0';ctx.font=`${S*.28}px "Press Start 2P",monospace`;ctx.fillText('z',x+S*.75,y-S*.1-Math.sin((fr+p.t)/25)*3)}
+}
+function marco(x,y,w,h,col,dash){ // recuadro con sombra oscura debajo, para que se vea igual de día que de noche
+  ctx.setLineDash(dash||[]);ctx.lineWidth=7;ctx.strokeStyle='rgba(42,29,20,.6)';ctx.strokeRect(x,y,w,h);
+  ctx.lineWidth=3;ctx.strokeStyle=col;ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
+}
+const lerp=(a,b,t)=>Math.round(a+(b-a)*t);
+function tick(){
+  fr++;
+  if(scrollDir){camGoal=null;camC+=scrollDir*.15;clampCam()}
+  else if(camGoal!==null){camC+=(camGoal-camC)*.12;if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}clampCam()}
+  const maxC=COLS-W/S;$('navL').hidden=camC<=.01;$('navR').hidden=camC>=maxC-.01;
+  nightAmt+=((night?1:0)-nightAmt)*.05;const na=nightAmt;
+  // cielo
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,`rgb(${lerp(95,10,na)},${lerp(180,14,na)},${lerp(236,48,na)})`);
+  g.addColorStop(1,`rgb(${lerp(191,44,na)},${lerp(230,52,na)},${lerp(251,110,na)})`);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  if(na>.05){skyStars.forEach(s=>{ctx.globalAlpha=na*(.55+.45*Math.sin(fr/30+s.p));ctx.fillStyle='#fff6e0';ctx.fillRect(s.x*W,s.y*H,s.s,s.s)});ctx.globalAlpha=1}
+  // sol que se esconde y luna que sale
+  const sx=W-S*2.2,sy=S*.6+na*H;
+  ctx.fillStyle='#ffe066';ctx.fillRect(sx,sy,S*1.2,S*1.2);ctx.fillStyle='#fff3a6';ctx.fillRect(sx+S*.25,sy+S*.25,S*.7,S*.7);
+  const my=S*.6+(1-na)*H;ctx.fillStyle='#e8ecf4';ctx.fillRect(sx,my,S*1.2,S*1.2);ctx.fillStyle='#c3cad8';ctx.fillRect(sx+S*.2,my+S*.25,S*.3,S*.3);ctx.fillRect(sx+S*.7,my+S*.7,S*.25,S*.25);
+  if(!clouds.length)clouds=[0,1,2].map(()=>({x:Math.random()*W,y:20+Math.random()*H*.2,w:60+Math.random()*60}));
+  clouds.forEach(c=>{c.x+=.15;if(c.x>W+20)c.x=-c.w-20;ctx.fillStyle=`rgba(255,255,255,${.9-.6*na})`;
+    ctx.fillRect(c.x,c.y,c.w,S*.5);ctx.fillRect(c.x+c.w*.2,c.y-S*.3,c.w*.5,S*.35)});
+
+  // mundo
+  ctx.save();ctx.translate(-Math.round(camC*S),offY);
+  const x0=Math.max(0,Math.floor(camC)),x1=Math.min(COLS-1,Math.floor(camC+W/S));
+  const lights=[];
+  for(let y=0;y<ROWS;y++)for(let x=x0;x<=x1;x++){const v=grid[idx(x,y)];if(!v)continue;
+    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(tex[v],x*S,y*S,S,S);ctx.globalAlpha=1;
+    if(v===13)lights.push([x,y,3.2]);
+    else if(v===9&&na>.05){ctx.fillStyle=`rgba(255,214,90,${.5*na})`;ctx.fillRect(x*S,y*S,S,S);lights.push([x,y,1.6])}
+    else if(v!==11&&v!==7&&v!==9){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(x*S,y*S+S-2,S,2)}}
+  // copia: el modelo en un marco liso, una flecha y, al lado, el cuadro amarillo donde hay que hacerlo igual
+  if(reto&&reto.kind==='copia'&&!reto.won){const r=reto,py=r.y0*S-4,pw=r.w*S+8,ph=r.h*S+8,u=S/8,ax=(r.cs+r.w)*S,ay=(r.y0+r.h/2)*S;
+    marco(r.cs*S-4,py,pw,ph,'#fff6e0');marco(r.zx*S-4,py,pw,ph,'#ffd43b',[8,6]);
+    ctx.fillStyle='#fff6e0';ctx.fillRect(ax+u*1.5,ay-u/2,u*3,u);ctx.beginPath();ctx.moveTo(ax+u*4.5,ay-u*1.5);ctx.lineTo(ax+u*6.5,ay);ctx.lineTo(ax+u*4.5,ay+u*1.5);ctx.fill();
+    // pista: en el modelo parpadea el bloque que toca copiar
+    r.ghost.forEach(g=>{if(g.miss<2||grid[idx(g.x,g.y)]===g.b)return;
+      ctx.globalAlpha=.55+.45*Math.sin(fr/8);ctx.strokeStyle='#ffd43b';ctx.lineWidth=4;ctx.strokeRect(g.mx*S+2,g.my*S+2,S-4,S-4);ctx.globalAlpha=1})}
+  // huecos de la serie o de la copia por rellenar
+  if(reto&&reto.ghost&&!reto.won)reto.ghost.forEach(g=>{if(grid[idx(g.x,g.y)]===g.b)return;
+    if(g.miss>=2){ctx.globalAlpha=.4;ctx.drawImage(tex[g.b],g.x*S,g.y*S,S,S)}
+    ctx.globalAlpha=.65+.3*Math.sin(fr/10);ctx.strokeStyle='#fff6e0';ctx.lineWidth=3;ctx.setLineDash([6,5]);
+    ctx.strokeRect(g.x*S+3,g.y*S+3,S-6,S-6);ctx.setLineDash([]);
+    if(g.miss<2&&reto.kind==='serie'){ctx.fillStyle='#fff6e0';ctx.font=`${S*.4}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.fillText('?',g.x*S+S/2,g.y*S+S*.72);ctx.textAlign='start'}
+    ctx.globalAlpha=1});
+  // cerditos (de noche duermen)
+  const asleep=na>.6;
+  pigs.forEach(p=>{
+    p.t++;if(p.joy>0)p.joy--;
+    p.vy=Math.min(p.vy+.0125,.25);let ny=p.y+p.vy;
+    const cx=Math.floor(p.x+.5);
+    if(p.vy>0&&solid(cx,Math.floor(ny+.98))){ny=Math.floor(ny+.98)-1;p.vy=0}
+    if(p.vy<0&&solid(cx,Math.floor(ny))){ny=Math.floor(ny)+1;p.vy=0}
+    p.y=ny;
+    if(!asleep||p.joy>0){
+      if(Math.random()<.004)p.vx*=-1;
+      const nx=p.x+p.vx,front=Math.floor(nx+(p.vx>0?.9:.1)),row=Math.floor(p.y+.5);
+      if(solid(front,row)){if(!solid(front,row-1)&&p.vy===0)p.vy=-.16;else p.vx*=-1}else p.x=nx;
+    }
+    drawPig(p,asleep&&p.joy<=0)});
+  // trocitos y fuegos artificiales
+  particles=particles.filter(q=>{q.vy+=.0075;q.x+=q.vx;q.y+=q.vy;q.life--;
+    if(q.col){ctx.fillStyle=q.col;ctx.fillRect(q.x*S,q.y*S,S/6,S/6)}else ctx.drawImage(tex[q.id],q.x*S,q.y*S,S/5,S/5);return q.life>0});
+  ctx.restore();
+
+  // oscuridad de la noche, con luz de antorchas y ventanas
+  if(na>.02){
+    lctx.globalCompositeOperation='source-over';lctx.clearRect(0,0,W,H);lctx.fillStyle=`rgba(8,12,48,${.6*na})`;lctx.fillRect(0,0,W,H);
+    lctx.globalCompositeOperation='destination-out';
+    lights.forEach(([x,y,r])=>{const lx=(x+.5-camC)*S,ly=(y+.5)*S+offY,rr=r*S*(1+.04*Math.sin(fr/6+x));
+      const lg=lctx.createRadialGradient(lx,ly,0,lx,ly,rr);lg.addColorStop(0,'rgba(0,0,0,1)');lg.addColorStop(1,'rgba(0,0,0,0)');
+      lctx.fillStyle=lg;lctx.fillRect(lx-rr,ly-rr,rr*2,rr*2)});
+    ctx.drawImage(light,0,0,W,H);
+  }
+  requestAnimationFrame(tick);
+}
+
+window.addEventListener('resize',resize);
+resize();
+if(!load()){genWorld();camC=COLS/2-W/S/2}
+clampCam();$('starN').textContent=stars;$('tNight').textContent=night?'☀️':'🌙';
+requestAnimationFrame(tick);
+
+// sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
