@@ -68,6 +68,15 @@ El service worker solo funciona en `localhost` o por HTTPS.
 
 El workflow `.github/workflows/pages.yml` publica en GitHub Pages en cada push a `main`. En el repo: *Settings → Pages → Source: GitHub Actions*.
 
+## Dispositivos antiguos
+
+El juego está escrito para funcionar desde iOS 12 (un iPad Air de 1.ª generación), aunque en ese sistema solo está probado en simulación:
+
+- Sin eventos de puntero (antes de iOS 13) los toques sobre el mundo usan eventos táctiles.
+- Sin `gap` en flex (antes de iOS 14.5) el script lo detecta y separa botones y casillas con márgenes (`.sin-gap`).
+- La resolución de dibujo baja sola si el aparato no llega a unos 28 fotogramas por segundo; al ser pixelado apenas se nota.
+- El código no usa sintaxis posterior a ES2018.
+
 ## iPhone / iPad
 
 - La voz y el sonido solo arrancan tras el primer toque. Si no suena, revisar el interruptor de silencio.
