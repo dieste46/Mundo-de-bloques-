@@ -28,7 +28,8 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 |---|---|---|
 | 🧱 Pon N bloques · 🗼 torre · ⛏️ pica · 🐷 cerditos | Conteo hasta 10 | Cuenta en voz alta según avanza |
 | ➡️ Sigue la serie | Patrones AB, AAB, ABB, ABC | Repite la serie; a la segunda marca el bloque |
-| ➕ Que haya N · ➖ Deja solo N | Sumas y restas hasta 10 | Dice cuántos hay y cuántos faltan |
+| ➕ Que haya N · ➖ Deja solo N | Sumas y restas hasta 10, con la cuenta escrita en la cabecera (3 + ? = 7, 8 - ? = 5) | Dice cuántos hay y cuántos faltan |
+| ➕ Junta | Sumar dos grupos: aparecen dos torres (3 + 2 = ?) y se toca el número. Fácil hasta 5, medio de 4 a 8, difícil de 6 a 10 | Se puede contar tocando cada bloque. Al primer fallo dice qué número ha tocado y anima a contar; al segundo, el juego cuenta los bloques con él en voz alta y marca el número |
 | 🗼 Una torre más alta | Comparar cantidades | — |
 | 👀 Copia el modelo | Orientación espacial, atención | Dice qué bloque ha puesto; a la segunda marca el que toca y lo hace parpadear en el modelo |
 | 🐷 Programa al cerdito | Secuencias (tipo Bee-Bot), izquierda/derecha | Explica por qué no ha llegado (choque, faltan pasos); a la segunda marca las flechas del camino |
@@ -43,7 +44,7 @@ Dificultad por tramos (nivel 0–3 fácil, 4–7 medio, 8+ difícil): modelos de
 index.html            todo el juego (HTML + CSS + JS)
 sw.js                 service worker: precarga y caché para jugar sin conexión
 manifest.json         PWA
-icon.svg, *.png       iconos (los PNG salen del SVG)
+*.png                 iconos: una B hecha con bloques del juego (los genera un script con las mismas texturas)
 fonts/                Press Start 2P alojada en el repo (licencia OFL en fonts/OFL.txt)
 ```
 

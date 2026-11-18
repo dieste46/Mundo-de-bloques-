@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Bloques">
 <title>Mundo de Bloques</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/press-start-2p.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -29,7 +29,7 @@
 .sin-gap #hud>*+*,.sin-gap #tab>*+*{margin-top:8px}
 .sin-gap #vozCard>*+*{margin-top:12px}.sin-gap #vozList>*+*{margin-top:6px}
 .sin-gap #blocks>*+*,.sin-gap #flechas>*+*,.sin-gap #reto>*+*,.sin-gap #stars>*+*,.sin-gap .mundo>*+*{margin-left:8px}
-.sin-gap #tools>*+*,.sin-gap .vrow>*+*{margin-left:6px}
+.sin-gap #tools>*+*,.sin-gap .vrow>*+*,.sin-gap #retoOpc>*+*{margin-left:6px}
 .sin-gap #retoSlots .s,.sin-gap #fila .f{margin:2px}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--panel);color:var(--ink);font-family:var(--pixel);touch-action:manipulation;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
@@ -79,12 +79,21 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #reto{box-sizing:border-box;margin-left:64px;max-width:calc(100% - 64px);background:var(--glass);border:4px solid var(--sel);padding:8px;display:flex;align-items:center;gap:8px}
 @media (min-width:700px){#reto{margin:0 64px;max-width:calc(100% - 128px)}}
 /* en móvil: botones arriba y casillas debajo, para que diez casillas no ocupen media pantalla */
-@media (max-width:519px){#reto{flex-wrap:wrap;justify-content:center}#retoSlots{order:5;flex-basis:100%}#retoSlots.torre{align-items:center}}
+@media (max-width:519px){#reto{flex-wrap:wrap;justify-content:center}#retoSlots{order:5;flex-basis:100%}#retoSlots.torre{align-items:center}#retoOpc{order:6;flex-basis:100%;justify-content:center}#retoEq{font-size:14px}}
 #reto .rb{flex:0 0 auto;width:44px;height:44px;border:3px solid var(--slot);background:var(--panel-2);padding:0;font-size:20px;font-family:system-ui}
 #retoIco{flex:0 0 auto;font-size:22px;font-family:system-ui}
 #retoNum{flex:0 0 auto;font-size:20px;color:var(--sel)} /* la cifra del reto, para unir cantidad y número */
+/* la cuenta escrita (3 + ? = 7) y los números que se tocan para responder */
+#retoEq{flex:0 0 auto;font-size:18px;white-space:nowrap}
+#retoEq b{font-weight:normal;color:var(--sel)}
+#reto.done #retoEq,#reto.done #retoEq b{color:var(--slot)}
+#retoOpc{display:flex;gap:6px}
+#retoOpc .opc{width:52px;height:52px;border:3px solid var(--slot);background:var(--panel-2);font-size:20px;padding:0}
+#retoOpc .opc.pista{background:var(--sel);border-color:var(--sel-edge);color:var(--slot);animation:late 1.2s ease-in-out infinite}
+#retoOpc .opc.mal{animation:tiembla .35s 2}
 #reto.done #retoNum{color:var(--slot)}
 #retoSlots{display:flex;flex-wrap:wrap;gap:4px;min-width:0;justify-content:center}
+#retoSlots:empty{display:none}
 #retoSlots.torre{flex-direction:column-reverse;flex-wrap:nowrap}
 #retoSlots .s{width:22px;height:22px;opacity:.28;display:grid;place-items:center;font-family:system-ui;font-size:16px;outline:2px dashed var(--ink);outline-offset:-2px}
 #retoSlots .s canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
@@ -149,7 +158,9 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
         <button class="rb" id="rSay" aria-label="Repetir el reto">🔊</button>
         <span id="retoIco"></span>
         <span id="retoNum" hidden></span>
+        <span id="retoEq" hidden></span>
         <div id="retoSlots"></div>
+        <div id="retoOpc" hidden></div>
         <button class="rb" id="rHard" aria-label="Más difícil">💪</button>
         <button class="rb" id="rClose" aria-label="Dejar el reto">✖</button>
       </div>
@@ -307,7 +318,7 @@ let calidad=3,tAnt=0,lento=16,frCal=0;
 // Dificultad: cada familia de retos lleva su propio nivel. Parte de `base` (lo elige el adulto en ajustes) y luego sube o baja solo.
 // niv[familia]=[nivel, tropiezos seguidos]
 let base=0,niv={};
-const FAM={pon:'contar',torre:'contar',pica:'contar',cerdos:'contar'}; // el resto de retos son cada uno su familia
+const FAM={pon:'contar',torre:'contar',pica:'contar',cerdos:'contar'}; // el resto de retos (serie, suma, junta, resta, alta, copia, programa) son cada uno su familia
 const nivel=k=>{const f=FAM[k]||k;return niv[f]?niv[f][0]:base};
 const tier=k=>{const l=nivel(k);return l<4?0:l<8?1:2}; // tramo de dificultad: fácil, medio, difícil
 const skyStars=(()=>{const r=rng(77);return Array.from({length:40},()=>({x:r(),y:r()*.6,s:r()<.2?3:2,p:r()*6}))})();
@@ -665,7 +676,7 @@ document.querySelectorAll('#flechas [data-d]').forEach(b=>b.onclick=()=>progAdd(
 $('fDel').onclick=progDel;$('fGo').onclick=progGo;
 
 function startReto(){
-  const kinds=['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa'].filter(k=>k!==lastKind);
+  const kinds=['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta'].filter(k=>k!==lastKind);
   let kind=pick(kinds),r=null,level=nivel(kind);
   const base=grid.slice();
   if(kind==='serie'){
@@ -687,6 +698,17 @@ function startReto(){
   }else if(kind==='copia'){
     const m=makeModelo();
     if(m){r={kind,b:0,n:m.ghost.length,...m};lookAt(m.cs,m.w*2+1,m.y0)}
+  }else if(kind==='junta'){
+    // dos torres juntas: a bloques de un tipo y bq de otro, que suman t (fácil hasta 5, medio de 4 a 8, difícil de 6 a 10)
+    const [lo,hi]=[[2,5],[4,8],[6,10]][tier('junta')],t=lo+rand(hi-lo+1),amin=Math.max(1,t-5),a=amin+rand(Math.min(5,t-1)-amin+1),bq=t-a;
+    const spot=findSky(3,Math.max(a,bq));
+    if(spot){const A=pick(EDU),B=pick(EDU.filter(v=>v!==A&&!(A===9&&v===12)&&!(A===12&&v===9))),cells=[]; // cristal y nieve juntos se confunden
+      for(let i=0;i<a;i++)cells.push({x:spot.cs,y:spot.base-i,b:A});
+      for(let i=0;i<bq;i++)cells.push({x:spot.cs+2,y:spot.base-i,b:B});
+      cells.forEach(c=>grid[idx(c.x,c.y)]=c.b);
+      const otros=[t-2,t-1,t+1,t+2].filter(v=>v>=1&&v<=10).sort(()=>Math.random()-.5).slice(0,2);
+      r={kind,b:0,n:1,slots:0,a,bq,A,B,t,cells,cont:[],cs:spot.cs,bs:spot.base,opts:[t,...otros].sort(()=>Math.random()-.5)};
+      lookAt(spot.cs,3,spot.base-Math.max(a,bq)+1)}
   }else if(kind==='programa'){
     const t=makeTablero();
     r={kind,b:0,n:1,...t,x:t.sx,y:t.sy,prog:[],fails:0,now:-1,bad:-1};
@@ -701,7 +723,7 @@ function startReto(){
     if(kind==='pon')b=pick([10,8,9,12,6,11,13,4]);
     r={kind,b,n};
   }
-  r.base=base;r.dug=0;r.added=0;r.slots=r.slots||r.n;
+  r.base=base;r.dug=0;r.added=0;if(r.slots===undefined)r.slots=r.n;
   lastKind=r.kind;reto=r;r.shown=r.ini=progress(r);
   antes=null;$('undoBtn').classList.add('off'); // el reto planta bloques: lo de antes ya no se puede deshacer
   $('tReto').classList.remove('call');
@@ -719,6 +741,7 @@ function phrase(r){
   if(r.kind==='resta')return `Hay ${NUM[r.n0]} ${PLURAL[r.b]}. `+p+`dejar solo ${NUM[r.n]}. Usa el pico.`;
   if(r.kind==='alta')return `Esta torre tiene ${NUM[r.k]} ${PLURAL[r.a]}. `+p+`hacer una más alta con ${PLURAL[r.b]}.`;
   if(r.kind==='copia')return p+'hacer una construcción igual que esta en el cuadro amarillo.';
+  if(r.kind==='junta'){const q=(n,b)=>n===1?'un '+SING[b]:NUM[n]+' '+PLURAL[b];return `Aquí hay ${q(r.a,r.A)} y ${q(r.bq,r.B)}. ¿Cuántos son en total? Toca el número.`}
   if(r.kind==='programa')return p+'llevar al cerdito hasta la manzana. Pon las flechas y toca el botón verde.';
   return p+`poner ${NUM[r.n]} cerditos.`;
 }
@@ -726,6 +749,7 @@ function winText(r){
   const cap=s=>s[0].toUpperCase()+s.slice(1);
   if(r.kind==='serie')return '¡Has seguido la serie!';
   if(r.kind==='suma')return `${cap(NUM[r.k])} y ${NUM[r.n-r.k]} son ${NUM[r.n]}.`;
+  if(r.kind==='junta')return `${cap(NUM[r.a])} y ${NUM[r.bq]} son ${NUM[r.t]}.`;
   if(r.kind==='resta')return `${cap(NUM[r.n0])} menos ${NUM[r.n0-r.n]} ${r.n===1?'es':'son'} ${NUM[r.n]}.`;
   if(r.kind==='alta')return `Tu torre tiene ${NUM[r.n]} y la otra ${NUM[r.k]}. ${cap(NUM[r.n])} es más que ${NUM[r.k]}.`;
   if(r.kind==='copia')return `Las dos construcciones son iguales: ${NUM[r.n]} bloques, cada uno en su sitio.`;
@@ -735,7 +759,7 @@ function winText(r){
 function progress(r){
   if(r.kind==='pica')return r.dug;
   if(r.kind==='cerdos')return r.added;
-  if(r.kind==='programa')return r.ok?1:0;
+  if(r.kind==='programa'||r.kind==='junta')return r.ok?1:0;
   if(r.ghost)return r.ghost.filter(g=>grid[idx(g.x,g.y)]===g.b).length; // serie y copia: casillas marcadas con el bloque que toca
   const isNew=i=>grid[i]===r.b&&r.base[i]!==r.b;
   if(r.kind==='torre'||r.kind==='alta'){let best=0;for(let x=0;x<COLS;x++){let run=0;for(let y=0;y<ROWS;y++){if(isNew(idx(x,y))){run++;if(run>best)best=run}else run=0}}return best}
@@ -748,10 +772,36 @@ function drawSlots(){
     else if(r.kind==='cerdos')s.textContent='🐷';else s.appendChild(texCanvas(r.kind==='programa'?'manzana':r.b));
     s.className='s'+(on?' on':'')+(r.kind==='serie'&&!on?' ask':'')+(r.kind==='resta'&&i>=r.n?' quita':'');sl.appendChild(s)}
 }
+// la cuenta escrita del reto: con el hueco (?) mientras se juega y completa al ganar
+function ecuacion(r,fin){
+  const q=v=>fin?String(v):'<b>?</b>';
+  if(r.kind==='suma')return `${r.k} + ${q(r.n-r.k)} = ${r.n}`;
+  if(r.kind==='resta')return `${r.n0} - ${q(r.n0-r.n)} = ${r.n}`;
+  if(r.kind==='junta')return `${r.a} + ${r.bq} = ${q(r.t)}`;
+  return '';
+}
+function elige(v,btn){ // se toca un número en el reto de juntar
+  const r=reto;if(!r||r.won||r.kind!=='junta'||r.contando)return;
+  if(v===r.t){r.ok=true;btn.classList.add('pista');checkReto();return}
+  r.err=(r.err||0)+1;beep(170,.12,'triangle',.07);btn.classList.remove('mal');void btn.offsetWidth;btn.classList.add('mal');
+  if(r.err<2)say(`Ese es el ${NUM[v]}. Cuenta todos los bloques: toca cada uno.`);
+  else cuentaJunta(r);
+}
+function cuentaJunta(r){ // pista: el juego cuenta los bloques en voz alta, uno a uno, y luego marca el número que toca
+  r.contando=true;r.cont=[];say('Mira, los contamos juntos.');let i=0;
+  const paso=()=>{if(reto!==r)return;
+    if(i<r.cells.length){const c=r.cells[i++];r.cont.push(c.x+','+c.y);ult={x:c.x,y:c.y};cifra(i);say(NUM[i],false);beep(500+i*50,.07);setTimeout(paso,800)}
+    else{r.contando=false;say(`Son ${NUM[r.t]}. Toca el ${NUM[r.t]}.`);[...$('retoOpc').children].forEach(b=>b.classList.toggle('pista',+b.dataset.v===r.t))}};
+  setTimeout(paso,1500);
+}
+const enJunta=(x,y)=>!!(reto&&!reto.won&&reto.kind==='junta'&&reto.cells.some(c=>c.x===x&&c.y===y));
 function renderReto(){
   const el=$('reto');el.hidden=false;el.classList.remove('done');
-  $('retoIco').textContent={pon:'🧱',torre:'🗼',pica:'⛏️',cerdos:'🐷',serie:'➡️',suma:'➕',resta:'➖',alta:'🗼',copia:'👀',programa:'🐷'}[reto.kind];
-  $('retoNum').hidden=!['pon','torre','pica','cerdos','suma','resta'].includes(reto.kind);$('retoNum').textContent=reto.n;
+  $('retoIco').textContent={pon:'🧱',torre:'🗼',pica:'⛏️',cerdos:'🐷',serie:'➡️',suma:'➕',resta:'➖',alta:'🗼',copia:'👀',programa:'🐷',junta:'➕'}[reto.kind];
+  $('retoNum').hidden=!['pon','torre','pica','cerdos'].includes(reto.kind);$('retoNum').textContent=reto.n;
+  $('retoEq').hidden=!ecuacion(reto);$('retoEq').innerHTML=ecuacion(reto)||'';
+  const op=$('retoOpc');op.textContent='';op.hidden=reto.kind!=='junta';
+  if(reto.kind==='junta')reto.opts.forEach(v=>{const b=document.createElement('button');b.className='opc';b.textContent=v;b.dataset.v=v;b.setAttribute('aria-label',NUM[v]);b.onclick=()=>elige(v,b);op.appendChild(b)});
   $('retoSlots').className=(reto.kind==='torre'||reto.kind==='alta')?'torre':'';
   drawSlots();
   $('rHard').hidden=!['pon','torre','pica','cerdos'].includes(reto.kind);$('rSay').hidden=false;$('rClose').hidden=false;
@@ -774,7 +824,8 @@ function checkReto(){
 }
 function winReto(){
   const r=reto;r.won=true;stars++;ajusta(r,true);$('starN').textContent=stars;
-  $('reto').classList.add('done');$('rHard').hidden=true;$('rSay').hidden=true;$('rClose').hidden=true;
+  $('reto').classList.add('done');$('rHard').hidden=true;$('rSay').hidden=true;$('rClose').hidden=true;$('retoOpc').hidden=true;
+  if(ecuacion(r))$('retoEq').innerHTML=ecuacion(r,true); // la cuenta, ya completa
   fanfare();fireworks();pigs.forEach(p=>{p.vy=-.17;p.joy=60});
   say(`¡Lo has conseguido! ${winText(r)} ¡Una estrella!`);
   save();setTimeout(()=>{if(reto===r)closeReto()},4200);
@@ -782,7 +833,7 @@ function winReto(){
 // Nivel que se ajusta solo. Un reto resuelto sin necesitar la pista sube un peldaño; dos tropiezos seguidos en la misma familia
 // (ganar con pista, o dejarlo a medias) bajan dos, que es lo que hace falta para que el siguiente se note más fácil.
 const tropezo=r=>!!((r.ghost&&r.ghost.some(g=>g.miss>=2))||r.fails>=2||r.err>=2);
-const intentado=r=>progress(r)!==r.ini||tropezo(r)||!!(r.ghost&&r.ghost.some(g=>g.miss))||!!(r.prog&&r.prog.length)||r.fails>0;
+const intentado=r=>progress(r)!==r.ini||tropezo(r)||!!(r.ghost&&r.ghost.some(g=>g.miss))||!!(r.prog&&r.prog.length)||r.fails>0||r.err>0||!!(r.cont&&r.cont.length);
 function ajusta(r,ganado){
   const f=FAM[r.kind]||r.kind,e=niv[f]||(niv[f]=[base,0]);
   if(ganado&&!tropezo(r)){e[0]=Math.min(16,e[0]+1);e[1]=0}
@@ -825,11 +876,14 @@ function stampHouse(x,y){
   while(y<ROWS-1&&!solid(x,y+1))y++;           // baja hasta el suelo
   while(y>1&&solid(x,y))y--;                    // o sube si has tocado dentro de la tierra
   HOUSE.forEach((row,ry)=>row.forEach((v,rx)=>{const cx=x-2+rx,cy=y-(HOUSE.length-1)+ry;
-    if(!v||cx<0||cx>=COLS||cy<0||cy>=ROWS||pigIn(cx,cy)||enCopia(cx,cy))return;grid[idx(cx,cy)]=v<0?0:v}));
+    if(!v||cx<0||cx>=COLS||cy<0||cy>=ROWS||pigIn(cx,cy)||enCopia(cx,cy)||enJunta(cx,cy))return;grid[idx(cx,cy)]=v<0?0:v}));
   [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
 }
 function act(e){
   let {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
+  if(enJunta(x,y)){const r=reto;if(r.contando)return; // contar tocando: cada bloque nuevo dice el número siguiente
+    const k=x+','+y;if(r.cont.includes(k)){beep(300,.05);return}
+    r.cont.push(k);ult={x,y};const n=r.cont.length;cifra(n);say(NUM[n],false);beep(500+n*50,.07);return}
   // con un bloque en la mano, tocar un bloque que tiene hueco encima pone el nuevo encima: así se construye sobre el suelo
   // o se apila aunque el dedo caiga un poco bajo (que es lo normal, el dedo tapa justo el sitio al que se apunta)
   if(mode==='put'&&grid[idx(x,y)]&&y>0&&!grid[idx(x,y-1)]&&enCopia(x,y)!==1)y--;
@@ -940,6 +994,11 @@ function tick(){
     if(v===13){lights.push([x,y,3.6]);if(Math.random()<.02)particles.push({x:x+.42+Math.random()*.16,y:y+.2,vx:(Math.random()-.5)*.012,vy:-.05,life:22,col:'#ffd43b'})}
     else if(v===9&&na>.05){ctx.fillStyle=`rgba(255,214,90,${.5*na})`;ctx.fillRect(x*S,y*S,S,S);lights.push([x,y,1.6])}
     else if(v!==11&&v!==7&&v!==9){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(x*S,y*S+S-2,S,2)}}
+  // juntar: un + entre las dos torres y un marco amarillo en los bloques que ya se han contado
+  if(reto&&reto.kind==='junta'&&!reto.won){const r=reto,px=(r.cs+1.5)*S,py=(r.bs-(Math.max(r.a,r.bq)-1)/2+.5)*S,l=S*.32,g=S*.09;
+    ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(px-l+3,py-g+3,2*l,2*g);ctx.fillRect(px-g+3,py-l+3,2*g,2*l);
+    ctx.fillStyle='#fff6e0';ctx.fillRect(px-l,py-g,2*l,2*g);ctx.fillRect(px-g,py-l,2*g,2*l);
+    ctx.strokeStyle='#ffd43b';ctx.lineWidth=4;r.cont.forEach(k=>{const [x,y]=k.split(',').map(Number);ctx.strokeRect(x*S+2,y*S+2,S-4,S-4)})}
   // copia: el modelo en un marco liso, una flecha y, al lado, el cuadro amarillo donde hay que hacerlo igual
   if(reto&&reto.kind==='copia'&&!reto.won){const r=reto,py=r.y0*S-4,pw=r.w*S+8,ph=r.h*S+8,u=S/8,ax=(r.cs+r.w)*S,ay=(r.y0+r.h/2)*S;
     marco(r.cs*S-4,py,pw,ph,'#fff6e0');marco(r.zx*S-4,py,pw,ph,'#ffd43b',[8,6]);
@@ -1012,7 +1071,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY})};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0}};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

@@ -1,15 +1,15 @@
 // Guarda el juego entero al instalarse, así funciona sin conexión desde la primera visita.
 // "Red primero": con conexión siempre coge lo último; sin conexión (o si la red no contesta en 3 s) tira de la caché.
 // Al añadir un archivo nuevo al juego, ponlo en ASSETS y sube el número de CACHE.
-const CACHE = 'bloques-v1';
+const CACHE = 'bloques-v2';
 const ASSETS = [
   './',
   'index.html',
   'manifest.json',
   'fonts/press-start-2p.woff2',
-  'icon.svg',
   'icon-192.png',
   'icon-512.png',
+  'icon-maskable.png',
   'apple-touch-icon.png'
 ];
 self.addEventListener('install', e => e.waitUntil(
