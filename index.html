@@ -33,9 +33,10 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--panel);color:var
 button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 
-/* flechas para moverse por el mundo */
-.nav{position:absolute;top:50%;transform:translateY(-50%);width:52px;height:72px;border:4px solid var(--slot);
-  background:var(--glass);font-size:22px;padding:0;display:grid;place-items:center}
+/* flechas para moverse por el mundo: pequeñas y abajo, en las esquinas, sobre la tierra; el centro queda libre para construir
+   (el mundo también se mueve arrastrando el dedo, así que son solo un apoyo) */
+.nav{position:absolute;bottom:8px;width:44px;height:44px;border:3px solid var(--slot);
+  background:rgba(42,29,20,.6);font-size:16px;padding:0;display:grid;place-items:center}
 #navL{left:8px}#navR{right:8px}
 
 /* estrellas ganadas */
@@ -115,7 +116,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .tool[aria-pressed="true"],.tool.ask{background:var(--sel);border-color:var(--sel-edge)}
 #tReto.call{animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{50%{background:var(--sel);border-color:var(--sel-edge)}}
-#toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--glass);color:var(--ink);
+#toast{position:absolute;left:50%;bottom:60px;transform:translateX(-50%);background:var(--glass);color:var(--ink);
   font-size:11px;line-height:1.5;padding:10px 14px;pointer-events:none;opacity:0;transition:opacity .3s;max-width:calc(100% - 32px);text-align:center}
 #toast.on{opacity:1}
 @media (prefers-reduced-motion:reduce){.slot[aria-pressed="true"]{transform:none}#toast{transition:none}#tReto.call{animation:none}
@@ -451,7 +452,7 @@ const MODELOS=[
   [['.A.','ABA','BBB'],['A..','AB.','ABC'],['ACA','B.B','BBB'],['AB','BA','AB','BA'],['.A','AB','BC','CC']]
 ];
 function makeModelo(){ // planta el modelo en el cielo y deja al lado, tras una columna libre, la zona donde copiarlo
-  const wmax=Math.max(1,Math.floor((W/S-1-120/S)/2)); // que quepan modelo y copia entre las flechas de los lados
+  const wmax=Math.max(1,Math.floor((W/S-1-120/S)/2)); // que quepan modelo y copia con margen a los lados
   const ids=EDU.slice().sort(()=>Math.random()-.5);
   if(ids.indexOf(9)<3&&ids.indexOf(12)<3)ids.splice(ids.indexOf(12),1); // cristal y nieve juntos se confunden
   for(let t=tier();t>=0;t--){

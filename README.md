@@ -15,7 +15,7 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 
 - **Un toque = un bloque.** Con 🧱 un toque pone un bloque en un hueco vacío; con ⛏️ quita uno. De uno en uno, que además es como se cuentan en los retos.
 - **Lo que ya está puesto no se cambia de un toque.** Si el hueco está ocupado suena un golpe sordo y la voz recuerda que para quitarlo está el pico (que se ilumina). Si lo ocupa un cerdito, salta y gruñe.
-- **Arrastrar mueve el mundo**, no pinta: deslizar el dedo desplaza el paisaje a los lados. Las flechas ◀ ▶ hacen lo mismo manteniéndolas pulsadas.
+- **Arrastrar mueve el mundo**, no pinta: deslizar el dedo desplaza el paisaje a los lados. Las flechas ◀ ▶ de las esquinas de abajo hacen lo mismo manteniéndolas pulsadas.
 
 ## Retos (botón ⭐)
 
