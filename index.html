@@ -829,7 +829,10 @@ function stampHouse(x,y){
   [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
 }
 function act(e){
-  const {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
+  let {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
+  // con un bloque en la mano, tocar un bloque que tiene hueco encima pone el nuevo encima: así se construye sobre el suelo
+  // o se apila aunque el dedo caiga un poco bajo (que es lo normal, el dedo tapa justo el sitio al que se apunta)
+  if(mode==='put'&&grid[idx(x,y)]&&y>0&&!grid[idx(x,y-1)]&&enCopia(x,y)!==1)y--;
   ult={x,y};
   const i=idx(x,y);
   if(mode==='pig'){ // tocar un cerdo lo hace saltar; tocar un hueco añade uno
@@ -844,7 +847,7 @@ function act(e){
     const pg=pigs.find(p=>Math.floor(p.x+.5)===x&&Math.floor(p.y+.5)===y);
     // el hueco lo ocupa un cerdito: salta, gruñe y echa a andar (aunque duerma) hacia el lado por el que antes sale, y así deja el sitio libre
     if(pg){const lado=pg.x>=x?1:-1;pg.vy=-.175;pg.joy=60;pg.vx=Math.abs(pg.vx)*(solid(x+lado,y)&&!solid(x-lado,y)?-lado:lado);oink();return}
-    if(grid[i]){ // un bloque solo entra en un hueco vacío: lo que ya está puesto no se cambia de un toque, se quita con el pico
+    if(grid[i]){ // un bloque solo entra en un hueco vacío (o encima de otro, ver arriba): lo que ya está puesto no se cambia de un toque, se quita con el pico
       beep(170,.09,'triangle',.07);
       if(Date.now()-ocupadoT>8000){ocupadoT=Date.now();say('Ahí ya hay un bloque. Si quieres quitarlo, usa el pico.');
         const b=$('tDig');b.classList.add('ask');setTimeout(()=>b.classList.remove('ask'),1500)}
