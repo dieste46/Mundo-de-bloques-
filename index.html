@@ -112,7 +112,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #fila .f.mal{border:3px dashed var(--sel);animation:tiembla .35s 2}
 /* pantallas bajas (móvil tumbado): la fila de flechas no se parte en dos y todo va más apretado, para que quepa */
 @media (max-height:520px){#tab{padding:4px;gap:4px}#fila{max-width:none}#fila .f{width:28px;height:28px;font-size:16px}
-  #world.prog #toast{display:none}} /* ahí el texto taparía el tablero; la instrucción se sigue diciendo en voz alta */
+  #world.prog #toast,#world.conreto #toast{display:none}} /* ahí el texto taparía el tablero o el marco del reto; la instrucción se sigue diciendo en voz alta */
 @keyframes late{50%{opacity:.4}}
 @keyframes tiembla{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 
@@ -208,7 +208,10 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 
 <script>
 (()=>{
-const T=16, COLS=48, ROWS=16, MAXPIGS=20;
+const T=16, COLS=48, ROWS=32, MAXPIGS=20;
+// El mundo mide 48 × 32 bloques. El suelo queda hacia la mitad (filas SUELO a SUELO+3): por encima hay cielo de sobra para construir alto
+// y por debajo, tierra y piedra para picar hondo. Antes medía 16 de alto; SUBE es lo que se desplazan hacia abajo los mundos guardados de entonces.
+const SUELO=19, SUBE=10;
 const BLOCKS=[
   {id:1,name:'Hierba'},{id:2,name:'Tierra'},{id:3,name:'Piedra'},{id:4,name:'Madera'},
   {id:5,name:'Hojas'},{id:6,name:'Arena'},{id:7,name:'Agua'},{id:8,name:'Ladrillo'},
@@ -296,8 +299,8 @@ const pigImg=(izq,leg,dormido)=>pigTex[`${leg?1:0}${dormido?1:0}${izq?1:0}`];
 // --- estado ---
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('world');
 const light=document.createElement('canvas'),lctx=light.getContext('2d');
-let S=40,W=300,H=300,offY=0,camC=COLS/2-4,grid=[],pigs=[],clouds=[],particles=[];
-let night=false,nightAmt=0,stars=0,fr=0,barCam=null,barA=0;
+let S=40,W=300,H=300,offY=0,camC=COLS/2-4,camR=0,grid=[],pigs=[],clouds=[],particles=[];
+let night=false,nightAmt=0,stars=0,fr=0,barCam=null,barA=0; // barCam: [columna, fila] de la vista en el fotograma anterior
 // resolución de dibujo: empieza en la de la pantalla y baja sola si el aparato no llega (ver tick)
 let calidad=3,tAnt=0,lento=16,frCal=0;
 // Dificultad: cada familia de retos lleva su propio nivel. Parte de `base` (lo elige el adulto en ajustes) y luego sube o baja solo.
@@ -315,11 +318,10 @@ function topOf(x){let y=0;while(y<ROWS&&!grid[idx(x,y)])y++;return y}
 function genWorld(){
   grid=new Array(COLS*ROWS).fill(0);
   const r=rng(Date.now()&0xffff);
-  let h=10;
+  let h=SUELO+1;
   for(let x=0;x<COLS;x++){
-    if(r()<.35)h+=r()<.5?-1:1;h=Math.max(9,Math.min(12,h));
-    for(let y=h;y<ROWS;y++)grid[idx(x,y)]=y==h?1:(y<h+3?2:3);
-    if(r()<.15)grid[idx(x,ROWS-1)]=10;
+    if(r()<.35)h+=r()<.5?-1:1;h=Math.max(SUELO,Math.min(SUELO+3,h));
+    for(let y=h;y<ROWS;y++)grid[idx(x,y)]=y==h?1:(y<h+3?2:(r()<(y>ROWS-4?.12:.03)?10:3)); // hierba, tres de tierra y piedra con algo de oro, más cuanto más hondo
   }
   // una charca con arena
   const px=6+(r()*(COLS-14)|0);
@@ -332,7 +334,7 @@ function genWorld(){
     else if(r()<.15)grid[idx(x,top-1)]=11;
   }
   pigs=[];addPig(COLS/2-3|0);addPig(COLS/2+2|0);
-  camC=COLS/2-W/S/2;clampCam(); // empieza mirando al centro, donde están los cerditos
+  camC=COLS/2-W/S/2;camR=vista();clampCam(); // empieza mirando al centro, donde están los cerditos, con el suelo en la parte baja de la pantalla
   save();
 }
 function addPig(x,y){
@@ -344,13 +346,20 @@ function addPig(x,y){
 // Hay tres mundos, cada uno con sus bloques, sus cerditos, su hora y su vista. Las estrellas y los niveles son del niño, no del mundo.
 // El mundo en el que se está vive en grid/pigs/night/camC; los otros esperan guardados en `mundos`.
 let mundo=0,mundos=[null,null,null];
-const empaqueta=()=>({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,camC});
+const empaqueta=()=>({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,camC,camR});
 const valido=w=>!!w&&Array.isArray(w.grid)&&w.grid.length===COLS*ROWS;
+function crece(w){ // un mundo de cuando el mapa tenía 16 filas: se le añade cielo por arriba y piedra (con algo de oro) por abajo, sin tocar lo construido
+  if(!w||!Array.isArray(w.grid)||w.grid.length!==COLS*16)return w;
+  const g=new Array(COLS*ROWS).fill(0),r=rng(w.grid.reduce((a,v)=>a+v,7));
+  for(let i=0;i<COLS*16;i++)g[i+COLS*SUBE]=w.grid[i];
+  for(let i=COLS*(16+SUBE);i<g.length;i++)g[i]=r()<.08?10:3;
+  return{grid:g,pigs:(w.pigs||[]).map(p=>[p[0],p[1]+SUBE]),night:w.night,camC:w.camC};
+}
 function save(){try{mundos[mundo]=empaqueta();localStorage.setItem('bloques2',JSON.stringify({mundo,mundos,stars,base,niv}))}catch(e){}}
-function abre(w){grid=w.grid;pigs=[];(w.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));night=!!w.night;nightAmt=night?1:0;if(typeof w.camC==='number')camC=w.camC}
+function abre(w){grid=w.grid;pigs=[];(w.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));night=!!w.night;nightAmt=night?1:0;if(typeof w.camC==='number')camC=w.camC;camR=typeof w.camR==='number'?w.camR:vista()}
 function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));if(!d)return false;
-  if(Array.isArray(d.mundos)){mundos=[0,1,2].map(i=>valido(d.mundos[i])?d.mundos[i]:null);mundo=mundos[d.mundo|0]?d.mundo|0:mundos.findIndex(Boolean)}
-  else if(valido(d)){mundos=[{grid:d.grid,pigs:d.pigs,night:d.night,camC:d.camC},null,null];mundo=0} // guardado de antes, con un solo mundo
+  if(Array.isArray(d.mundos)){mundos=[0,1,2].map(i=>{const w=crece(d.mundos[i]);return valido(w)?w:null});mundo=mundos[d.mundo|0]?d.mundo|0:mundos.findIndex(Boolean)}
+  else if(valido(crece(d))){mundos=[crece({grid:d.grid,pigs:d.pigs,night:d.night,camC:d.camC}),null,null];mundo=0} // guardado de antes, con un solo mundo
   else return false;
   if(mundo<0){mundo=0;return false}
   stars=d.stars|0;
@@ -361,13 +370,15 @@ function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));if(!d)r
 function resize(){
   W=wrap.clientWidth;H=wrap.clientHeight;const dpr=Math.min(window.devicePixelRatio||1,calidad);
   S=Math.max(32,Math.min(56,Math.round(Math.min(W,H)/9)));S=Math.max(S,Math.ceil(W/COLS));
-  offY=H-ROWS*S;
   cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=ctx.webkitImageSmoothingEnabled=false;
   light.width=Math.max(1,W);light.height=Math.max(1,H);
   clampCam();
   if(reto&&reto.kind==='programa')renderTab();
 }
-function clampCam(){camC=Math.max(0,Math.min(COLS-W/S,camC))}
+// La vista: camC es la columna del borde izquierdo y camR la fila del borde de arriba. Si la pantalla es más alta que el mundo, se pega abajo.
+function clampCam(){camC=Math.max(0,Math.min(COLS-W/S,camC));const m=ROWS-H/S;camR=m<=0?m:Math.max(0,Math.min(m,camR));offY=-Math.round(camR*S)}
+const vista=()=>SUELO+1-H/S*.62; // altura de vista normal: el suelo a unos dos tercios de la pantalla, como siempre
+const hudFilas=()=>(W<520?150:90)/S; // filas que puede llegar a tapar por arriba la cabecera del reto (en móvil ocupa dos o tres líneas)
 
 // --- sonido y voz ---
 let ac=null;
@@ -416,13 +427,13 @@ function marcaSon(){document.getElementById('vozBtn').textContent=vcfg.son===2?'
 function saveVoz(){try{localStorage.setItem('bloquesVoz',JSON.stringify(vcfg))}catch(e){}}
 function sample(){say('A ver si eres capaz de poner tres bloques de oro.',false)}
 try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice}catch(e){}
-let sayT;
+let sayT,dicho=null; // dicho: la última frase; Safari antiguo puede no decirla si el objeto se recoge antes de que suene
 function say(t,show=true,charla=false){ // charla: lo que dice al tocar botones (nombres de bloques y herramientas), que en "solo retos" se calla
   if(show)toast(t);
   if(vcfg.son===2||(charla&&vcfg.son===1))return;
   try{
     if(!voice)pickVoice(); // en iOS la lista de voces puede llegar tarde y sin avisar
-    const u=new SpeechSynthesisUtterance(t);u.lang=voice?voice.lang:'es-ES';if(voice)u.voice=voice;u.rate=vcfg.rate;u.pitch=vcfg.pitch;
+    const u=dicho=new SpeechSynthesisUtterance(t);u.lang=voice?voice.lang:'es-ES';if(voice)u.voice=voice;u.rate=vcfg.rate;u.pitch=vcfg.pitch;
     clearTimeout(sayT);
     // Safari en iOS pierde la frase si se llama a speak() justo después de cancel(): pequeña espera
     if(speechSynthesis.speaking||speechSynthesis.pending){speechSynthesis.cancel();sayT=setTimeout(()=>speechSynthesis.speak(u),80)}
@@ -452,10 +463,10 @@ $('tNight').onclick=()=>{night=!night;$('tNight').textContent=night?'☀️':'�
 // 🌍 abre el selector de mundos: tres huecos con su miniatura. Tocar uno entra en él (si está vacío, se crea).
 // Cambiar un mundo ya hecho por uno nuevo es cosa del adulto, tras la puerta, para que ningún toque suelto borre nada.
 const COLOR={1:'#5cb83a',2:'#8a5a36',3:'#8b8f94',4:'#9c6a3c',5:'#3f9a34',6:'#e9d79a',7:'#3a7fd9',8:'#b34a33',9:'#cdeefa',10:'#f2c230',11:'#e8414b',12:'#f4f8fb',13:'#ff7a1a'};
-function miniatura(w){ // el mundo entero a un píxel por bloque
-  const c=lienzo(COLS,ROWS),x=c.getContext('2d');x.fillStyle=w.night?'#1c2452':'#7ec8f2';x.fillRect(0,0,COLS,ROWS);
-  w.grid.forEach((v,i)=>{if(v){x.fillStyle=COLOR[v];x.fillRect(i%COLS,i/COLS|0,1,1)}});
-  x.fillStyle='#f2a0b0';(w.pigs||[]).forEach(p=>x.fillRect(p[0],p[1],1,1));return c;
+function miniatura(w){ // el mundo a un píxel por bloque: la franja de 16 filas alrededor del suelo, que es donde está casi todo
+  const F=SUELO-10,c=lienzo(COLS,16),x=c.getContext('2d');x.fillStyle=w.night?'#1c2452':'#7ec8f2';x.fillRect(0,0,COLS,16);
+  w.grid.forEach((v,i)=>{if(v){x.fillStyle=COLOR[v];x.fillRect(i%COLS,(i/COLS|0)-F,1,1)}});
+  x.fillStyle='#f2a0b0';(w.pigs||[]).forEach(p=>x.fillRect(p[0],p[1]-F,1,1));return c;
 }
 function irAMundo(i,nuevo){ // guarda el mundo actual y entra en el i; con `nuevo`, lo crea de cero
   save();closeReto();antes=null;$('undoBtn').classList.add('off');particles=[];
@@ -492,7 +503,7 @@ document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 
 // --- retos: sin tiempo, sin fallos, con casillas que se llenan y números en voz alta ---
-let reto=null,lastKind='',camGoal=null;
+let reto=null,lastKind='',camGoal=null,camGoalR=null,camFila=null;
 const NAME={};BLOCKS.forEach(b=>NAME[b.id]=b.name.toLowerCase());
 const SING={4:'bloque de madera',6:'bloque de arena',8:'ladrillo',9:'cristal',10:'bloque de oro',12:'bloque de nieve'};
 // para explicar un fallo al copiar: "Eso es un ladrillo" / "ahí va el oro"
@@ -502,22 +513,23 @@ const EDU=[10,8,9,12,6,4];
 const pick=a=>a[Math.random()*a.length|0];
 const rand=n=>Math.random()*n|0;
 function countOf(b){let n=0;for(let i=0;i<grid.length;i++)if(grid[i]===b)n++;return n}
-function visTop(){return Math.max(0,Math.ceil(-offY/S))}
-function skyTop(){return Math.max(visTop()+2,Math.ceil(((W<520?120:84)-offY)/S))} // primera fila que queda por debajo del reto (en móvil ocupa dos líneas)
-function findSky(w,rows){ // hueco libre en el cielo, lo más cerca posible de lo que se ve
+function findSky(w,rows){ // hueco libre en el cielo, justo encima del terreno y lo más cerca posible de lo que se ve; la vista irá hasta él
+  if(rows+1>H/S-hudFilas())return null; // no cabría entero en pantalla bajo la cabecera
   const centre=camC+W/S/2-w/2;let best=null;
   for(let cs=1;cs<=COLS-w-1;cs++){let mt=ROWS;for(let x=cs;x<cs+w;x++)mt=Math.min(mt,topOf(x));
-    const base=mt-2;if(base-(rows-1)<skyTop())continue;
+    const base=mt-2;if(base-(rows-1)<1)continue;
     const d=Math.abs(cs-centre);if(!best||d<best.d)best={cs,base,d}}
   return best;
 }
 function findGround(k){ // columna con suelo firme y sitio para una torre de k
+  if(k+3>H/S-hudFilas())return null;
   const centre=camC+W/S/2;let best=null;
-  for(let c=2;c<COLS-2;c++){const t=topOf(c);if(t>=ROWS||NOSOLID[grid[idx(c,t)]]||t-(k+1)<skyTop())continue;
+  for(let c=2;c<COLS-2;c++){const t=topOf(c);if(t>=ROWS||NOSOLID[grid[idx(c,t)]]||t-(k+1)<1)continue;
     const d=Math.abs(c-centre);if(!best||d<best.d)best={c,t,d}}
   return best;
 }
-function lookAt(cs,w){camGoal=Math.max(0,Math.min(COLS-W/S,cs+w/2-W/S/2))}
+function lookAt(cs,w,fila){ // lleva la vista a las columnas cs..cs+w y, en vertical, deja la fila `fila` justo debajo de la cabecera del reto
+  camGoal=Math.max(0,Math.min(COLS-W/S,cs+w/2-W/S/2));camFila=fila} // la altura se fija en startReto, cuando ya se sabe cuánto ocupa la cabecera
 function stampFrame(spot,count,b,rows){for(let i=0;i<count;i++)grid[idx(spot.cs+i%5,spot.base-(rows-1)+Math.floor(i/5))]=b}
 
 // "copia el modelo": construcciones pequeñas por tramo de dificultad; cada letra es un bloque distinto y el punto, un hueco
@@ -659,19 +671,19 @@ function startReto(){
       const at=i=>ids[pat.charCodeAt(i%pat.length)-65],seq=[],ghost=[];
       for(let i=0;i<4;i++){grid[idx(spot.cs+i,spot.base)]=at(i);seq.push(at(i))}
       for(let i=4;i<6;i++)ghost.push({x:spot.cs+i,y:spot.base,b:at(i),miss:0});
-      r={kind,b:0,n:2,seq,ghost};lookAt(spot.cs,6)}
+      r={kind,b:0,n:2,seq,ghost};lookAt(spot.cs,6,spot.base)}
   }else if(kind==='suma'){
     const n=Math.min(10,3+Math.floor(level/2)),k=1+rand(n-1),rows=Math.ceil(k/5),spot=findSky(5,rows);
-    if(spot){const b=pick(EDU);stampFrame(spot,k,b,rows);r={kind,b,n,k};lookAt(spot.cs,5)}
+    if(spot){const b=pick(EDU);stampFrame(spot,k,b,rows);r={kind,b,n,k};lookAt(spot.cs,5,spot.base-rows+1)}
   }else if(kind==='resta'){
     const n0=Math.min(10,4+Math.floor(level/2)),d=1+rand(Math.min(3,1+Math.floor(level/3))),rows=Math.ceil(n0/5),spot=findSky(5,rows);
-    if(spot){const b=pick(EDU);stampFrame(spot,n0,b,rows);r={kind,b,n:n0-d,n0,slots:n0};lookAt(spot.cs,5)}
+    if(spot){const b=pick(EDU);stampFrame(spot,n0,b,rows);r={kind,b,n:n0-d,n0,slots:n0};lookAt(spot.cs,5,spot.base-rows+1)}
   }else if(kind==='alta'){
     const k=Math.min(6,2+Math.floor(level/3)),g=findGround(k);
-    if(g){const a=pick(EDU),b=pick(EDU.filter(v=>v!==a));for(let i=1;i<=k;i++)grid[idx(g.c,g.t-i)]=a;r={kind,b,n:k+1,k,a};lookAt(g.c,1)}
+    if(g){const a=pick(EDU),b=pick(EDU.filter(v=>v!==a));for(let i=1;i<=k;i++)grid[idx(g.c,g.t-i)]=a;r={kind,b,n:k+1,k,a};lookAt(g.c,1,g.t-k-2)}
   }else if(kind==='copia'){
     const m=makeModelo();
-    if(m){r={kind,b:0,n:m.ghost.length,...m};lookAt(m.cs,m.w*2+1)}
+    if(m){r={kind,b:0,n:m.ghost.length,...m};lookAt(m.cs,m.w*2+1,m.y0)}
   }else if(kind==='programa'){
     const t=makeTablero();
     r={kind,b:0,n:1,...t,x:t.sx,y:t.sy,prog:[],fails:0,now:-1,bad:-1};
@@ -690,7 +702,9 @@ function startReto(){
   lastKind=r.kind;reto=r;r.shown=r.ini=progress(r);
   antes=null;$('undoBtn').classList.add('off'); // el reto planta bloques: lo de antes ya no se puede deshacer
   $('tReto').classList.remove('call');
-  renderReto();say(phrase(r));save();
+  renderReto();
+  if(camFila!==null){camGoalR=Math.max(0,Math.min(ROWS-H/S,camFila-($('reto').offsetHeight+26)/S));camFila=null}
+  say(phrase(r));save();
 }
 function phrase(r){
   const p='A ver si eres capaz de ';
@@ -738,7 +752,7 @@ function renderReto(){
   $('retoSlots').className=(reto.kind==='torre'||reto.kind==='alta')?'torre':'';
   drawSlots();
   $('rHard').hidden=!['pon','torre','pica','cerdos'].includes(reto.kind);$('rSay').hidden=false;$('rClose').hidden=false;
-  const prog=reto.kind==='programa';progUI(prog);if(prog)renderTab();
+  const prog=reto.kind==='programa';progUI(prog);if(prog)renderTab();wrap.classList.add('conreto');
 }
 function checkReto(){
   if(!reto||reto.won)return;
@@ -771,7 +785,7 @@ function ajusta(r,ganado){
   if(ganado&&!tropezo(r)){e[0]=Math.min(16,e[0]+1);e[1]=0}
   else if(++e[1]>=2){e[0]=Math.max(0,e[0]-2);e[1]=0}
 }
-function closeReto(){reto=null;$('reto').hidden=true;progUI(false);$('tReto').classList.add('call')}
+function closeReto(){wrap.classList.remove('conreto');reto=null;$('reto').hidden=true;progUI(false);$('tReto').classList.add('call')}
 function fireworks(){
   const cols=['#ffd43b','#e8414b','#5cb83a','#3a7fd9','#fff6e0','#f2a0b0'];
   for(let k=0;k<4;k++){const cx=camC+W/S*(.2+Math.random()*.6),cy=(-offY+H*(.2+Math.random()*.3))/S;
@@ -806,7 +820,7 @@ function pigIn(x,y){return pigs.some(p=>Math.floor(p.x+.5)===x&&Math.floor(p.y+.
 const HOUSE=[[0,0,4,0,0],[0,4,4,4,0],[4,4,4,4,4],[8,9,8,8,8],[8,8,8,-1,8],[8,8,8,-1,8]];
 function stampHouse(x,y){
   while(y<ROWS-1&&!solid(x,y+1))y++;           // baja hasta el suelo
-  while(y>6&&solid(x,y))y--;                    // o sube si has tocado dentro de la tierra
+  while(y>1&&solid(x,y))y--;                    // o sube si has tocado dentro de la tierra
   HOUSE.forEach((row,ry)=>row.forEach((v,rx)=>{const cx=x-2+rx,cy=y-(HOUSE.length-1)+ry;
     if(!v||cx<0||cx>=COLS||cy<0||cy>=ROWS||pigIn(cx,cy)||enCopia(cx,cy))return;grid[idx(cx,cy)]=v<0?0:v}));
   [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
@@ -848,11 +862,11 @@ function burst(x,y,id){for(let k=0;k<8;k++)particles.push({x:x+.5,y:y+.5,vx:(Mat
 // Cada dedo se sigue por separado. Si se levanta sin haberse movido es un toque y actúa donde se posó;
 // si se desliza más de un tercio de bloque es un arrastre: mueve el mundo de lado y no pone ni pica nada.
 const dedos=new Map();let panId=null,ocupadoT=0;
-function baja(id,x,y){dedos.set(id,{clientX:x,clientY:y,cam:camC,drag:false})}
+function baja(id,x,y){dedos.set(id,{clientX:x,clientY:y,cam:camC,camR,drag:false})}
 function mueve(id,x,y){const d=dedos.get(id);if(!d)return;
   if(!d.drag&&Math.hypot(x-d.clientX,y-d.clientY)>Math.max(12,S*.33)){
-    d.drag=true;if(panId===null){panId=id;camGoal=null;d.clientX=x;d.cam=camC}}
-  if(panId===id){camC=d.cam-(x-d.clientX)/S;clampCam()}}
+    d.drag=true;if(panId===null){panId=id;camGoal=camGoalR=null;d.clientX=x;d.clientY=y;d.cam=camC;d.camR=camR}}
+  if(panId===id){camC=d.cam-(x-d.clientX)/S;camR=d.camR-(y-d.clientY)/S;clampCam()}}
 function sube(id,cancelado){const d=dedos.get(id);if(!d)return;dedos.delete(id);
   if(panId===id){panId=null;save()}else if(!d.drag&&!cancelado)act(d)}
 if(window.PointerEvent){
@@ -888,8 +902,10 @@ function tick(){
   // (El umbral queda por debajo de 30 a propósito: un móvil en modo de bajo consumo va a 30 clavados y bajarle la resolución no le ayudaría.)
   {const t=Date.now();if(tAnt)lento=lento*.95+Math.min(100,t-tAnt)*.05;tAnt=t;
     if(lento>36&&fr-frCal>150&&calidad>1){calidad=Math.max(1,Math.min(calidad,window.devicePixelRatio||1)-.5);frCal=fr;lento=16;resize()}}
-  if(camGoal!==null){camC+=(camGoal-camC)*.12;if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}clampCam()}
-  const maxC=COLS-W/S;
+  if(camGoal!==null){camC+=(camGoal-camC)*.12;if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}}
+  if(camGoalR!==null){camR+=(camGoalR-camR)*.12;if(Math.abs(camGoalR-camR)<.02){camR=camGoalR;camGoalR=null}}
+  clampCam();
+  const maxC=COLS-W/S,maxR=ROWS-H/S;
   nightAmt+=((night?1:0)-nightAmt)*.05;const na=nightAmt;
   // cielo
   const g=ctx.createLinearGradient(0,0,0,H);
@@ -908,8 +924,12 @@ function tick(){
   // mundo
   ctx.save();ctx.translate(-Math.round(camC*S),offY);
   const x0=Math.max(0,Math.floor(camC)),x1=Math.min(COLS-1,Math.floor(camC+W/S));
+  const y0=Math.max(0,Math.floor(camR)),y1=Math.min(ROWS-1,Math.floor(camR+H/S));
+  // bajo tierra, lo que se pica deja ver roca oscura en vez de cielo
+  if(y1>=SUELO+4){const cy=(SUELO+4)*S,g2=ctx.createLinearGradient(0,cy,0,cy+S);g2.addColorStop(0,'rgba(46,33,24,0)');g2.addColorStop(1,'rgba(46,33,24,1)');
+    ctx.fillStyle=g2;ctx.fillRect(x0*S,cy,(x1-x0+1)*S,S);ctx.fillStyle='#2e2118';ctx.fillRect(x0*S,cy+S,(x1-x0+1)*S,(y1-SUELO-4)*S)}
   const lights=[];
-  for(let y=0;y<ROWS;y++)for(let x=x0;x<=x1;x++){const v=grid[idx(x,y)];if(!v)continue;
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const v=grid[idx(x,y)];if(!v)continue;
     ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(v===13&&((fr>>3)+x*3+y)&1?tex.llama2:tex[v],x*S,y*S,S,S);ctx.globalAlpha=1;
     if(v===13){lights.push([x,y,3.6]);if(Math.random()<.02)particles.push({x:x+.42+Math.random()*.16,y:y+.2,vx:(Math.random()-.5)*.012,vy:-.05,life:22,col:'#ffd43b'})}
     else if(v===9&&na>.05){ctx.fillStyle=`rgba(255,214,90,${.5*na})`;ctx.fillRect(x*S,y*S,S,S);lights.push([x,y,1.6])}
@@ -966,12 +986,16 @@ function tick(){
       ctx.fillStyle=lg;ctx.fillRect(lx-rr,ly-rr,rr*2,rr*2)});
     ctx.globalCompositeOperation='source-over';
   }
-  // deslizador: qué trozo del mundo se ve. El mundo se mueve arrastrando el dedo; la barra solo aparece mientras se mueve y se apaga sola
-  if(barCam===null)barCam=camC;
-  if(Math.abs(camC-barCam)>.002){barA=2;barCam=camC}else if(barA>0)barA-=.03;
-  if(barA>0&&maxC>0){const x0=16,w=W-32,y=H-16,tw=Math.max(28,w*(W/S)/COLS);
-    ctx.globalAlpha=Math.min(1,barA);ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x0-2,y-2,w+4,10);
-    ctx.fillStyle='#fff6e0';ctx.fillRect(x0+(w-tw)*camC/maxC,y,tw,6);ctx.globalAlpha=1}
+  // deslizadores: qué trozo del mundo se ve, a lo ancho (abajo) y a lo alto (a la derecha). El mundo se mueve arrastrando el dedo;
+  // las barras solo aparecen mientras se mueve y se apagan solas
+  if(barCam===null)barCam=[camC,camR];
+  if(Math.abs(camC-barCam[0])>.002||Math.abs(camR-barCam[1])>.002){barA=2;barCam=[camC,camR]}else if(barA>0)barA-=.03;
+  if(barA>0){ctx.globalAlpha=Math.min(1,barA);
+    if(maxC>0){const x0=16,w=W-40,y=H-16,tw=Math.max(28,w*(W/S)/COLS);
+      ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x0-2,y-2,w+4,10);ctx.fillStyle='#fff6e0';ctx.fillRect(x0+(w-tw)*camC/maxC,y,tw,6)}
+    if(maxR>0){const y0=16,hh=H-48,x=W-16,th=Math.max(28,hh*(H/S)/ROWS);
+      ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x-2,y0-2,10,hh+4);ctx.fillStyle='#fff6e0';ctx.fillRect(x,y0+(hh-th)*camR/maxR,6,th)}
+    ctx.globalAlpha=1}
   requestAnimationFrame(tick);
 }
 
@@ -980,6 +1004,9 @@ resize();
 if(!load())genWorld();
 clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night?'☀️':'🌙';
 requestAnimationFrame(tick);
+
+// para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY})};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
