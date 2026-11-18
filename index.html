@@ -263,7 +263,7 @@ const pigImg=(izq,leg,dormido)=>pigTex[`${leg?1:0}${dormido?1:0}${izq?1:0}`];
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('world');
 const light=document.createElement('canvas'),lctx=light.getContext('2d');
 let S=40,W=300,H=300,offY=0,camC=COLS/2-4,grid=[],pigs=[],clouds=[],particles=[];
-let night=false,nightAmt=0,stars=0,level=0,fr=0,scrollDir=0;
+let night=false,nightAmt=0,stars=0,level=0,fr=0,scrollDir=0,barCam=null,barA=0;
 const tier=()=>level<4?0:level<8?1:2; // tramo de dificultad de los retos: fácil, medio, difícil
 const skyStars=(()=>{const r=rng(77);return Array.from({length:40},()=>({x:r(),y:r()*.6,s:r()<.2?3:2,p:r()*6}))})();
 function idx(x,y){return y*COLS+x}
@@ -836,6 +836,12 @@ function tick(){
       lctx.fillStyle=lg;lctx.fillRect(lx-rr,ly-rr,rr*2,rr*2)});
     ctx.drawImage(light,0,0,W,H);
   }
+  // deslizador entre las flechas: qué trozo del mundo se ve. Solo aparece mientras la vista se mueve y se apaga solo al parar
+  if(barCam===null)barCam=camC;
+  if(Math.abs(camC-barCam)>.002){barA=2;barCam=camC}else if(barA>0)barA-=.03;
+  if(barA>0&&maxC>0){const x0=64,w=W-128,y=H-33,tw=Math.max(28,w*(W/S)/COLS);
+    ctx.globalAlpha=Math.min(1,barA);ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x0-2,y-2,w+4,10);
+    ctx.fillStyle='#fff6e0';ctx.fillRect(x0+(w-tw)*camC/maxC,y,tw,6);ctx.globalAlpha=1}
   requestAnimationFrame(tick);
 }
 
