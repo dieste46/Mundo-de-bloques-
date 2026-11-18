@@ -16,7 +16,8 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 
 - **Un toque = un bloque.** Con 🧱 un toque pone un bloque en un hueco vacío; con ⛏️ quita uno. De uno en uno, que además es como se cuentan en los retos.
 - **Lo que ya está puesto no se cambia de un toque.** Si el hueco está ocupado suena un golpe sordo y la voz recuerda que para quitarlo está el pico (que se ilumina). Si lo ocupa un cerdito, salta y gruñe.
-- **Deshacer (↩️).** Devuelve el mundo a como estaba justo antes del último cambio: un bloque, un picotazo, una casa o un "mundo nuevo" entero. Tocarlo otra vez lo rehace, así que por mucho que se pulse nunca se pierde más de un paso.
+- **Tres mundos (🌍).** El botón abre tres huecos con su miniatura; tocar uno entra en él y, si está vacío, lo crea. Cada mundo guarda por separado sus bloques, sus cerditos, su hora y su vista; las estrellas y los niveles son del niño y valen en todos. Cambiar un mundo ya hecho por uno nuevo (🔄) pide la multiplicación del adulto, para que ningún toque suelto borre nada.
+- **Deshacer (↩️).** Devuelve el mundo a como estaba justo antes del último cambio: un bloque, un picotazo o una casa. Tocarlo otra vez lo rehace, así que por mucho que se pulse nunca se pierde más de un paso.
 - **Arrastrar mueve el mundo**, no pinta: deslizar el dedo desplaza el paisaje a los lados. Mientras la vista se mueve aparece abajo un deslizador que indica en qué parte del mundo estás; al parar se apaga solo. No hay flechas ni botones de desplazamiento.
 
 ## Retos (botón ⭐)
@@ -46,7 +47,9 @@ fonts/                Press Start 2P alojada en el repo (licencia OFL en fonts/O
 
 Los gráficos no son imágenes: las texturas de los bloques (16×16), el cerdito (16×12), la flor, la antorcha y la manzana se dibujan por código al arrancar, en la sección "texturas pixeladas generadas" de `index.html`. Los que tienen forma se escriben como dibujos de letras, una letra por color.
 
-El progreso (mundo, estrellas, nivel, voz) se guarda solo en el dispositivo (`localStorage`).
+El progreso (los tres mundos, estrellas, niveles, voz) se guarda solo en el dispositivo (`localStorage`), con cada cambio. Ojo: Safari puede borrar los datos de una web que lleva días sin abrirse; instalada en la pantalla de inicio no le pasa.
+
+De noche las antorchas dan luz: abren un claro en la oscuridad con un resplandor cálido, la llama parpadea y suelta alguna chispa. El cristal también brilla.
 
 Un tipo de reto nuevo se añade en cuatro sitios de `index.html`: `startReto` (lo prepara), `phrase` (lo que dice la voz), `progress` (cuánto lleva) y `winText` (lo que dice al ganar).
 

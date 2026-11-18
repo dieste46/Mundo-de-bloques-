@@ -41,7 +41,17 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 /* columna de la izquierda: estrellas, ajustes (para el adulto) y deshacer */
 #vozBtn{top:52px}#undoBtn{top:104px}#undoBtn.off{opacity:.4}
 #vozBtn,#undoBtn{position:absolute;left:10px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
-#voz{position:fixed;inset:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
+#voz,#mundos{position:fixed;inset:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
+/* selector de mundos: tres huecos con su miniatura; el 🔄 de la derecha (cambiarlo por uno nuevo) es para el adulto */
+#mundosCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,460px);max-height:100%;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;touch-action:pan-y}
+#mundosList{display:flex;flex-direction:column;gap:10px}
+.mundo{display:flex;gap:8px;align-items:stretch}
+.mcard{flex:1;min-width:0;position:relative;padding:0;border:4px solid var(--slot);background:var(--slot);display:block}
+.mundo.sel .mcard{border-color:var(--sel)}
+.mcard canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.mplus{display:grid;place-items:center;width:100%;aspect-ratio:3/1;font-size:34px;font-family:system-ui;background:var(--panel-2)}
+.mnum{position:absolute;left:6px;top:6px;background:var(--glass);padding:5px 8px;font-size:14px}
+.mnew{flex:0 0 44px;border:3px solid var(--slot);background:var(--panel-2);font-size:18px;font-family:system-ui;padding:0;opacity:.7}
 #vozCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,420px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
   font-family:system-ui,sans-serif;font-size:15px;overflow-y:auto;touch-action:pan-y}
 #vozCard h2{margin:0;font-family:var(--pixel);font-size:13px}
@@ -144,6 +154,12 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
     <button id="undoBtn" class="off" aria-label="Deshacer lo último">↩️</button>
     <div id="toast"></div>
   </div>
+  <div id="mundos" hidden>
+    <div id="mundosCard" role="dialog" aria-label="Elige un mundo">
+      <div id="mundosList"></div>
+      <button class="vopt" id="mundosClose" style="text-align:center" aria-label="Cerrar">✖</button>
+    </div>
+  </div>
   <div id="voz" hidden>
     <div id="vozCard" role="dialog" aria-label="Ajustes del juego">
       <h2>Ajustes</h2>
@@ -177,7 +193,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <button class="tool" id="tHouse" aria-label="Casa" aria-pressed="false">🏠</button>
       <button class="tool" id="tNight" aria-label="Día y noche">🌙</button>
       <button class="tool call" id="tReto" aria-label="Reto nuevo">⭐</button>
-      <button class="tool" id="tNew" aria-label="Mundo nuevo">🌍</button>
+      <button class="tool" id="tNew" aria-label="Mis mundos">🌍</button>
     </div>
   </div>
 </div>
@@ -242,6 +258,11 @@ function makeTex(id){
   tex[id]=cv;
 }
 BLOCKS.forEach(b=>makeTex(b.id));
+// segunda postura de la llama, para que la antorcha parpadee
+tex.llama2=sprite([
+  '................','.......O........','.....OOO........','.....OYOO.......','.....OYYO.......','......OYWO......','......BBb.......','......BBb.......',
+  '.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......'],
+  {O:'#ff7a1a',Y:'#ffd43b',W:'#fff3a6',B:'#8a5a36',b:'#6b4626'});
 // la manzana que busca el cerdito en el reto de las flechas
 tex.manzana=sprite([
   '................','.........GG.....','.......B.GGg....','.......B..g.....','....RRRBRRRR....','...RRRRRRRRRR...','..RRWRRRRRRRRr..','..RWWRRRRRRRRr..',
@@ -305,13 +326,22 @@ function addPig(x,y){
 }
 
 // --- guardado (solo en este navegador) ---
-function save(){try{localStorage.setItem('bloques2',JSON.stringify({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,stars,base,niv,camC}))}catch(e){}}
-function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));
-  if(d&&Array.isArray(d.grid)&&d.grid.length===COLS*ROWS){grid=d.grid;pigs=[];(d.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));
-    night=!!d.night;nightAmt=night?1:0;stars=d.stars|0;
-    if(d.niv&&typeof d.niv==='object'){niv=d.niv;base=d.base|0}
-    else{const l=d.level|0;base=l<4?0:l<8?4:8;niv={};if(l!==base)['contar','serie','suma','resta','alta','copia','programa'].forEach(f=>niv[f]=[l,0])} // partidas guardadas con el nivel único de antes
-    if(typeof d.camC==='number')camC=d.camC;return true}}catch(e){}return false}
+// Hay tres mundos, cada uno con sus bloques, sus cerditos, su hora y su vista. Las estrellas y los niveles son del niño, no del mundo.
+// El mundo en el que se está vive en grid/pigs/night/camC; los otros esperan guardados en `mundos`.
+let mundo=0,mundos=[null,null,null];
+const empaqueta=()=>({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,camC});
+const valido=w=>!!w&&Array.isArray(w.grid)&&w.grid.length===COLS*ROWS;
+function save(){try{mundos[mundo]=empaqueta();localStorage.setItem('bloques2',JSON.stringify({mundo,mundos,stars,base,niv}))}catch(e){}}
+function abre(w){grid=w.grid;pigs=[];(w.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));night=!!w.night;nightAmt=night?1:0;if(typeof w.camC==='number')camC=w.camC}
+function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));if(!d)return false;
+  if(Array.isArray(d.mundos)){mundos=[0,1,2].map(i=>valido(d.mundos[i])?d.mundos[i]:null);mundo=mundos[d.mundo|0]?d.mundo|0:mundos.findIndex(Boolean)}
+  else if(valido(d)){mundos=[{grid:d.grid,pigs:d.pigs,night:d.night,camC:d.camC},null,null];mundo=0} // guardado de antes, con un solo mundo
+  else return false;
+  if(mundo<0){mundo=0;return false}
+  stars=d.stars|0;
+  if(d.niv&&typeof d.niv==='object'){niv=d.niv;base=d.base|0}
+  else{const l=d.level|0;base=l<4?0:l<8?4:8;niv={};if(l!==base)['contar','serie','suma','resta','alta','copia','programa'].forEach(f=>niv[f]=[l,0])} // partidas guardadas con el nivel único de antes
+  abre(mundos[mundo]);return true}catch(e){}return false}
 
 function resize(){
   W=wrap.clientWidth;H=wrap.clientHeight;const dpr=window.devicePixelRatio||1;
@@ -404,17 +434,40 @@ $('tDig').onclick=()=>{setMode('dig');beep(400,.05);say('¡A picar!',true,true)}
 $('tPig').onclick=()=>{setMode('pig');oink();say('Toca para poner un cerdito',true,true)};
 $('tHouse').onclick=()=>{setMode('house');beep(520,.06);say('Toca para poner una casa',true,true)};
 $('tNight').onclick=()=>{night=!night;$('tNight').textContent=night?'☀️':'🌙';beep(night?330:660,.15,'triangle',.07);say(night?'Buenas noches':'Buenos días',true,true);save()};
-let confirmNew=false,confirmTimer;
-$('tNew').onclick=e=>{
-  const b=e.currentTarget;
-  if(!confirmNew){confirmNew=true;b.classList.add('ask');say('¿Mundo nuevo? Toca otra vez.');clearTimeout(confirmTimer);
-    confirmTimer=setTimeout(()=>{confirmNew=false;b.classList.remove('ask')},3500);return}
-  confirmNew=false;b.classList.remove('ask');foto(true);closeReto();genWorld();beep(880,.1);setTimeout(()=>beep(1100,.12),100);say('¡Mundo nuevo!',true,true)};
+// 🌍 abre el selector de mundos: tres huecos con su miniatura. Tocar uno entra en él (si está vacío, se crea).
+// Cambiar un mundo ya hecho por uno nuevo es cosa del adulto, tras la puerta, para que ningún toque suelto borre nada.
+const COLOR={1:'#5cb83a',2:'#8a5a36',3:'#8b8f94',4:'#9c6a3c',5:'#3f9a34',6:'#e9d79a',7:'#3a7fd9',8:'#b34a33',9:'#cdeefa',10:'#f2c230',11:'#e8414b',12:'#f4f8fb',13:'#ff7a1a'};
+function miniatura(w){ // el mundo entero a un píxel por bloque
+  const c=lienzo(COLS,ROWS),x=c.getContext('2d');x.fillStyle=w.night?'#1c2452':'#7ec8f2';x.fillRect(0,0,COLS,ROWS);
+  w.grid.forEach((v,i)=>{if(v){x.fillStyle=COLOR[v];x.fillRect(i%COLS,i/COLS|0,1,1)}});
+  x.fillStyle='#f2a0b0';(w.pigs||[]).forEach(p=>x.fillRect(p[0],p[1],1,1));return c;
+}
+function irAMundo(i,nuevo){ // guarda el mundo actual y entra en el i; con `nuevo`, lo crea de cero
+  save();closeReto();antes=null;$('undoBtn').classList.add('off');particles=[];
+  mundo=i;if(nuevo||!mundos[i]){night=false;nightAmt=0;genWorld()}else abre(mundos[i]);
+  $('tNight').textContent=night?'☀️':'🌙';clampCam();save();
+}
+function renderMundos(){
+  const el=$('mundosList');el.textContent='';
+  [0,1,2].forEach(i=>{const w=i===mundo?empaqueta():mundos[i],fila=document.createElement('div');fila.className='mundo'+(i===mundo?' sel':'');
+    const b=document.createElement('button');b.className='mcard';b.setAttribute('aria-label',w?'Mundo '+(i+1):'Mundo '+(i+1)+', vacío: crear uno nuevo');
+    if(w)b.appendChild(miniatura(w));else{const m=document.createElement('span');m.className='mplus';m.textContent='➕';b.appendChild(m)}
+    const n=document.createElement('span');n.className='mnum';n.textContent=i+1;b.appendChild(n);
+    b.onclick=()=>{$('mundos').hidden=true;const nuevo=!w;if(i!==mundo)irAMundo(i);
+      beep(880,.1);if(nuevo)setTimeout(()=>beep(1100,.12),100);say(nuevo?'¡Mundo nuevo!':'Mundo '+NUM[i+1],true,true)};
+    fila.appendChild(b);
+    if(w){const r=document.createElement('button');r.className='mnew';r.textContent='🔄';r.setAttribute('aria-label','Cambiar el mundo '+(i+1)+' por uno nuevo (para mayores)');
+      r.onclick=()=>{if(!puerta('Cambiar el mundo '+(i+1)+' por uno nuevo (para mayores)'))return;
+        if(i===mundo)irAMundo(i,true);else{mundos[i]=null;save()}renderMundos()};fila.appendChild(r)}
+    el.appendChild(fila)});
+}
+$('tNew').onclick=()=>{$('mundos').hidden=false;renderMundos();beep(660,.06);say('Elige un mundo.',true,true)};
+$('mundosClose').onclick=()=>{$('mundos').hidden=true};
+$('mundos').addEventListener('click',e=>{if(e.target===$('mundos'))$('mundos').hidden=true});
 
 // puerta sencilla, como en Mini Juegos: el panel es todo texto y es para el adulto; así el niño no cambia la voz o el nivel sin querer
-$('vozBtn').onclick=()=>{const a=3+rand(7),b=3+rand(7);
-  if(Number(prompt(`Ajustes (para mayores): ¿cuánto es ${a} × ${b}?`))!==a*b)return;
-  $('voz').hidden=false;renderVoz()};
+function puerta(para){const a=3+rand(7),b=3+rand(7);return Number(prompt(`${para}: ¿cuánto es ${a} × ${b}?`))===a*b}
+$('vozBtn').onclick=()=>{if(puerta('Ajustes (para mayores)')){$('voz').hidden=false;renderVoz()}};
 $('vozClose').onclick=()=>{$('voz').hidden=true};
 $('voz').addEventListener('click',e=>{if(e.target===$('voz'))$('voz').hidden=true});
 
@@ -620,7 +673,7 @@ function startReto(){
   }
   r.base=base;r.dug=0;r.added=0;r.slots=r.slots||r.n;
   lastKind=r.kind;reto=r;r.shown=r.ini=progress(r);
-  if(antes&&antes.cam===null){antes=null;$('undoBtn').classList.add('off')} // el reto planta bloques: lo de antes ya no se puede deshacer
+  antes=null;$('undoBtn').classList.add('off'); // el reto planta bloques: lo de antes ya no se puede deshacer
   $('tReto').classList.remove('call');
   renderReto();say(phrase(r));save();
 }
@@ -717,16 +770,15 @@ $('rHard').onclick=()=>{if(!reto)return;const max=reto.kind==='torre'?8:(reto.ki
   if(reto.n>=max){say('¡Ya es el más difícil!');return}
   reto.n=Math.min(max,reto.n+2);reto.slots=reto.n;renderReto();reto.shown=progress(reto);say('¡Más difícil! '+phrase(reto))};
 
-// --- deshacer: se guarda cómo estaba el mundo justo antes del último cambio (también antes de un "mundo nuevo").
+// --- deshacer: se guarda cómo estaba el mundo justo antes del último cambio.
 // Tocar otra vez lo rehace: así, por mucho que se pulse, nunca se pierde más de un paso.
 let antes=null,rehecho=true;
-function estado(mundo){return{grid:grid.slice(),pigs:pigs.map(p=>({...p})),cam:mundo?camC:null,reto,dug:reto?reto.dug:0,added:reto?reto.added:0}}
-function foto(mundo){antes=estado(mundo);rehecho=true;$('undoBtn').classList.remove('off')}
+function estado(){return{grid:grid.slice(),pigs:pigs.map(p=>({...p})),reto,dug:reto?reto.dug:0,added:reto?reto.added:0}}
+function foto(){antes=estado();rehecho=true;$('undoBtn').classList.remove('off')}
 function undo(){
   if(!antes){say('No hay nada que deshacer.');return}
-  const a=antes,mundo=a.cam!==null;antes=estado(mundo);
-  if(mundo&&reto)closeReto();
-  grid=a.grid;pigs=a.pigs;if(mundo){camC=a.cam;clampCam()}
+  const a=antes;antes=estado();
+  grid=a.grid;pigs=a.pigs;
   if(reto&&reto===a.reto){reto.dug=a.dug;reto.added=a.added}
   rehecho=!rehecho;beep(rehecho?440:330,.08,'triangle',.07);say(rehecho?'Rehacer':'Deshacer',true,true);
   checkReto();save();
@@ -826,8 +878,8 @@ function tick(){
   const x0=Math.max(0,Math.floor(camC)),x1=Math.min(COLS-1,Math.floor(camC+W/S));
   const lights=[];
   for(let y=0;y<ROWS;y++)for(let x=x0;x<=x1;x++){const v=grid[idx(x,y)];if(!v)continue;
-    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(tex[v],x*S,y*S,S,S);ctx.globalAlpha=1;
-    if(v===13)lights.push([x,y,3.2]);
+    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(v===13&&((fr>>3)+x*3+y)&1?tex.llama2:tex[v],x*S,y*S,S,S);ctx.globalAlpha=1;
+    if(v===13){lights.push([x,y,3.6]);if(Math.random()<.02)particles.push({x:x+.42+Math.random()*.16,y:y+.2,vx:(Math.random()-.5)*.012,vy:-.05,life:22,col:'#ffd43b'})}
     else if(v===9&&na>.05){ctx.fillStyle=`rgba(255,214,90,${.5*na})`;ctx.fillRect(x*S,y*S,S,S);lights.push([x,y,1.6])}
     else if(v!==11&&v!==7&&v!==9){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(x*S,y*S+S-2,S,2)}}
   // copia: el modelo en un marco liso, una flecha y, al lado, el cuadro amarillo donde hay que hacerlo igual
@@ -875,6 +927,12 @@ function tick(){
       const lg=lctx.createRadialGradient(lx,ly,0,lx,ly,rr);lg.addColorStop(0,'rgba(0,0,0,1)');lg.addColorStop(1,'rgba(0,0,0,0)');
       lctx.fillStyle=lg;lctx.fillRect(lx-rr,ly-rr,rr*2,rr*2)});
     ctx.drawImage(light,0,0,W,H);
+    // y alrededor de cada antorcha, un resplandor cálido que tiembla un poco
+    ctx.globalCompositeOperation='lighter';
+    lights.forEach(([x,y,r])=>{if(r<3)return;const lx=(x+.5-camC)*S,ly=(y+.4)*S+offY,rr=r*S*(.92+.06*Math.sin(fr/5+x*2));
+      const lg=ctx.createRadialGradient(lx,ly,0,lx,ly,rr);lg.addColorStop(0,`rgba(255,170,70,${.42*na})`);lg.addColorStop(.5,`rgba(255,140,40,${.16*na})`);lg.addColorStop(1,'rgba(255,140,40,0)');
+      ctx.fillStyle=lg;ctx.fillRect(lx-rr,ly-rr,rr*2,rr*2)});
+    ctx.globalCompositeOperation='source-over';
   }
   // deslizador: qué trozo del mundo se ve. El mundo se mueve arrastrando el dedo; la barra solo aparece mientras se mueve y se apaga sola
   if(barCam===null)barCam=camC;
