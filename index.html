@@ -41,7 +41,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 /* columna de la izquierda: estrellas, ajustes (para el adulto) y deshacer */
 #vozBtn{top:52px}#undoBtn{top:104px}#undoBtn.off{opacity:.4}
 #vozBtn,#undoBtn{position:absolute;left:10px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
-#voz,#mundos{position:fixed;inset:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
+#voz,#mundos{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
 /* selector de mundos: tres huecos con su miniatura; el 🔄 de la derecha (cambiarlo por uno nuevo) es para el adulto */
 #mundosCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,460px);max-height:100%;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;touch-action:pan-y}
 #mundosList{display:flex;flex-direction:column;gap:10px}
@@ -49,7 +49,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .mcard{flex:1;min-width:0;position:relative;padding:0;border:4px solid var(--slot);background:var(--slot);display:block}
 .mundo.sel .mcard{border-color:var(--sel)}
 .mcard canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
-.mplus{display:grid;place-items:center;width:100%;aspect-ratio:3/1;font-size:34px;font-family:system-ui;background:var(--panel-2)}
+.mplus{display:grid;place-items:center;width:100%;min-height:90px;aspect-ratio:3/1;font-size:34px;font-family:system-ui;background:var(--panel-2)}
 .mnum{position:absolute;left:6px;top:6px;background:var(--glass);padding:5px 8px;font-size:14px}
 .mnew{flex:0 0 44px;border:3px solid var(--slot);background:var(--panel-2);font-size:18px;font-family:system-ui;padding:0;opacity:.7}
 #vozCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,420px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
