@@ -30,6 +30,7 @@
 .sin-gap #vozCard>*+*{margin-top:12px}.sin-gap #vozList>*+*{margin-top:6px}
 .sin-gap #blocks>*+*,.sin-gap #flechas>*+*,.sin-gap #reto>*+*,.sin-gap #stars>*+*,.sin-gap .mundo>*+*{margin-left:8px}
 .sin-gap #tools>*+*,.sin-gap .vrow>*+*,.sin-gap #retoOpc>*+*{margin-left:6px}
+.sin-gap #zoomDots>*+*{margin-left:4px}
 .sin-gap #retoSlots .s,.sin-gap #fila .f{margin:2px}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--panel);color:var(--ink);font-family:var(--pixel);touch-action:manipulation;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
@@ -47,8 +48,12 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 
 /* ajustes de voz y nivel (para el adulto) */
 /* columna de la izquierda: estrellas, ajustes (para el adulto) y deshacer */
-#vozBtn{top:52px}#undoBtn{top:104px}#undoBtn.off{opacity:.4}
-#vozBtn,#undoBtn{position:absolute;left:10px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
+#vozBtn{top:52px}#undoBtn{top:104px}#undoBtn.off{opacity:.4}#zoomBtn{top:156px}
+/* bajo la lupa, tres puntos de distinto tamaño: el encendido es el tamaño de bloque que se ve */
+#zoomDots{position:absolute;left:10px;top:202px;width:44px;display:flex;justify-content:center;align-items:center;gap:4px;pointer-events:none}
+#zoomDots i{display:block;background:var(--ink);opacity:.35}#zoomDots i:nth-child(1){width:10px;height:10px}#zoomDots i:nth-child(2){width:7px;height:7px}#zoomDots i:nth-child(3){width:5px;height:5px}
+#zoomDots i.on{opacity:1;background:var(--sel)}
+#vozBtn,#undoBtn,#zoomBtn{position:absolute;left:10px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
 #voz,#mundos{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
 /* selector de mundos: tres huecos con su miniatura; el 🔄 de la derecha (cambiarlo por uno nuevo) es para el adulto */
 #mundosCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,460px);max-height:100%;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;touch-action:pan-y}
@@ -173,6 +178,8 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
     </div>
     <button id="vozBtn" aria-label="Ajustes: voz y nivel de los retos">🗣️</button>
     <button id="undoBtn" class="off" aria-label="Deshacer lo último">↩️</button>
+    <button id="zoomBtn" aria-label="Tamaño de los bloques">🔍</button>
+    <div id="zoomDots" aria-hidden="true"><i></i><i></i><i></i></div>
     <div id="toast"></div>
   </div>
   <div id="mundos" hidden>
@@ -383,13 +390,30 @@ function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));if(!d)r
   else{const l=d.level|0;base=l<4?0:l<8?4:8;niv={};if(l!==base)['contar','serie','suma','resta','alta','copia','programa'].forEach(f=>niv[f]=[l,0])} // partidas guardadas con el nivel único de antes
   abre(mundos[mundo]);return true}catch(e){}return false}
 
+// zoom: 0 = bloques grandes, 1 = normales, 2 = pequeños. vcfg.zoom es el que elige el niño; zoomAhora el que se ve
+// (un reto que no cabe aleja la vista él solo, y al cerrarse vuelve al elegido)
+const ZOOM=[1.3,1,.76];let zoomAhora=1,zoomAuto=false;
+function ponZoom(z,auto){
+  z=Math.max(0,Math.min(2,z));if(z===zoomAhora)return false;
+  const cx=camC+W/S/2,cy=camR+H/S/2; // se mantiene el centro de lo que se está viendo
+  zoomAhora=z;zoomAuto=!!auto;resize();camC=cx-W/S/2;camR=cy-H/S/2;camGoal=camGoalR=null;clampCam();
+  if(!auto){vcfg.zoom=z;saveVoz()}
+  return true;
+}
+function cambiaZoom(d){ // d = -1 acerca (bloques más grandes), +1 aleja
+  if(!ponZoom(zoomAhora+d,false)){beep(200,.08,'triangle',.06);return}
+  beep(d<0?660:440,.07);say(['Bloques grandes','Bloques medianos','Bloques pequeños'][zoomAhora],true,true);
+}
 function resize(){
   W=wrap.clientWidth;H=wrap.clientHeight;const dpr=Math.min(window.devicePixelRatio||1,calidad);
-  S=Math.max(32,Math.min(56,Math.round(Math.min(W,H)/9)));S=Math.max(S,Math.ceil(W/COLS));
+  // tamaño normal: una décima parte del lado corto, entre 30 y 50 px; luego el nivel de zoom lo agranda o lo encoge
+  const sb=Math.max(30,Math.min(50,Math.round(Math.min(W,H)/10)));
+  S=Math.max(24,Math.min(72,Math.round(sb*ZOOM[zoomAhora])));S=Math.max(S,Math.ceil(W/COLS),Math.ceil(H/ROWS)); // el mundo siempre llena la pantalla
   cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=ctx.webkitImageSmoothingEnabled=false;
   light.width=Math.max(1,W);light.height=Math.max(1,H);
   clampCam();
   if(reto&&reto.kind==='programa')renderTab();
+  if(typeof marcaZoom==='function')marcaZoom();
 }
 // La vista: camC es la columna del borde izquierdo y camR la fila del borde de arriba. Si la pantalla es más alta que el mundo, se pega abajo.
 function clampCam(){camC=Math.max(0,Math.min(COLS-W/S,camC));const m=ROWS-H/S;camR=m<=0?m:Math.max(0,Math.min(m,camR));offY=-Math.round(camR*S)}
@@ -409,7 +433,7 @@ function beep(f,d=.08,type='square',vol=.05){if(vcfg.son===2)return;try{audio();
 function oink(){beep(260,.12,'sawtooth',.06);setTimeout(()=>beep(200,.15,'sawtooth',.06),110)}
 function fanfare(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'square',.06),i*110))}
 let voice=null;
-const vcfg={name:'',rate:.95,pitch:1,son:0}; // son: 0 = todo, 1 = la voz solo habla en los retos, 2 = silencio // tono natural: subirlo hace que las voces buenas (mejoradas, premium) suenen raras
+const vcfg={name:'',rate:.95,pitch:1,son:0,zoom:1}; // son: 0 = todo, 1 = la voz solo habla en los retos, 2 = silencio // tono natural: subirlo hace que las voces buenas (mejoradas, premium) suenen raras
 try{Object.assign(vcfg,JSON.parse(localStorage.getItem('bloquesVoz'))||{});if(vcfg.pitch===1.1)vcfg.pitch=1}catch(e){}
 // puntúa las voces instaladas (igual que en Mini Juegos): primero español de España y calidad alta; fuera las que suenan a robot
 function voiceScore(v){
@@ -705,8 +729,17 @@ $('fDel').onclick=progDel;$('fGo').onclick=progGo;
 
 function startReto(){
   const kinds=['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta','letra','letra'].filter(k=>k!==lastKind);
-  let kind=pick(kinds),r=null,level=nivel(kind);
+  let kind=pick(kinds),level=nivel(kind);
   const base=grid.slice();
+  let r=crea(kind,level);
+  // si no cabe en pantalla, se alejan los bloques un paso (o dos) y se vuelve a intentar; al cerrar el reto se recupera el tamaño elegido
+  while(!r&&ZONA.includes(kind)&&zoomAhora<2){ponZoom(zoomAhora+1,true);r=crea(kind,level)}
+  if(!r&&zoomAuto)ponZoom(vcfg.zoom,false); // ni así: se vuelve al tamaño elegido y sale un reto de los de siempre
+  return startReto2(kind,level,base,r);
+}
+const ZONA=['serie','suma','resta','alta','copia','junta','letra']; // retos que necesitan un sitio en la pantalla
+function crea(kind,level){ // prepara el reto de ese tipo; null si no hay sitio para él
+  let r=null;
   if(kind==='serie'){
     const spot=findSky(6,1);
     if(spot){const pat=pick(level<4?['AB']:['AB','AAB','ABB','ABC']),ids=EDU.slice().sort(()=>Math.random()-.5);
@@ -749,6 +782,9 @@ function startReto(){
     const t=makeTablero();
     r={kind,b:0,n:1,...t,x:t.sx,y:t.sy,prog:[],fails:0,now:-1,bad:-1};
   }
+  return r;
+}
+function startReto2(kind,level,base,r){
   if(!r){ // retos de siempre (y recurso si no hay sitio en el cielo)
     if(!['pon','torre','pica','cerdos'].includes(kind))kind='pon';
     level=nivel(kind);
@@ -881,7 +917,8 @@ function ajusta(r,ganado){
   if(ganado&&!tropezo(r)){e[0]=Math.min(16,e[0]+1);e[1]=0}
   else if(++e[1]>=2){e[0]=Math.max(0,e[0]-2);e[1]=0}
 }
-function closeReto(){wrap.classList.remove('conreto');reto=null;$('reto').hidden=true;progUI(false);$('tReto').classList.add('call')}
+function closeReto(){if(zoomAuto)ponZoom(vcfg.zoom,false); // si el reto alejó la vista, vuelve al tamaño elegido
+  wrap.classList.remove('conreto');reto=null;$('reto').hidden=true;progUI(false);$('tReto').classList.add('call')}
 function fireworks(){
   const cols=['#ffd43b','#e8414b','#5cb83a','#3a7fd9','#fff6e0','#f2a0b0'];
   for(let k=0;k<4;k++){const cx=camC+W/S*(.2+Math.random()*.6),cy=(-offY+H*(.2+Math.random()*.3))/S;
@@ -909,6 +946,9 @@ function undo(){
   checkReto();save();
 }
 $('undoBtn').onclick=undo;
+// 🔍 recorre los tamaños: normal → grande → pequeño → normal…
+$('zoomBtn').onclick=()=>{const sig=[2,0,1][zoomAhora];zoomAuto=false;cambiaZoom(sig-zoomAhora)};
+function marcaZoom(){[...$('zoomDots').children].forEach((d,i)=>d.classList.toggle('on',i===zoomAhora))}
 
 // --- toques: un toque = un bloque (o un picotazo); arrastrar el dedo mueve el mundo, no pinta ---
 function cellAt(e){const r=cv.getBoundingClientRect();return{x:Math.floor((e.clientX-r.left)/S+camC),y:Math.floor((e.clientY-r.top-offY)/S)}}
@@ -963,13 +1003,21 @@ function cifra(n){if(ult)particles.push({x:ult.x+.5,y:ult.y-.15,life:60,txt:Stri
 function burst(x,y,id){for(let k=0;k<8;k++)particles.push({x:x+.5,y:y+.5,vx:(Math.random()-.5)*.12,vy:-Math.random()*.12,life:30,id})}
 // Cada dedo se sigue por separado. Si se levanta sin haberse movido es un toque y actúa donde se posó;
 // si se desliza más de un tercio de bloque es un arrastre: mueve el mundo de lado y no pone ni pica nada.
-const dedos=new Map();let panId=null,ocupadoT=0;
-function baja(id,x,y){dedos.set(id,{clientX:x,clientY:y,cam:camC,camR,drag:false})}
-function mueve(id,x,y){const d=dedos.get(id);if(!d)return;
+// Con dos dedos, separarlos o juntarlos cambia el tamaño de los bloques (un paso por gesto). Mientras la distancia entre
+// ellos apenas cambia no es un pellizco: así una palma apoyada no impide tocar con otro dedo.
+const dedos=new Map();let panId=null,ocupadoT=0,pinza=null;
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function baja(id,x,y){dedos.set(id,{clientX:x,clientY:y,x,y,cam:camC,camR,drag:false});
+  if(dedos.size===2){const [a,b]=[...dedos.values()];pinza={d0:Math.max(1,dist(a,b)),hecho:false}}}
+function mueve(id,x,y){const d=dedos.get(id);if(!d)return;d.x=x;d.y=y;
+  if(pinza&&dedos.size===2){const [a,b]=[...dedos.values()],k=dist(a,b)/pinza.d0;
+    if(Math.abs(k-1)>.15){a.drag=b.drag=true;if(panId!==null){panId=null}} // es un pellizco: ni toque ni arrastre
+    if(!pinza.hecho&&(k>1.35||k<.74)){pinza.hecho=true;zoomAuto=false;cambiaZoom(k>1?-1:1)}
+    if(a.drag&&b.drag&&Math.abs(k-1)>.15)return}
   if(!d.drag&&Math.hypot(x-d.clientX,y-d.clientY)>Math.max(12,S*.33)){
-    d.drag=true;if(panId===null){panId=id;camGoal=camGoalR=null;d.clientX=x;d.clientY=y;d.cam=camC;d.camR=camR}}
+    d.drag=true;if(panId===null&&dedos.size===1){panId=id;camGoal=camGoalR=null;d.clientX=x;d.clientY=y;d.cam=camC;d.camR=camR}}
   if(panId===id){camC=d.cam-(x-d.clientX)/S;camR=d.camR-(y-d.clientY)/S;clampCam()}}
-function sube(id,cancelado){const d=dedos.get(id);if(!d)return;dedos.delete(id);
+function sube(id,cancelado){const d=dedos.get(id);if(!d)return;dedos.delete(id);if(dedos.size<2)pinza=null;
   if(panId===id){panId=null;save()}else if(!d.drag&&!cancelado)act(d)}
 if(window.PointerEvent){
   cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId)}catch(_){}baja(e.pointerId,e.clientX,e.clientY)});
@@ -1107,6 +1155,7 @@ function tick(){
   requestAnimationFrame(tick);
 }
 
+zoomAhora=[0,1,2].includes(vcfg.zoom)?vcfg.zoom:1;
 window.addEventListener('resize',resize);
 resize();
 if(!load())genWorld();
@@ -1114,7 +1163,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
