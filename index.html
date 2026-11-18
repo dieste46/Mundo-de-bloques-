@@ -33,12 +33,6 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--panel);color:var
 button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 
-/* flechas para moverse por el mundo: pequeñas y abajo, en las esquinas, sobre la tierra; el centro queda libre para construir
-   (el mundo también se mueve arrastrando el dedo, así que son solo un apoyo) */
-.nav{position:absolute;bottom:8px;width:44px;height:44px;border:3px solid var(--slot);
-  background:rgba(42,29,20,.6);font-size:16px;padding:0;display:grid;place-items:center}
-#navL{left:8px}#navR{right:8px}
-
 /* estrellas ganadas */
 #stars{position:absolute;left:10px;top:10px;background:var(--glass);padding:8px 10px;font-size:12px;display:flex;gap:8px;align-items:center}
 #stars .e{font-family:system-ui;font-size:16px}
@@ -120,7 +114,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .tool[aria-pressed="true"],.tool.ask{background:var(--sel);border-color:var(--sel-edge)}
 #tReto.call{animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{50%{background:var(--sel);border-color:var(--sel-edge)}}
-#toast{position:absolute;left:50%;bottom:60px;transform:translateX(-50%);background:var(--glass);color:var(--ink);
+#toast{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);background:var(--glass);color:var(--ink);
   font-size:11px;line-height:1.5;padding:10px 14px;pointer-events:none;opacity:0;transition:opacity .3s;max-width:calc(100% - 32px);text-align:center}
 #toast.on{opacity:1}
 @media (prefers-reduced-motion:reduce){.slot[aria-pressed="true"]{transform:none}#toast{transition:none}#tReto.call{animation:none}
@@ -146,8 +140,6 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
         <div id="fila" aria-label="Fila de flechas"></div>
       </div>
     </div>
-    <button class="nav" id="navL" aria-label="Ir a la izquierda">◀</button>
-    <button class="nav" id="navR" aria-label="Ir a la derecha">▶</button>
     <button id="vozBtn" aria-label="Ajustes: voz y nivel de los retos">🗣️</button>
     <button id="undoBtn" class="off" aria-label="Deshacer lo último">↩️</button>
     <div id="toast"></div>
@@ -155,6 +147,8 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
   <div id="voz" hidden>
     <div id="vozCard" role="dialog" aria-label="Ajustes del juego">
       <h2>Ajustes</h2>
+      <div class="vlabel">Sonido (en "solo retos" la voz no nombra cada botón que se toca)</div>
+      <div class="vrow" id="vozSon"></div>
       <div class="vlabel">Voz</div>
       <div id="vozList"></div>
       <div class="vlabel">Velocidad</div>
@@ -269,7 +263,7 @@ const pigImg=(izq,leg,dormido)=>pigTex[`${leg?1:0}${dormido?1:0}${izq?1:0}`];
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('world');
 const light=document.createElement('canvas'),lctx=light.getContext('2d');
 let S=40,W=300,H=300,offY=0,camC=COLS/2-4,grid=[],pigs=[],clouds=[],particles=[];
-let night=false,nightAmt=0,stars=0,fr=0,scrollDir=0,barCam=null,barA=0;
+let night=false,nightAmt=0,stars=0,fr=0,barCam=null,barA=0;
 // Dificultad: cada familia de retos lleva su propio nivel. Parte de `base` (lo elige el adulto en ajustes) y luego sube o baja solo.
 // niv[familia]=[nivel, tropiezos seguidos]
 let base=0,niv={};
@@ -337,13 +331,13 @@ function audio(){ac=ac||new (window.AudioContext||window.webkitAudioContext)();i
 const unlock=()=>{try{const a=audio(),s=a.createBufferSource();s.buffer=a.createBuffer(1,1,22050);s.connect(a.destination);s.start(0)}catch(e){}};
 ['pointerdown','touchend','click'].forEach(t=>document.addEventListener(t,unlock,{once:true}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)['pointerdown','touchend','click'].forEach(t=>document.addEventListener(t,unlock,{once:true}))});
-function beep(f,d=.08,type='square',vol=.05){try{audio();
+function beep(f,d=.08,type='square',vol=.05){if(vcfg.son===2)return;try{audio();
   const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.value=vol;
   g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 function oink(){beep(260,.12,'sawtooth',.06);setTimeout(()=>beep(200,.15,'sawtooth',.06),110)}
 function fanfare(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'square',.06),i*110))}
 let voice=null;
-const vcfg={name:'',rate:.95,pitch:1}; // tono natural: subirlo hace que las voces buenas (mejoradas, premium) suenen raras
+const vcfg={name:'',rate:.95,pitch:1,son:0}; // son: 0 = todo, 1 = la voz solo habla en los retos, 2 = silencio // tono natural: subirlo hace que las voces buenas (mejoradas, premium) suenen raras
 try{Object.assign(vcfg,JSON.parse(localStorage.getItem('bloquesVoz'))||{});if(vcfg.pitch===1.1)vcfg.pitch=1}catch(e){}
 // puntúa las voces instaladas (igual que en Mini Juegos): primero español de España y calidad alta; fuera las que suenan a robot
 function voiceScore(v){
@@ -366,18 +360,21 @@ function renderVoz(){
   const row=(id,opts,cur,elige)=>{const el=document.getElementById(id);el.textContent='';opts.forEach(([label,val])=>{const b=document.createElement('button');b.className='vopt';
     b.textContent=label;b.setAttribute('aria-pressed',cur===val);b.onclick=()=>{elige(val);renderVoz()};el.appendChild(b)})};
   const cfg=key=>val=>{vcfg[key]=val;saveVoz();sample()};
+  row('vozSon',[['🔊 Todo',0],['⭐ Solo retos',1],['🔇 Silencio',2]],vcfg.son,val=>{vcfg.son=val;saveVoz();try{speechSynthesis.cancel()}catch(e){}marcaSon();sample()});
   row('vozRate',[['🐢 Lenta',.75],['Normal',.95],['🐇 Rápida',1.15]],vcfg.rate,cfg('rate'));
   row('vozPitch',[['Grave',.8],['Normal',1],['Aguda',1.4]],vcfg.pitch,cfg('pitch'));
   // nivel de partida de los retos: al elegir uno, todas las familias vuelven a empezar desde ahí y luego suben o bajan solas
   row('vozNivel',[['🌱 Fácil',0],['🌿 Medio',4],['🌳 Difícil',8]],base,
     val=>{base=val;niv={};save();say(['Retos fáciles.','Retos de nivel medio.','Retos difíciles.'][val/4],false)});
 }
+function marcaSon(){document.getElementById('vozBtn').textContent=vcfg.son===2?'🔇':'🗣️'} // el botón de ajustes avisa de que está en silencio
 function saveVoz(){try{localStorage.setItem('bloquesVoz',JSON.stringify(vcfg))}catch(e){}}
 function sample(){say('A ver si eres capaz de poner tres bloques de oro.',false)}
 try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice}catch(e){}
 let sayT;
-function say(t,show=true){
+function say(t,show=true,charla=false){ // charla: lo que dice al tocar botones (nombres de bloques y herramientas), que en "solo retos" se calla
   if(show)toast(t);
+  if(vcfg.son===2||(charla&&vcfg.son===1))return;
   try{
     if(!voice)pickVoice(); // en iOS la lista de voces puede llegar tarde y sin avisar
     const u=new SpeechSynthesisUtterance(t);u.lang=voice?voice.lang:'es-ES';if(voice)u.voice=voice;u.rate=vcfg.rate;u.pitch=vcfg.pitch;
@@ -397,22 +394,22 @@ function texCanvas(id){const c=document.createElement('canvas');c.width=c.height
 BLOCKS.forEach(b=>{
   const btn=document.createElement('button');btn.className='slot';btn.id='b'+b.id;btn.setAttribute('aria-label',b.name);
   btn.setAttribute('aria-pressed',b.id===current);btn.appendChild(texCanvas(b.id));
-  btn.onclick=()=>{current=b.id;setMode('put');document.querySelectorAll('.slot').forEach(s=>s.setAttribute('aria-pressed',s===btn));beep(660,.05);say(b.name)};
+  btn.onclick=()=>{current=b.id;setMode('put');document.querySelectorAll('.slot').forEach(s=>s.setAttribute('aria-pressed',s===btn));beep(660,.05);say(b.name,true,true)};
   blocksEl.appendChild(btn);
 });
 const MODES={put:'tPut',dig:'tDig',pig:'tPig',house:'tHouse'};
 function setMode(m){mode=m;for(const k in MODES)$(MODES[k]).setAttribute('aria-pressed',m===k)}
-$('tPut').onclick=()=>{setMode('put');beep(500,.05);say('Poner')};
-$('tDig').onclick=()=>{setMode('dig');beep(400,.05);say('¡A picar!')};
-$('tPig').onclick=()=>{setMode('pig');oink();say('Toca para poner un cerdito')};
-$('tHouse').onclick=()=>{setMode('house');beep(520,.06);say('Toca para poner una casa')};
-$('tNight').onclick=()=>{night=!night;$('tNight').textContent=night?'☀️':'🌙';beep(night?330:660,.15,'triangle',.07);say(night?'Buenas noches':'Buenos días');save()};
+$('tPut').onclick=()=>{setMode('put');beep(500,.05);say('Poner',true,true)};
+$('tDig').onclick=()=>{setMode('dig');beep(400,.05);say('¡A picar!',true,true)};
+$('tPig').onclick=()=>{setMode('pig');oink();say('Toca para poner un cerdito',true,true)};
+$('tHouse').onclick=()=>{setMode('house');beep(520,.06);say('Toca para poner una casa',true,true)};
+$('tNight').onclick=()=>{night=!night;$('tNight').textContent=night?'☀️':'🌙';beep(night?330:660,.15,'triangle',.07);say(night?'Buenas noches':'Buenos días',true,true);save()};
 let confirmNew=false,confirmTimer;
 $('tNew').onclick=e=>{
   const b=e.currentTarget;
   if(!confirmNew){confirmNew=true;b.classList.add('ask');say('¿Mundo nuevo? Toca otra vez.');clearTimeout(confirmTimer);
     confirmTimer=setTimeout(()=>{confirmNew=false;b.classList.remove('ask')},3500);return}
-  confirmNew=false;b.classList.remove('ask');foto(true);closeReto();genWorld();beep(880,.1);setTimeout(()=>beep(1100,.12),100);say('¡Mundo nuevo!')};
+  confirmNew=false;b.classList.remove('ask');foto(true);closeReto();genWorld();beep(880,.1);setTimeout(()=>beep(1100,.12),100);say('¡Mundo nuevo!',true,true)};
 
 // puerta sencilla, como en Mini Juegos: el panel es todo texto y es para el adulto; así el niño no cambia la voz o el nivel sin querer
 $('vozBtn').onclick=()=>{const a=3+rand(7),b=3+rand(7);
@@ -421,10 +418,6 @@ $('vozBtn').onclick=()=>{const a=3+rand(7),b=3+rand(7);
 $('vozClose').onclick=()=>{$('voz').hidden=true};
 $('voz').addEventListener('click',e=>{if(e.target===$('voz'))$('voz').hidden=true});
 
-// flechas: mantener pulsado para moverse
-[['navL',-1],['navR',1]].forEach(([id,d])=>{const b=$(id);
-  b.addEventListener('pointerdown',e=>{e.preventDefault();scrollDir=d});
-  ['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>{if(scrollDir===d){scrollDir=0;save()}}))});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 // Safari en iOS ignora user-scalable=no: se bloquea el zoom con dos dedos, que jugando sale sin querer y se queda puesto
 ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
@@ -552,8 +545,8 @@ function progAdd(d){
 }
 function progDel(){
   const r=progLibre();if(!r)return;
-  if(!r.prog.length){say('Borrar',false);return}
-  r.bad=-1;r.prog.pop();beep(300,.06);say('Borrar',false);drawFila();
+  if(!r.prog.length){say('Borrar',false,true);return}
+  r.bad=-1;r.prog.pop();beep(300,.06);say('Borrar',false,true);drawFila();
 }
 function progGo(){ // el cerdito sigue las flechas una a una; si no llega no pasa nada: se explica y vuelve a la salida
   const r=progLibre();if(!r)return;
@@ -735,7 +728,7 @@ function undo(){
   if(mundo&&reto)closeReto();
   grid=a.grid;pigs=a.pigs;if(mundo){camC=a.cam;clampCam()}
   if(reto&&reto===a.reto){reto.dug=a.dug;reto.added=a.added}
-  rehecho=!rehecho;beep(rehecho?440:330,.08,'triangle',.07);say(rehecho?'Rehacer':'Deshacer');
+  rehecho=!rehecho;beep(rehecho?440:330,.08,'triangle',.07);say(rehecho?'Rehacer':'Deshacer',true,true);
   checkReto();save();
 }
 $('undoBtn').onclick=undo;
@@ -811,9 +804,8 @@ function marco(x,y,w,h,col,dash){ // recuadro con sombra oscura debajo, para que
 const lerp=(a,b,t)=>Math.round(a+(b-a)*t);
 function tick(){
   fr++;
-  if(scrollDir){camGoal=null;camC+=scrollDir*.15;clampCam()}
-  else if(camGoal!==null){camC+=(camGoal-camC)*.12;if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}clampCam()}
-  const maxC=COLS-W/S;$('navL').hidden=camC<=.01;$('navR').hidden=camC>=maxC-.01;
+  if(camGoal!==null){camC+=(camGoal-camC)*.12;if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}clampCam()}
+  const maxC=COLS-W/S;
   nightAmt+=((night?1:0)-nightAmt)*.05;const na=nightAmt;
   // cielo
   const g=ctx.createLinearGradient(0,0,0,H);
@@ -884,10 +876,10 @@ function tick(){
       lctx.fillStyle=lg;lctx.fillRect(lx-rr,ly-rr,rr*2,rr*2)});
     ctx.drawImage(light,0,0,W,H);
   }
-  // deslizador entre las flechas: qué trozo del mundo se ve. Solo aparece mientras la vista se mueve y se apaga solo al parar
+  // deslizador: qué trozo del mundo se ve. El mundo se mueve arrastrando el dedo; la barra solo aparece mientras se mueve y se apaga sola
   if(barCam===null)barCam=camC;
   if(Math.abs(camC-barCam)>.002){barA=2;barCam=camC}else if(barA>0)barA-=.03;
-  if(barA>0&&maxC>0){const x0=64,w=W-128,y=H-33,tw=Math.max(28,w*(W/S)/COLS);
+  if(barA>0&&maxC>0){const x0=16,w=W-32,y=H-16,tw=Math.max(28,w*(W/S)/COLS);
     ctx.globalAlpha=Math.min(1,barA);ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x0-2,y-2,w+4,10);
     ctx.fillStyle='#fff6e0';ctx.fillRect(x0+(w-tw)*camC/maxC,y,tw,6);ctx.globalAlpha=1}
   requestAnimationFrame(tick);
@@ -896,7 +888,7 @@ function tick(){
 window.addEventListener('resize',resize);
 resize();
 if(!load())genWorld();
-clampCam();$('starN').textContent=stars;$('tNight').textContent=night?'☀️':'🌙';
+clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night?'☀️':'🌙';
 requestAnimationFrame(tick);
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
