@@ -8,13 +8,15 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 
 - **No hace falta saber leer.** Todo son iconos y las instrucciones se dicen en voz alta (Web Speech API, voz es-ES). El botón 🔊 repite el reto.
 - **Sin cronómetro ni penalización.** Un fallo no quita nada: se explica qué ha pasado y, al segundo fallo, aparece una pista para que nunca se quede atascado.
-- **El nivel sube solo**, una estrella cada vez. En ajustes (🗣️) el adulto elige de dónde parten los retos: fácil, medio o difícil.
+- **El nivel se ajusta solo, y por separado para cada tipo de reto** (contar, series, sumas, restas, comparar, copiar, programar). Un reto resuelto sin necesitar la pista sube un peldaño; dos tropiezos seguidos en el mismo tipo (ganar con pista o dejarlo a medias) bajan dos. En ajustes (🗣️) el adulto elige el nivel de partida: fácil, medio o difícil.
+- **Cantidad y cifra juntas.** En los retos de contar, sumar y restar la cabecera muestra la cifra pedida junto a las casillas, y cada número que dice la voz sube flotando desde el bloque recién puesto.
 - **Los ajustes son para el adulto.** El panel 🗣️ es lo único con texto, así que se abre con una multiplicación (como la zona de padres de Mini Juegos) para que el niño no cambie la voz o el nivel sin querer. La voz se elige sola: la mejor española instalada.
 
 ## Cómo se toca
 
 - **Un toque = un bloque.** Con 🧱 un toque pone un bloque en un hueco vacío; con ⛏️ quita uno. De uno en uno, que además es como se cuentan en los retos.
 - **Lo que ya está puesto no se cambia de un toque.** Si el hueco está ocupado suena un golpe sordo y la voz recuerda que para quitarlo está el pico (que se ilumina). Si lo ocupa un cerdito, salta y gruñe.
+- **Deshacer (↩️).** Devuelve el mundo a como estaba justo antes del último cambio: un bloque, un picotazo, una casa o un "mundo nuevo" entero. Tocarlo otra vez lo rehace, así que por mucho que se pulse nunca se pierde más de un paso.
 - **Arrastrar mueve el mundo**, no pinta: deslizar el dedo desplaza el paisaje a los lados. Las flechas ◀ ▶ de las esquinas de abajo hacen lo mismo manteniéndolas pulsadas. Mientras la vista se mueve aparece entre ellas un deslizador que indica en qué parte del mundo estás; al parar se apaga solo.
 
 ## Retos (botón ⭐)

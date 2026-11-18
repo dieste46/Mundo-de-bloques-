@@ -44,7 +44,9 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #stars .e{font-family:system-ui;font-size:16px}
 
 /* ajustes de voz y nivel (para el adulto) */
-#vozBtn{position:absolute;left:10px;top:52px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
+/* columna de la izquierda: estrellas, ajustes (para el adulto) y deshacer */
+#vozBtn{top:52px}#undoBtn{top:104px}#undoBtn.off{opacity:.4}
+#vozBtn,#undoBtn{position:absolute;left:10px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
 #voz{position:fixed;inset:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
 #vozCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,420px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
   font-family:system-ui,sans-serif;font-size:15px;overflow-y:auto;touch-action:pan-y}
@@ -68,6 +70,8 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 @media (max-width:519px){#reto{flex-wrap:wrap;justify-content:center}#retoSlots{order:5;flex-basis:100%}#retoSlots.torre{align-items:center}}
 #reto .rb{flex:0 0 auto;width:44px;height:44px;border:3px solid var(--slot);background:var(--panel-2);padding:0;font-size:20px;font-family:system-ui}
 #retoIco{flex:0 0 auto;font-size:22px;font-family:system-ui}
+#retoNum{flex:0 0 auto;font-size:20px;color:var(--sel)} /* la cifra del reto, para unir cantidad y número */
+#reto.done #retoNum{color:var(--slot)}
 #retoSlots{display:flex;flex-wrap:wrap;gap:4px;min-width:0;justify-content:center}
 #retoSlots.torre{flex-direction:column-reverse;flex-wrap:nowrap}
 #retoSlots .s{width:22px;height:22px;opacity:.28;display:grid;place-items:center;font-family:system-ui;font-size:16px;outline:2px dashed var(--ink);outline-offset:-2px}
@@ -132,6 +136,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <div id="reto" hidden>
         <button class="rb" id="rSay" aria-label="Repetir el reto">🔊</button>
         <span id="retoIco"></span>
+        <span id="retoNum" hidden></span>
         <div id="retoSlots"></div>
         <button class="rb" id="rHard" aria-label="Más difícil">💪</button>
         <button class="rb" id="rClose" aria-label="Dejar el reto">✖</button>
@@ -144,6 +149,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
     <button class="nav" id="navL" aria-label="Ir a la izquierda">◀</button>
     <button class="nav" id="navR" aria-label="Ir a la derecha">▶</button>
     <button id="vozBtn" aria-label="Ajustes: voz y nivel de los retos">🗣️</button>
+    <button id="undoBtn" class="off" aria-label="Deshacer lo último">↩️</button>
     <div id="toast"></div>
   </div>
   <div id="voz" hidden>
@@ -155,7 +161,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <div class="vrow" id="vozRate"></div>
       <div class="vlabel">Tono</div>
       <div class="vrow" id="vozPitch"></div>
-      <div class="vlabel">Nivel de los retos (luego sube solo con cada estrella)</div>
+      <div class="vlabel">Nivel de partida de los retos (luego sube o baja solo)</div>
       <div class="vrow" id="vozNivel"></div>
       <button class="vopt" id="vozClose" style="text-align:center">Cerrar</button>
     </div>
@@ -263,8 +269,13 @@ const pigImg=(izq,leg,dormido)=>pigTex[`${leg?1:0}${dormido?1:0}${izq?1:0}`];
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('world');
 const light=document.createElement('canvas'),lctx=light.getContext('2d');
 let S=40,W=300,H=300,offY=0,camC=COLS/2-4,grid=[],pigs=[],clouds=[],particles=[];
-let night=false,nightAmt=0,stars=0,level=0,fr=0,scrollDir=0,barCam=null,barA=0;
-const tier=()=>level<4?0:level<8?1:2; // tramo de dificultad de los retos: fácil, medio, difícil
+let night=false,nightAmt=0,stars=0,fr=0,scrollDir=0,barCam=null,barA=0;
+// Dificultad: cada familia de retos lleva su propio nivel. Parte de `base` (lo elige el adulto en ajustes) y luego sube o baja solo.
+// niv[familia]=[nivel, tropiezos seguidos]
+let base=0,niv={};
+const FAM={pon:'contar',torre:'contar',pica:'contar',cerdos:'contar'}; // el resto de retos son cada uno su familia
+const nivel=k=>{const f=FAM[k]||k;return niv[f]?niv[f][0]:base};
+const tier=k=>{const l=nivel(k);return l<4?0:l<8?1:2}; // tramo de dificultad: fácil, medio, difícil
 const skyStars=(()=>{const r=rng(77);return Array.from({length:40},()=>({x:r(),y:r()*.6,s:r()<.2?3:2,p:r()*6}))})();
 function idx(x,y){return y*COLS+x}
 function get(x,y){return(x<0||x>=COLS||y<0||y>=ROWS)?3:grid[idx(x,y)]}
@@ -300,10 +311,13 @@ function addPig(x,y){
 }
 
 // --- guardado (solo en este navegador) ---
-function save(){try{localStorage.setItem('bloques2',JSON.stringify({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,stars,level,camC}))}catch(e){}}
+function save(){try{localStorage.setItem('bloques2',JSON.stringify({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,stars,base,niv,camC}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));
   if(d&&Array.isArray(d.grid)&&d.grid.length===COLS*ROWS){grid=d.grid;pigs=[];(d.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));
-    night=!!d.night;nightAmt=night?1:0;stars=d.stars|0;level=d.level|0;if(typeof d.camC==='number')camC=d.camC;return true}}catch(e){}return false}
+    night=!!d.night;nightAmt=night?1:0;stars=d.stars|0;
+    if(d.niv&&typeof d.niv==='object'){niv=d.niv;base=d.base|0}
+    else{const l=d.level|0;base=l<4?0:l<8?4:8;niv={};if(l!==base)['contar','serie','suma','resta','alta','copia','programa'].forEach(f=>niv[f]=[l,0])} // partidas guardadas con el nivel único de antes
+    if(typeof d.camC==='number')camC=d.camC;return true}}catch(e){}return false}
 
 function resize(){
   W=wrap.clientWidth;H=wrap.clientHeight;const dpr=window.devicePixelRatio||1;
@@ -354,9 +368,9 @@ function renderVoz(){
   const cfg=key=>val=>{vcfg[key]=val;saveVoz();sample()};
   row('vozRate',[['🐢 Lenta',.75],['Normal',.95],['🐇 Rápida',1.15]],vcfg.rate,cfg('rate'));
   row('vozPitch',[['Grave',.8],['Normal',1],['Aguda',1.4]],vcfg.pitch,cfg('pitch'));
-  // nivel del que parten los retos: marca el tramo en el que está ahora y, al tocar otro, los retos siguen desde ahí
-  row('vozNivel',[['🌱 Fácil',0],['🌿 Medio',4],['🌳 Difícil',8]],tier()*4,
-    val=>{level=val;save();say(['Retos fáciles.','Retos de nivel medio.','Retos difíciles.'][val/4],false)});
+  // nivel de partida de los retos: al elegir uno, todas las familias vuelven a empezar desde ahí y luego suben o bajan solas
+  row('vozNivel',[['🌱 Fácil',0],['🌿 Medio',4],['🌳 Difícil',8]],base,
+    val=>{base=val;niv={};save();say(['Retos fáciles.','Retos de nivel medio.','Retos difíciles.'][val/4],false)});
 }
 function saveVoz(){try{localStorage.setItem('bloquesVoz',JSON.stringify(vcfg))}catch(e){}}
 function sample(){say('A ver si eres capaz de poner tres bloques de oro.',false)}
@@ -398,7 +412,7 @@ $('tNew').onclick=e=>{
   const b=e.currentTarget;
   if(!confirmNew){confirmNew=true;b.classList.add('ask');say('¿Mundo nuevo? Toca otra vez.');clearTimeout(confirmTimer);
     confirmTimer=setTimeout(()=>{confirmNew=false;b.classList.remove('ask')},3500);return}
-  confirmNew=false;b.classList.remove('ask');closeReto();genWorld();beep(880,.1);setTimeout(()=>beep(1100,.12),100);say('¡Mundo nuevo!')};
+  confirmNew=false;b.classList.remove('ask');foto(true);closeReto();genWorld();beep(880,.1);setTimeout(()=>beep(1100,.12),100);say('¡Mundo nuevo!')};
 
 // puerta sencilla, como en Mini Juegos: el panel es todo texto y es para el adulto; así el niño no cambia la voz o el nivel sin querer
 $('vozBtn').onclick=()=>{const a=3+rand(7),b=3+rand(7);
@@ -455,7 +469,7 @@ function makeModelo(){ // planta el modelo en el cielo y deja al lado, tras una 
   const wmax=Math.max(1,Math.floor((W/S-1-120/S)/2)); // que quepan modelo y copia con margen a los lados
   const ids=EDU.slice().sort(()=>Math.random()-.5);
   if(ids.indexOf(9)<3&&ids.indexOf(12)<3)ids.splice(ids.indexOf(12),1); // cristal y nieve juntos se confunden
-  for(let t=tier();t>=0;t--){
+  for(let t=tier('copia');t>=0;t--){
     const opts=MODELOS[t].filter(m=>m[0].length<=wmax).sort(()=>Math.random()-.5);
     for(const m of opts){
       const w=m[0].length,h=m.length,spot=findSky(w*2+1,h);if(!spot)continue;
@@ -484,7 +498,7 @@ function ruta(t,sx,sy){ // camino más corto hasta la manzana (búsqueda en anch
   return null;
 }
 function makeTablero(){ // fácil: en línea recta; medio: con una esquina y una piedra; difícil: tablero mayor y varias piedras
-  const tr=tier(),cols=tr<2?4:5,rows=3;
+  const tr=tier('programa'),cols=tr<2?4:5,rows=3;
   for(let n=0;n<300;n++){
     const t={cols,rows,rocas:new Set(),sx:rand(cols),sy:rand(rows),fx:rand(cols),fy:rand(rows)};
     const dx=Math.abs(t.fx-t.sx),dy=Math.abs(t.fy-t.sy);
@@ -576,7 +590,7 @@ $('fDel').onclick=progDel;$('fGo').onclick=progGo;
 
 function startReto(){
   const kinds=['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa'].filter(k=>k!==lastKind);
-  let kind=pick(kinds),r=null;
+  let kind=pick(kinds),r=null,level=nivel(kind);
   const base=grid.slice();
   if(kind==='serie'){
     const spot=findSky(6,1);
@@ -603,6 +617,7 @@ function startReto(){
   }
   if(!r){ // retos de siempre (y recurso si no hay sitio en el cielo)
     if(!['pon','torre','pica','cerdos'].includes(kind))kind='pon';
+    level=nivel(kind);
     let n=Math.min(10,2+Math.floor(level/2)),b=0;
     if(kind==='cerdos'){n=Math.min(n,5);if(pigs.length+n>MAXPIGS)kind='pon'}
     if(kind==='pica'){b=pick([3,2]);if(countOf(b)<12)kind='pon'}
@@ -611,7 +626,8 @@ function startReto(){
     r={kind,b,n};
   }
   r.base=base;r.dug=0;r.added=0;r.slots=r.slots||r.n;
-  lastKind=r.kind;reto=r;r.shown=progress(r);
+  lastKind=r.kind;reto=r;r.shown=r.ini=progress(r);
+  if(antes&&antes.cam===null){antes=null;$('undoBtn').classList.add('off')} // el reto planta bloques: lo de antes ya no se puede deshacer
   $('tReto').classList.remove('call');
   renderReto();say(phrase(r));save();
 }
@@ -657,6 +673,7 @@ function drawSlots(){
 function renderReto(){
   const el=$('reto');el.hidden=false;el.classList.remove('done');
   $('retoIco').textContent={pon:'🧱',torre:'🗼',pica:'⛏️',cerdos:'🐷',serie:'➡️',suma:'➕',resta:'➖',alta:'🗼',copia:'👀',programa:'🐷'}[reto.kind];
+  $('retoNum').hidden=!['pon','torre','pica','cerdos','suma','resta'].includes(reto.kind);$('retoNum').textContent=reto.n;
   $('retoSlots').className=(reto.kind==='torre'||reto.kind==='alta')?'torre':'';
   drawSlots();
   $('rHard').hidden=!['pon','torre','pica','cerdos'].includes(reto.kind);$('rSay').hidden=false;$('rClose').hidden=false;
@@ -669,20 +686,29 @@ function checkReto(){
   const up=raw>r.shown;r.shown=raw;drawSlots();
   if(r.kind==='resta'){
     if(raw===r.n)return winReto();
-    if(raw<r.n)say(raw?`Ahora hay ${NUM[raw]}. Pon ${NUM[r.n-raw]} más.`:`No queda ninguno. Pon ${NUM[r.n]}.`,false);
-    else if(NUM[raw])say(NUM[raw],false);
+    if(raw<r.n){r.err=(r.err||0)+1;say(raw?`Ahora hay ${NUM[raw]}. Pon ${NUM[r.n-raw]} más.`:`No queda ninguno. Pon ${NUM[r.n]}.`,false)}
+    else if(NUM[raw]){say(NUM[raw],false);cifra(raw)}
     return;
   }
   if(raw>=r.n)return winReto();
   if(r.ghost)return;
-  if(up&&raw>0){say(NUM[raw],false);beep(500+raw*60,.07)}
+  if(up&&raw>0){say(NUM[raw],false);beep(500+raw*60,.07);cifra(raw)}
 }
 function winReto(){
-  const r=reto;r.won=true;stars++;level++;$('starN').textContent=stars;
+  const r=reto;r.won=true;stars++;ajusta(r,true);$('starN').textContent=stars;
   $('reto').classList.add('done');$('rHard').hidden=true;$('rSay').hidden=true;$('rClose').hidden=true;
   fanfare();fireworks();pigs.forEach(p=>{p.vy=-.17;p.joy=60});
   say(`¡Lo has conseguido! ${winText(r)} ¡Una estrella!`);
   save();setTimeout(()=>{if(reto===r)closeReto()},4200);
+}
+// Nivel que se ajusta solo. Un reto resuelto sin necesitar la pista sube un peldaño; dos tropiezos seguidos en la misma familia
+// (ganar con pista, o dejarlo a medias) bajan dos, que es lo que hace falta para que el siguiente se note más fácil.
+const tropezo=r=>!!((r.ghost&&r.ghost.some(g=>g.miss>=2))||r.fails>=2||r.err>=2);
+const intentado=r=>progress(r)!==r.ini||tropezo(r)||!!(r.ghost&&r.ghost.some(g=>g.miss))||!!(r.prog&&r.prog.length)||r.fails>0;
+function ajusta(r,ganado){
+  const f=FAM[r.kind]||r.kind,e=niv[f]||(niv[f]=[base,0]);
+  if(ganado&&!tropezo(r)){e[0]=Math.min(16,e[0]+1);e[1]=0}
+  else if(++e[1]>=2){e[0]=Math.max(0,e[0]-2);e[1]=0}
 }
 function closeReto(){reto=null;$('reto').hidden=true;progUI(false);$('tReto').classList.add('call')}
 function fireworks(){
@@ -693,10 +719,26 @@ function fireworks(){
 }
 $('tReto').onclick=()=>{if(reto&&!reto.won){say(phrase(reto));return}if(!reto)startReto()};
 $('rSay').onclick=()=>reto&&say(phrase(reto));
-$('rClose').onclick=()=>{closeReto();beep(300,.06)};
+$('rClose').onclick=()=>{const r=reto;if(r&&!r.won&&intentado(r)){ajusta(r,false);save()}closeReto();beep(300,.06)};
 $('rHard').onclick=()=>{if(!reto)return;const max=reto.kind==='torre'?8:(reto.kind==='cerdos'?Math.min(8,reto.n+MAXPIGS-pigs.length):10);
   if(reto.n>=max){say('¡Ya es el más difícil!');return}
   reto.n=Math.min(max,reto.n+2);reto.slots=reto.n;renderReto();reto.shown=progress(reto);say('¡Más difícil! '+phrase(reto))};
+
+// --- deshacer: se guarda cómo estaba el mundo justo antes del último cambio (también antes de un "mundo nuevo").
+// Tocar otra vez lo rehace: así, por mucho que se pulse, nunca se pierde más de un paso.
+let antes=null,rehecho=true;
+function estado(mundo){return{grid:grid.slice(),pigs:pigs.map(p=>({...p})),cam:mundo?camC:null,reto,dug:reto?reto.dug:0,added:reto?reto.added:0}}
+function foto(mundo){antes=estado(mundo);rehecho=true;$('undoBtn').classList.remove('off')}
+function undo(){
+  if(!antes){say('No hay nada que deshacer.');return}
+  const a=antes,mundo=a.cam!==null;antes=estado(mundo);
+  if(mundo&&reto)closeReto();
+  grid=a.grid;pigs=a.pigs;if(mundo){camC=a.cam;clampCam()}
+  if(reto&&reto===a.reto){reto.dug=a.dug;reto.added=a.added}
+  rehecho=!rehecho;beep(rehecho?440:330,.08,'triangle',.07);say(rehecho?'Rehacer':'Deshacer');
+  checkReto();save();
+}
+$('undoBtn').onclick=undo;
 
 // --- toques: un toque = un bloque (o un picotazo); arrastrar el dedo mueve el mundo, no pinta ---
 function cellAt(e){const r=cv.getBoundingClientRect();return{x:Math.floor((e.clientX-r.left)/S+camC),y:Math.floor((e.clientY-r.top-offY)/S)}}
@@ -711,14 +753,15 @@ function stampHouse(x,y){
 }
 function act(e){
   const {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
+  ult={x,y};
   const i=idx(x,y);
   if(mode==='pig'){ // tocar un cerdo lo hace saltar; tocar un hueco añade uno
     const p=pigs.find(p=>Math.abs(p.x-x)<1&&Math.abs(p.y-y)<1);
     if(p){p.vy=-.175;p.joy=40;oink();return}
     if(solid(x,y))return;
     if(pigs.length>=MAXPIGS){say('¡Ya hay muchos cerditos!');return}
-    addPig(x,y);pigs[pigs.length-1].joy=30;oink();if(reto)reto.added++;
-  }else if(mode==='house'){stampHouse(x,y)}
+    foto();addPig(x,y);pigs[pigs.length-1].joy=30;oink();if(reto)reto.added++;
+  }else if(mode==='house'){foto();stampHouse(x,y)}
   else if(enCopia(x,y)===1){say('Ese es el modelo. Haz uno igual en el cuadro amarillo.');return} // el modelo no se toca
   else if(mode==='put'){
     const pg=pigs.find(p=>Math.floor(p.x+.5)===x&&Math.floor(p.y+.5)===y);
@@ -735,10 +778,12 @@ function act(e){
       say(reto.kind==='serie'?`Mira la serie: ${reto.seq.map(i=>NAME[i]).join(', ')}. ¿Qué toca ahora?`
         :g.miss<2?`Eso es ${UN[current]}. Mira el modelo: en ese sitio va otro bloque.`:`Mira el modelo: ahí va ${DEF[g.b]}.`);return}
     if(!g&&enCopia(x,y)){beep(220,.1,'triangle',.06);say('En el modelo ese hueco está vacío. Ahí no va nada.');return}
-    grid[i]=current;beep(300+current*40,.06);if(g)say(NAME[current],false)}
-  else{if(!grid[i])return;const v=grid[i];burst(x,y,v);grid[i]=0;beep(150,.07,'triangle',.08);if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
+    foto();grid[i]=current;beep(300+current*40,.06);if(g)say(NAME[current],false)}
+  else{if(!grid[i])return;foto();const v=grid[i];burst(x,y,v);grid[i]=0;beep(150,.07,'triangle',.08);if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
   checkReto();save();
 }
+let ult=null;
+function cifra(n){if(ult)particles.push({x:ult.x+.5,y:ult.y-.15,life:60,txt:String(n)})} // el número que se acaba de decir sube flotando desde el bloque
 function burst(x,y,id){for(let k=0;k<8;k++)particles.push({x:x+.5,y:y+.5,vx:(Math.random()-.5)*.12,vy:-Math.random()*.12,life:30,id})}
 // Cada dedo se sigue por separado. Si se levanta sin haberse movido es un toque y actúa donde se posó;
 // si se desliza más de un tercio de bloque es un arrastre: mueve el mundo de lado y no pone ni pica nada.
@@ -823,7 +868,10 @@ function tick(){
     }
     drawPig(p,asleep&&p.joy<=0)});
   // trocitos y fuegos artificiales
-  particles=particles.filter(q=>{q.vy+=.0075;q.x+=q.vx;q.y+=q.vy;q.life--;
+  particles=particles.filter(q=>{
+    if(q.txt){q.y-=.016;q.life--;ctx.font=`${S*.55}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.globalAlpha=Math.min(1,q.life/15);
+      ctx.fillStyle='#2a1d14';ctx.fillText(q.txt,q.x*S+3,q.y*S+3);ctx.fillStyle='#ffd43b';ctx.fillText(q.txt,q.x*S,q.y*S);ctx.globalAlpha=1;ctx.textAlign='start';return q.life>0}
+    q.vy+=.0075;q.x+=q.vx;q.y+=q.vy;q.life--;
     if(q.col){ctx.fillStyle=q.col;ctx.fillRect(q.x*S,q.y*S,S/6,S/6)}else ctx.drawImage(tex[q.id],q.x*S,q.y*S,S/5,S/5);return q.life>0});
   ctx.restore();
 
