@@ -71,6 +71,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .vopt small{opacity:.7}
 .vopt[aria-pressed="true"]{background:var(--sel);border-color:var(--sel-edge);color:var(--slot)}
 .vlabel{font-size:12px;opacity:.8;margin-bottom:-6px}
+#palIn{flex:2;min-width:0;min-height:44px;box-sizing:border-box;padding:8px 10px;border:3px solid var(--slot);background:#fff6e0;color:var(--slot);font:16px system-ui,sans-serif;text-transform:uppercase;-webkit-user-select:text;user-select:text}
 
 /* reto: dibujo + casillas que se van llenando; debajo, el tablero del cerdito cuando toca programarlo */
 #hud{position:absolute;left:16px;right:16px;top:10px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
@@ -83,6 +84,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #reto .rb{flex:0 0 auto;width:44px;height:44px;border:3px solid var(--slot);background:var(--panel-2);padding:0;font-size:20px;font-family:system-ui}
 #retoIco{flex:0 0 auto;font-size:22px;font-family:system-ui}
 #retoNum{flex:0 0 auto;font-size:20px;color:var(--sel)} /* la cifra del reto, para unir cantidad y número */
+#retoNum.letra{font-size:30px} /* en el reto de letras, la letra bien grande */
 /* la cuenta escrita (3 + ? = 7) y los números que se tocan para responder */
 #retoEq{flex:0 0 auto;font-size:18px;white-space:nowrap}
 #retoEq b{font-weight:normal;color:var(--sel)}
@@ -190,6 +192,8 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <div class="vrow" id="vozRate"></div>
       <div class="vlabel">Tono</div>
       <div class="vrow" id="vozPitch"></div>
+      <div class="vlabel">Palabra de la semana (los retos de letras irán sacando sus letras; vacía, letras sueltas)</div>
+      <div class="vrow"><input id="palIn" type="text" maxlength="14" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ej.: PATO"><button class="vopt" id="palOk">Guardar</button></div>
       <div class="vlabel">Nivel de partida de los retos (luego sube o baja solo)</div>
       <div class="vrow" id="vozNivel"></div>
       <button class="vopt" id="vozClose" style="text-align:center">Cerrar</button>
@@ -420,6 +424,7 @@ function voiceScore(v){
 function esVoices(){try{return speechSynthesis.getVoices().map(v=>({v,sc:voiceScore(v)})).filter(x=>x.sc>=0).sort((a,b)=>b.sc-a.sc).map(x=>x.v)}catch(e){return[]}}
 function pickVoice(){const vs=esVoices();voice=vs.find(v=>v.name===vcfg.name)||vs[0]||null;if(!document.getElementById('voz').hidden)renderVoz()}
 function renderVoz(){
+  {const i=document.getElementById('palIn');if(document.activeElement!==i)i.value=palabra.txt}
   // qué versión del juego está cargada: la fecha en que se publicó la página que se está viendo (sirve para saber si ya ha llegado un cambio)
   try{const f=new Date(document.lastModified);document.getElementById('vozVer').textContent=isNaN(f)?'':'Versión del '+f.toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(e){}
   const list=document.getElementById('vozList'),vs=esVoices();list.textContent='';
@@ -438,6 +443,9 @@ function renderVoz(){
     val=>{base=val;niv={};save();say(['Retos fáciles.','Retos de nivel medio.','Retos difíciles.'][val/4],false)});
 }
 function marcaSon(){document.getElementById('vozBtn').textContent=vcfg.son===2?'🔇':'🗣️'} // el botón de ajustes avisa de que está en silencio
+document.getElementById('palOk').onclick=()=>{const t=limpiaPalabra(document.getElementById('palIn').value);
+  palabra={txt:t,i:0};guardaPalabra();document.getElementById('palIn').value=t;document.getElementById('palIn').blur();
+  say(t?`Palabra de la semana: ${t.toLowerCase()}.`:'Sin palabra de la semana: letras sueltas.',false)};
 function saveVoz(){try{localStorage.setItem('bloquesVoz',JSON.stringify(vcfg))}catch(e){}}
 function sample(){say('A ver si eres capaz de poner tres bloques de oro.',false)}
 try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice}catch(e){}
@@ -547,6 +555,26 @@ function lookAt(cs,w,fila){ // lleva la vista a las columnas cs..cs+w y, en vert
 function stampFrame(spot,count,b,rows){for(let i=0;i<count;i++)grid[idx(spot.cs+i%5,spot.base-(rows-1)+Math.floor(i/5))]=b}
 
 // "copia el modelo": construcciones pequeñas por tramo de dificultad; cada letra es un bloque distinto y el punto, un hueco
+// letras de bloques, en mayúscula: 5 filas de alto (la Ñ, 6) y de 3 a 5 de ancho
+const LETRAS={
+  A:['.X.','X.X','XXX','X.X','X.X'],B:['XX.','X.X','XX.','X.X','XX.'],C:['.XX','X..','X..','X..','.XX'],D:['XX.','X.X','X.X','X.X','XX.'],
+  E:['XXX','X..','XX.','X..','XXX'],F:['XXX','X..','XX.','X..','X..'],G:['.XXX','X...','X.XX','X..X','.XXX'],H:['X.X','X.X','XXX','X.X','X.X'],
+  I:['XXX','.X.','.X.','.X.','XXX'],J:['..X','..X','..X','X.X','.X.'],K:['X..X','X.X.','XX..','X.X.','X..X'],L:['X..','X..','X..','X..','XXX'],
+  M:['X...X','XX.XX','X.X.X','X...X','X...X'],N:['X..X','XX.X','X.XX','X..X','X..X'],Ñ:['XXXX','....','X..X','XX.X','X.XX','X..X'],
+  O:['XXX','X.X','X.X','X.X','XXX'],P:['XX.','X.X','XX.','X..','X..'],Q:['.XX.','X..X','X..X','X.XX','.XXX'],R:['XX.','X.X','XX.','X.X','X.X'],
+  S:['.XX','X..','.X.','..X','XX.'],T:['XXX','.X.','.X.','.X.','.X.'],U:['X.X','X.X','X.X','X.X','XXX'],V:['X.X','X.X','X.X','X.X','.X.'],
+  W:['X...X','X...X','X.X.X','XX.XX','X...X'],X:['X.X','X.X','.X.','X.X','X.X'],Y:['X.X','X.X','.X.','.X.','.X.'],Z:['XXX','..X','.X.','X..','XXX']};
+// cómo se dice cada letra y una palabra que empieza por ella (la W y la K, con palabras que un niño conoce)
+const DILETRA={A:'a',B:'be',C:'ce',D:'de',E:'e',F:'efe',G:'ge',H:'hache',I:'i',J:'jota',K:'ka',L:'ele',M:'eme',N:'ene',Ñ:'eñe',O:'o',P:'pe',Q:'cu',R:'erre',S:'ese',T:'te',U:'u',V:'uve',W:'uve doble',X:'equis',Y:'i griega',Z:'zeta'};
+const PALLETRA={A:'árbol',B:'barco',C:'casa',D:'dedo',E:'elefante',F:'foca',G:'gato',H:'helado',I:'iglú',J:'jirafa',K:'koala',L:'luna',M:'mamá',N:'nube',Ñ:'ñu',O:'oso',P:'pato',Q:'queso',R:'ratón',S:'sol',T:'tomate',U:'uva',V:'vaca',W:'web',X:'xilófono',Y:'yoyó',Z:'zapato'};
+const POOL=['AEIOU','AEIOUMPLSTND','ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'];
+// palabra de la semana: la escribe el adulto en ajustes; se guardan solo sus letras, en mayúscula y con sus tildes (para que la voz
+// la diga bien y se vea como en el cole); para dibujar cada letra con bloques se usa la letra sin tilde
+let palabra={txt:'',i:0};
+try{Object.assign(palabra,JSON.parse(localStorage.getItem('bloquesPalabra'))||{})}catch(e){}
+const limpiaPalabra=s=>(s||'').toUpperCase().replace(/[^A-ZÑÁÉÍÓÚÜ]/g,'').slice(0,12);
+const baseLetra=c=>c==='Ñ'?c:c.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function guardaPalabra(){try{localStorage.setItem('bloquesPalabra',JSON.stringify(palabra))}catch(e){}}
 const MODELOS=[
   [['AA','BB'],['AB','AB'],['AB','BA'],['A','B','A']],
   [['A.','AA'],['.A.','BBB'],['A.A','BBB'],['AB','BA','AB'],['A.','AB','AA']],
@@ -676,7 +704,7 @@ document.querySelectorAll('#flechas [data-d]').forEach(b=>b.onclick=()=>progAdd(
 $('fDel').onclick=progDel;$('fGo').onclick=progGo;
 
 function startReto(){
-  const kinds=['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta'].filter(k=>k!==lastKind);
+  const kinds=['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta','letra','letra'].filter(k=>k!==lastKind);
   let kind=pick(kinds),r=null,level=nivel(kind);
   const base=grid.slice();
   if(kind==='serie'){
@@ -709,6 +737,14 @@ function startReto(){
       const otros=[t-2,t-1,t+1,t+2].filter(v=>v>=1&&v<=10).sort(()=>Math.random()-.5).slice(0,2);
       r={kind,b:0,n:1,slots:0,a,bq,A,B,t,cells,cont:[],cs:spot.cs,bs:spot.base,opts:[t,...otros].sort(()=>Math.random()-.5)};
       lookAt(spot.cs,3,spot.base-Math.max(a,bq)+1)}
+  }else if(kind==='letra'){
+    // con palabra de la semana va sacando sus letras por orden; si no, una al azar del grupo que toca por nivel
+    const conPal=palabra.txt.length>0,pos=conPal?palabra.i%palabra.txt.length:-1,L=conPal?baseLetra(palabra.txt[pos]):pick([...POOL[tier('letra')]]);
+    const pat=LETRAS[L],w=pat[0].length,hh=pat.length,spot=findSky(w,hh);
+    if(spot){const ghost=[],y0=spot.base-hh+1;
+      pat.forEach((row,ry)=>[...row].forEach((ch,rx)=>{if(ch==='X')ghost.push({x:spot.cs+rx,y:y0+ry,b:0,miss:0})})); // b:0 = vale cualquier bloque
+      r={kind,b:0,n:ghost.length,ghost,L,pal:conPal?palabra.txt:'',pos};
+      lookAt(spot.cs,w,y0)}
   }else if(kind==='programa'){
     const t=makeTablero();
     r={kind,b:0,n:1,...t,x:t.sx,y:t.sy,prog:[],fails:0,now:-1,bad:-1};
@@ -742,6 +778,8 @@ function phrase(r){
   if(r.kind==='alta')return `Esta torre tiene ${NUM[r.k]} ${PLURAL[r.a]}. `+p+`hacer una más alta con ${PLURAL[r.b]}.`;
   if(r.kind==='copia')return p+'hacer una construcción igual que esta en el cuadro amarillo.';
   if(r.kind==='junta'){const q=(n,b)=>n===1?'un '+SING[b]:NUM[n]+' '+PLURAL[b];return `Aquí hay ${q(r.a,r.A)} y ${q(r.bq,r.B)}. ¿Cuántos son en total? Toca el número.`}
+  if(r.kind==='letra'){const d=DILETRA[r.L];
+    return (r.pal?`La palabra de esta semana es ${r.pal.toLowerCase()}. Vamos a hacer la ${d}, de ${r.pal.toLowerCase()}.`:`Vamos a hacer la ${d}, de ${PALLETRA[r.L]}.`)+' Rellena la letra con bloques.'}
   if(r.kind==='programa')return p+'llevar al cerdito hasta la manzana. Pon las flechas y toca el botón verde.';
   return p+`poner ${NUM[r.n]} cerditos.`;
 }
@@ -750,17 +788,19 @@ function winText(r){
   if(r.kind==='serie')return '¡Has seguido la serie!';
   if(r.kind==='suma')return `${cap(NUM[r.k])} y ${NUM[r.n-r.k]} son ${NUM[r.n]}.`;
   if(r.kind==='junta')return `${cap(NUM[r.a])} y ${NUM[r.bq]} son ${NUM[r.t]}.`;
+  if(r.kind==='letra')return `Has hecho la ${DILETRA[r.L]}. ${cap(DILETRA[r.L])}, de ${r.pal?r.pal.toLowerCase():PALLETRA[r.L]}.`;
   if(r.kind==='resta')return `${cap(NUM[r.n0])} menos ${NUM[r.n0-r.n]} ${r.n===1?'es':'son'} ${NUM[r.n]}.`;
   if(r.kind==='alta')return `Tu torre tiene ${NUM[r.n]} y la otra ${NUM[r.k]}. ${cap(NUM[r.n])} es más que ${NUM[r.k]}.`;
   if(r.kind==='copia')return `Las dos construcciones son iguales: ${NUM[r.n]} bloques, cada uno en su sitio.`;
   if(r.kind==='programa')return `El cerdito ha llegado a la manzana con ${r.used===1?'una flecha':NUM[r.used]+' flechas'}.`;
   return `${cap(NUM[r.n])} ${r.kind==='cerdos'?'cerditos':PLURAL[r.b]}.`;
 }
+const lleno=g=>g.b?grid[idx(g.x,g.y)]===g.b:!!grid[idx(g.x,g.y)]; // un hueco de reto ya relleno
 function progress(r){
   if(r.kind==='pica')return r.dug;
   if(r.kind==='cerdos')return r.added;
   if(r.kind==='programa'||r.kind==='junta')return r.ok?1:0;
-  if(r.ghost)return r.ghost.filter(g=>grid[idx(g.x,g.y)]===g.b).length; // serie y copia: casillas marcadas con el bloque que toca
+  if(r.ghost)return r.ghost.filter(lleno).length; // serie, copia y letra: casillas con el bloque que toca (en la letra, cualquiera)
   const isNew=i=>grid[i]===r.b&&r.base[i]!==r.b;
   if(r.kind==='torre'||r.kind==='alta'){let best=0;for(let x=0;x<COLS;x++){let run=0;for(let y=0;y<ROWS;y++){if(isNew(idx(x,y))){run++;if(run>best)best=run}else run=0}}return best}
   let n=0;for(let i=0;i<grid.length;i++)if(isNew(i))n++;return n;
@@ -768,7 +808,7 @@ function progress(r){
 function drawSlots(){
   const r=reto,sl=$('retoSlots'),raw=progress(r);sl.textContent='';
   for(let i=0;i<r.slots;i++){const s=document.createElement('div');let on=i<raw;
-    if(r.ghost){const g=r.ghost[i];on=grid[idx(g.x,g.y)]===g.b;if(on||r.kind==='copia')s.appendChild(texCanvas(g.b));else s.textContent='❓'}
+    if(r.ghost){const g=r.ghost[i];on=lleno(g);if(r.kind==='letra'){if(on)s.appendChild(texCanvas(grid[idx(g.x,g.y)]))}else if(on||r.kind==='copia')s.appendChild(texCanvas(g.b));else s.textContent='❓'}
     else if(r.kind==='cerdos')s.textContent='🐷';else s.appendChild(texCanvas(r.kind==='programa'?'manzana':r.b));
     s.className='s'+(on?' on':'')+(r.kind==='serie'&&!on?' ask':'')+(r.kind==='resta'&&i>=r.n?' quita':'');sl.appendChild(s)}
 }
@@ -778,6 +818,7 @@ function ecuacion(r,fin){
   if(r.kind==='suma')return `${r.k} + ${q(r.n-r.k)} = ${r.n}`;
   if(r.kind==='resta')return `${r.n0} - ${q(r.n0-r.n)} = ${r.n}`;
   if(r.kind==='junta')return `${r.a} + ${r.bq} = ${q(r.t)}`;
+  if(r.kind==='letra'&&r.pal)return [...r.pal].map((c,i)=>i===r.pos?`<b>${c}</b>`:c).join('');
   return '';
 }
 function elige(v,btn){ // se toca un número en el reto de juntar
@@ -797,9 +838,9 @@ function cuentaJunta(r){ // pista: el juego cuenta los bloques en voz alta, uno 
 const enJunta=(x,y)=>!!(reto&&!reto.won&&reto.kind==='junta'&&reto.cells.some(c=>c.x===x&&c.y===y));
 function renderReto(){
   const el=$('reto');el.hidden=false;el.classList.remove('done');
-  $('retoIco').textContent={pon:'🧱',torre:'🗼',pica:'⛏️',cerdos:'🐷',serie:'➡️',suma:'➕',resta:'➖',alta:'🗼',copia:'👀',programa:'🐷',junta:'➕'}[reto.kind];
-  $('retoNum').hidden=!['pon','torre','pica','cerdos'].includes(reto.kind);$('retoNum').textContent=reto.n;
-  $('retoEq').hidden=!ecuacion(reto);$('retoEq').innerHTML=ecuacion(reto)||'';
+  $('retoIco').textContent={pon:'🧱',torre:'🗼',pica:'⛏️',cerdos:'🐷',serie:'➡️',suma:'➕',resta:'➖',alta:'🗼',copia:'👀',programa:'🐷',junta:'➕',letra:'🔤'}[reto.kind];
+  $('retoNum').hidden=!['pon','torre','pica','cerdos','letra'].includes(reto.kind)||!!reto.pal;$('retoNum').textContent=reto.kind==='letra'?reto.L:reto.n;$('retoNum').className=reto.kind==='letra'?'letra':'';
+  $('retoEq').hidden=!ecuacion(reto);$('retoEq').innerHTML=ecuacion(reto)||''; // en la letra: la palabra de la semana, con la letra que toca resaltada
   const op=$('retoOpc');op.textContent='';op.hidden=reto.kind!=='junta';
   if(reto.kind==='junta')reto.opts.forEach(v=>{const b=document.createElement('button');b.className='opc';b.textContent=v;b.dataset.v=v;b.setAttribute('aria-label',NUM[v]);b.onclick=()=>elige(v,b);op.appendChild(b)});
   $('retoSlots').className=(reto.kind==='torre'||reto.kind==='alta')?'torre':'';
@@ -824,6 +865,7 @@ function checkReto(){
 }
 function winReto(){
   const r=reto;r.won=true;stars++;ajusta(r,true);$('starN').textContent=stars;
+  if(r.kind==='letra'&&r.pal&&r.pal===palabra.txt){palabra.i=(r.pos+1)%r.pal.length;guardaPalabra()}
   $('reto').classList.add('done');$('rHard').hidden=true;$('rSay').hidden=true;$('rClose').hidden=true;$('retoOpc').hidden=true;
   if(ecuacion(r))$('retoEq').innerHTML=ecuacion(r,true); // la cuenta, ya completa
   fanfare();fireworks();pigs.forEach(p=>{p.vy=-.17;p.joy=60});
@@ -907,7 +949,7 @@ function act(e){
         const b=$('tDig');b.classList.add('ask');setTimeout(()=>b.classList.remove('ask'),1500)}
       return}
     const g=reto&&!reto.won&&reto.ghost&&reto.ghost.find(g=>g.x===x&&g.y===y);
-    if(g&&current!==g.b){ // no encaja en la serie o en la copia: se explica, no se castiga; a la segunda aparece una pista
+    if(g&&g.b&&current!==g.b){ // no encaja en la serie o en la copia: se explica, no se castiga; a la segunda aparece una pista
       g.miss++;burst(x,y,current);beep(220,.1,'triangle',.06);
       say(reto.kind==='serie'?`Mira la serie: ${reto.seq.map(i=>NAME[i]).join(', ')}. ¿Qué toca ahora?`
         :g.miss<2?`Eso es ${UN[current]}. Mira el modelo: en ese sitio va otro bloque.`:`Mira el modelo: ahí va ${DEF[g.b]}.`);return}
@@ -1006,9 +1048,10 @@ function tick(){
     // pista: en el modelo parpadea el bloque que toca copiar
     r.ghost.forEach(g=>{if(g.miss<2||grid[idx(g.x,g.y)]===g.b)return;
       ctx.globalAlpha=.55+.45*Math.sin(fr/8);ctx.strokeStyle='#ffd43b';ctx.lineWidth=4;ctx.strokeRect(g.mx*S+2,g.my*S+2,S-4,S-4);ctx.globalAlpha=1})}
-  // huecos de la serie o de la copia por rellenar
-  if(reto&&reto.ghost&&!reto.won)reto.ghost.forEach(g=>{if(grid[idx(g.x,g.y)]===g.b)return;
-    if(g.miss>=2){ctx.globalAlpha=.4;ctx.drawImage(tex[g.b],g.x*S,g.y*S,S,S)}
+  // huecos de la serie, de la copia o de la letra por rellenar
+  if(reto&&reto.ghost&&!reto.won)reto.ghost.forEach(g=>{if(lleno(g))return;
+    if(reto.kind==='letra'){ctx.fillStyle='rgba(255,246,224,.5)';ctx.fillRect(g.x*S,g.y*S,S,S)} // la letra, en blanco suave: como las de repasar
+    if(g.miss>=2&&g.b){ctx.globalAlpha=.4;ctx.drawImage(tex[g.b],g.x*S,g.y*S,S,S)}
     ctx.globalAlpha=.65+.3*Math.sin(fr/10);ctx.strokeStyle='#fff6e0';ctx.lineWidth=3;ctx.setLineDash([6,5]);
     ctx.strokeRect(g.x*S+3,g.y*S+3,S-6,S-6);ctx.setLineDash([]);
     if(g.miss<2&&reto.kind==='serie'){ctx.fillStyle='#fff6e0';ctx.font=`${S*.4}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.fillText('?',g.x*S+S/2,g.y*S+S*.72);ctx.textAlign='start'}
@@ -1071,7 +1114,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0}};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
