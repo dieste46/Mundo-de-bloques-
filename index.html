@@ -134,7 +134,9 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 @keyframes late{50%{opacity:.4}}
 @keyframes tiembla{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 
-#bar{background:var(--panel);border-top:4px solid var(--panel-2);padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));
+/* Por abajo, en los iPhone con raya de inicio se deja el 60 % de la zona segura: lo justo para que los botones no pisen la raya
+   (20 px en vertical, 13 tumbado) sin regalarle una franja vacía. Donde no hay raya, o el navegador no entiende max(), quedan 10 px. */
+#bar{background:var(--panel);border-top:4px solid var(--panel-2);padding:10px 12px;padding-bottom:max(10px,calc(env(safe-area-inset-bottom,0px)*.6));
   display:flex;flex-direction:column;gap:10px}
 #blocks{display:flex;gap:8px;overflow-x:auto;padding:4px 0 2px;scrollbar-width:none;touch-action:pan-x}
 #blocks::-webkit-scrollbar{display:none}
