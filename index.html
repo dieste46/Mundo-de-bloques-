@@ -227,6 +227,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <button class="tool" id="tPig" aria-label="Cerditos" aria-pressed="false">🐷</button>
       <button class="tool" id="tHouse" aria-label="Casa" aria-pressed="false">🏠</button>
       <button class="tool" id="tNight" aria-label="Día y noche">🌙</button>
+      <button class="tool" id="tMusic" aria-label="Música" aria-pressed="false">🎵</button>
       <button class="tool call" id="tReto" aria-label="Reto nuevo">⭐</button>
       <button class="tool" id="tNew" aria-label="Mis mundos">🌍</button>
     </div>
@@ -585,6 +586,7 @@ $('tPig').onclick=()=>{setMode('pig');oink();say('Toca para poner un cerdito',tr
 $('tHouse').onclick=()=>{setMode('house');beep(520,.06);say('Toca para poner una casa',true,true)};
 $('tNight').onclick=()=>{night=!night;$('tNight').textContent=night?'☀️':'🌙';beep(night?330:660,.15,'triangle',.07);say(night?'Buenas noches':'Buenos días',true,true);save();
   if(!night)setTimeout(()=>{if(!night)amanece()},1500)}; // al hacerse de día, lo plantado crece
+$('tMusic').onclick=()=>tocaMusica();
 // 🌍 abre el selector de mundos: tres huecos con su miniatura. Tocar uno entra en él (si está vacío, se crea).
 // Cambiar un mundo ya hecho por uno nuevo es cosa del adulto, tras la puerta, para que ningún toque suelto borre nada.
 const COLOR={1:'#5cb83a',2:'#8a5a36',3:'#8b8f94',4:'#9c6a3c',5:'#3f9a34',6:'#e9d79a',7:'#3a7fd9',8:'#b34a33',9:'#cdeefa',10:'#f2c230',11:'#e8414b',12:'#f4f8fb',13:'#ff7a1a',14:'#5cb83a',15:'#3f9a34'};
@@ -1043,6 +1045,36 @@ function stampHouse(x,y){
     if(v>0)pops.set(idx(cx,cy),ahoraC+(HOUSE.length-1-ry)*55)})); // se levanta fila a fila, de abajo arriba
   [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
 }
+// --- el cerdito músico ---
+// Al tocar 🎵 un cerdito recorre las columnas que se ven en pantalla, de izquierda a derecha, saltando de cima en cima. Al caer en cada una suena su nota:
+// más aguda cuanto más alta está la cima (escala pentatónica: suene lo que suene, queda bien), y con el timbre del bloque que hay arriba
+// (campanita el cristal y el oro, gota el agua, caja la madera y la piedra, marimba lo demás). Las columnas se leen en el momento, así que se puede
+// ir construyendo por delante del cerdito y oír el cambio. Va por reloj. Con un reto abierto no suena, para no tapar la voz.
+const PASO=270,PENTA=[0,2,4,7,9];
+let musica=null,ultNotas=[];
+function nota(f,id){if(vcfg.son===2)return;const m=MAT[id]||'t';
+  if(m==='c'||m==='o'){tono(f,f,.6,'sine',.09);tono(f*2,f*2,.4,'sine',.04)}
+  else if(m==='w')tono(f,f*1.5,.22,'sine',.12);
+  else if(m==='m'||m==='d'){tono(f,f,.16,'triangle',.16);ruido(.02,2500,1,'highpass',.04)}
+  else tono(f,f,.34,'triangle',.14)}
+function paraMusica(fin){if(!musica)return;ultNotas=musica.notas;musica=null;$('tMusic').setAttribute('aria-pressed',false);
+  if(fin)pigs.forEach(p=>{p.vy=-.15;p.joy=40})} // al acabar la canción, los cerditos del mundo saltan de contentos
+function tocaMusica(){
+  if(musica){paraMusica();return}
+  if(reto&&!reto.won){beep(200,.08,'triangle',.06);say('Cuando acabes el reto, tocamos música.',true,true);return}
+  const x0=Math.max(0,Math.ceil(camC)),x1=Math.min(COLS-1,Math.floor(camC+W/S)-1);
+  musica={x0,x1,t0:Date.now()+700,ult:x0-1,notas:[]};$('tMusic').setAttribute('aria-pressed',true);say('¡Música!',true,true);
+}
+function pasoMusica(ahora){const m=musica;
+  if(reto&&!reto.won){paraMusica();return}
+  const k=(ahora-m.t0)/PASO,n=Math.floor(k),col=m.x0+Math.max(0,n);
+  if(col>m.x1){paraMusica(true);return}
+  if(k>=0&&col!==m.ult){m.ult=col;const y=topOf(col);
+    if(y<ROWS){const a=Math.max(0,Math.min(17,SUELO+5-y)),f=261.63*Math.pow(2,(Math.floor(a/5)*12+PENTA[a%5])/12);
+      nota(f,grid[y*COLS+col]);m.notas.push(Math.round(f));pops.set(y*COLS+col,ahora);particles.push({x:col+.5,y:y-.9,life:50,txt:'♪'})}}
+  const u=k<0?0:k-n,ya=topOf(col),yb=col<m.x1?topOf(col+1):ya; // de una cima a la siguiente, con un saltito
+  ctx.drawImage(pigImg(false,u>.5,false),(col+u)*S,(ya+(yb-ya)*u-1-Math.sin(Math.PI*u)*.7)*S+S*.25,S,S*.75);
+}
 // --- el mundo hace cosas solo ---
 // Reacciones: muchas veces por segundo se mira una casilla al azar y, si se dan las condiciones, cambia. Son tres y ninguna rompe nada que no se pueda rehacer:
 //  · la nieve que tiene una antorcha pegada se derrite y queda agua;
@@ -1262,6 +1294,7 @@ function tick(){
       if(solid(front,row)){if(!solid(front,row-1)&&p.vy===0)p.vy=-.16;else p.vx*=-1}else p.x=nx;
     }
     drawPig(p,asleep&&p.joy<=0)});
+  if(musica)pasoMusica(ahora);
   // trocitos y fuegos artificiales
   particles=particles.filter(q=>{
     if(q.txt){q.y-=.016;q.life--;ctx.font=`${S*.55}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.globalAlpha=Math.min(1,q.life/15);
@@ -1306,7 +1339,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},ultNotas:()=>ultNotas};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
