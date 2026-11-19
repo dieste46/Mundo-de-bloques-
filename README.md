@@ -16,6 +16,7 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 
 - **Un toque = un bloque.** Con 🧱 un toque pone un bloque en un hueco vacío; con ⛏️ quita uno. De uno en uno, que además es como se cuentan en los retos.
 - **Tocar un bloque que tiene hueco encima pone el nuevo encima.** Así se construye sobre el suelo y se apila sin tener que acertar el hueco (el dedo suele caer un poco por debajo de donde se apunta).
+- **Tocar se nota.** El bloque que se pone entra con un saltito (nace algo más pequeño, se pasa un pelín y se asienta en menos de dos décimas de segundo) y el que se pica se parte en trozos de su propio dibujo. Cada material suena a lo que es: un golpe sordo la tierra, un toc la madera, un clac la piedra, un plop el agua, un tin el cristal, un clin el oro. La casa se levanta fila a fila.
 - **Lo que ya está puesto no se cambia de un toque.** Si el hueco está ocupado suena un golpe sordo y la voz recuerda que para quitarlo está el pico (que se ilumina). Si lo ocupa un cerdito, salta y gruñe.
 - **Tres mundos (🌍).** El botón abre tres huecos con su miniatura; tocar uno entra en él y, si está vacío, lo crea. Cada mundo guarda por separado sus bloques, sus cerditos, su hora y su vista; las estrellas y los niveles son del niño y valen en todos. Cambiar un mundo ya hecho por uno nuevo (🔄) pide la multiplicación del adulto, para que ningún toque suelto borre nada.
 - **Tres tamaños de bloque (🔍).** La lupa de la columna izquierda pasa de bloques medianos a grandes, de grandes a pequeños y vuelta; también se cambia pellizcando con dos dedos (un paso por gesto). Los puntos bajo la lupa indican el tamaño actual y se recuerda en cada aparato. Si un reto no cabe en la pantalla, el juego aleja la vista él solo y, al cerrar el reto, vuelve al tamaño elegido.
@@ -56,7 +57,11 @@ Los gráficos no son imágenes: las texturas de los bloques (16×16), el cerdito
 
 El progreso (los tres mundos, estrellas, niveles, voz) se guarda solo en el dispositivo (`localStorage`), con cada cambio. Ojo: Safari puede borrar los datos de una web que lleva días sin abrirse; instalada en la pantalla de inicio no le pasa.
 
-De noche las antorchas dan luz: abren un claro en la oscuridad con un resplandor cálido, la llama parpadea y suelta alguna chispa. El cristal también brilla.
+De noche las antorchas dan luz: abren un claro en la oscuridad con un resplandor cálido, la llama parpadea y suelta alguna chispa. El cristal también brilla. La oscuridad se pinta en un lienzo cuatro veces más pequeño que la pantalla y cada luz es una pegatina redonda hecha una sola vez (`luzSpr`) que se estampa en él: por muchas antorchas que haya, a pantalla completa solo se pinta una capa. No crear degradados nuevos en cada fotograma es lo que más se nota en un aparato viejo.
+
+Los sonidos tampoco son archivos: `suena(id,romper)` los fabrica con un tono que cae y un poco de ruido filtrado, según el material de cada bloque (`MAT`).
+
+Las animaciones cortas (el saltito de los bloques) van por reloj, no por fotogramas, para que duren lo mismo en cualquier aparato.
 
 Un tipo de reto nuevo se añade en cuatro sitios de `index.html`: `startReto` (lo prepara), `phrase` (lo que dice la voz), `progress` (cuánto lleva) y `winText` (lo que dice al ganar).
 
@@ -77,11 +82,12 @@ El workflow `.github/workflows/pages.yml` publica en GitHub Pages en cada push a
 
 ## Dispositivos antiguos
 
-El juego está escrito para funcionar desde iOS 12 (un iPad Air de 1.ª generación), aunque en ese sistema solo está probado en simulación:
+El juego está escrito para funcionar desde iOS 12 y se juega en un iPad Air de 1.ª generación con iOS 12.5.8:
 
 - Sin eventos de puntero (antes de iOS 13) los toques sobre el mundo usan eventos táctiles.
 - Sin `gap` en flex (antes de iOS 14.5) el script lo detecta y separa botones y casillas con márgenes (`.sin-gap`).
 - La resolución de dibujo baja sola si el aparato no llega a unos 28 fotogramas por segundo; al ser pixelado apenas se nota.
+- En los ajustes (🗣️), debajo de la versión, se ve a cuántas imágenes por segundo va el juego en ese aparato y con qué detalle está dibujando. Es la forma de comprobar en el aparato de verdad si un cambio gráfico le pesa: lo ideal es 60; por debajo de 30 se nota.
 - El código no usa sintaxis posterior a ES2018.
 
 ## iPhone / iPad

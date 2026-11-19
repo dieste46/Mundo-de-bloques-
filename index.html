@@ -45,6 +45,8 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 /* estrellas ganadas */
 #stars{position:absolute;left:10px;top:10px;background:var(--glass);padding:8px 10px;font-size:12px;display:flex;gap:8px;align-items:center}
 #stars .e{font-family:system-ui;font-size:16px}
+#stars.gana{animation:estrella .8s;transform-origin:0 50%;-webkit-transform-origin:0 50%}
+@keyframes estrella{25%{transform:scale(1.5)}50%{transform:scale(.94)}75%{transform:scale(1.12)}}
 
 /* ajustes de voz y nivel (para el adulto) */
 /* columna de la izquierda: estrellas, ajustes (para el adulto) y deshacer */
@@ -322,10 +324,19 @@ const pigImg=(izq,leg,dormido)=>pigTex[`${leg?1:0}${dormido?1:0}${izq?1:0}`];
 // --- estado ---
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('world');
 const light=document.createElement('canvas'),lctx=light.getContext('2d');
+// La oscuridad de la noche se pinta en un lienzo cuatro veces más pequeño que la pantalla (es una mancha suave: ampliada no se nota),
+// y cada luz es una pegatina redonda hecha una sola vez: un agujero para la oscuridad y un resplandor cálido para las antorchas.
+// Antes se creaban dos degradados redondos por antorcha en cada fotograma, y de noche era lo más caro del juego con diferencia.
+const LQ=4;
+const luzSpr=(()=>{const mk=stops=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,32);
+  stops.forEach(s=>g.addColorStop(s[0],s[1]));x.fillStyle=g;x.fillRect(0,0,64,64);return c};
+  return{hueco:mk([[0,'rgba(0,0,0,1)'],[1,'rgba(0,0,0,0)']]),calida:mk([[0,'rgba(255,222,140,.42)'],[.12,'rgba(255,186,86,.36)'],[.5,'rgba(255,150,50,.15)'],[1,'rgba(255,140,40,0)']])}})();
 let S=40,W=300,H=300,offY=0,camC=COLS/2-4,camR=0,grid=[],pigs=[],clouds=[],particles=[];
-let night=false,nightAmt=0,stars=0,fr=0,barCam=null,barA=0; // barCam: [columna, fila] de la vista en el fotograma anterior
+let night=false,nightAmt=0,stars=0,fr=0,barCam=null,barA=0,cieloG=null,cieloK=''; // barCam: [columna, fila] de la vista en el fotograma anterior
 // resolución de dibujo: empieza en la de la pantalla y baja sola si el aparato no llega (ver tick)
 let calidad=3,tAnt=0,lento=16,frCal=0;
+// bloques recién puestos: casilla → cuándo empieza su salto (ver tick). Va por reloj, no por fotogramas, así dura lo mismo en un iPad viejo que en uno nuevo.
+const pops=new Map(),POP=170;
 // Dificultad: cada familia de retos lleva su propio nivel. Parte de `base` (lo elige el adulto en ajustes) y luego sube o baja solo.
 // niv[familia]=[nivel, tropiezos seguidos]
 let base=0,niv={};
@@ -410,7 +421,7 @@ function resize(){
   const sb=Math.max(30,Math.min(50,Math.round(Math.min(W,H)/10)));
   S=Math.max(24,Math.min(72,Math.round(sb*ZOOM[zoomAhora])));S=Math.max(S,Math.ceil(W/COLS),Math.ceil(H/ROWS)); // el mundo siempre llena la pantalla
   cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=ctx.webkitImageSmoothingEnabled=false;
-  light.width=Math.max(1,W);light.height=Math.max(1,H);
+  light.width=Math.max(1,Math.ceil(W/LQ));light.height=Math.max(1,Math.ceil(H/LQ));
   clampCam();
   if(reto&&reto.kind==='programa')renderTab();
   if(typeof marcaZoom==='function')marcaZoom();
@@ -430,6 +441,32 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)['pointerd
 function beep(f,d=.08,type='square',vol=.05){if(vcfg.son===2)return;try{audio();
   const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.value=vol;
   g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+// Cada bloque suena a lo que es al ponerlo y al romperlo: un golpe sordo la tierra, un toc la madera, un tin el cristal, un plop el agua...
+// Todo fabricado aquí (un tono que cae y un poco de ruido filtrado), sin archivos de sonido. Los tonos no bajan de unos 150 Hz: el altavoz de una tableta no da más.
+let ruidoBuf=null;
+function ruido(d,f,q,tipo,vol,t0=0){try{const a=audio();
+  if(!ruidoBuf){ruidoBuf=a.createBuffer(1,11025,22050);const c=ruidoBuf.getChannelData(0);for(let i=0;i<c.length;i++)c[i]=Math.random()*2-1}
+  const s=a.createBufferSource(),fl=a.createBiquadFilter(),g=a.createGain(),t=a.currentTime+t0;
+  s.buffer=ruidoBuf;fl.type=tipo;fl.frequency.value=f;fl.Q.value=q;
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  s.connect(fl);fl.connect(g);g.connect(a.destination);s.start(t);s.stop(t+d+.02)}catch(e){}}
+function tono(f0,f1,d,type,vol,t0=0){try{const a=audio(),o=a.createOscillator(),g=a.createGain(),t=a.currentTime+t0;
+  o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+d);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.02)}catch(e){}}
+// de qué está hecho cada bloque: t tierra y hierba, h hojas, a arena y nieve, d duro (piedra, ladrillo), m madera (y la antorcha), w agua, c cristal, o oro, f flor
+const MAT={1:'t',2:'t',3:'d',4:'m',5:'h',6:'a',7:'w',8:'d',9:'c',10:'o',11:'f',12:'a',13:'m'};
+function suena(id,romper){if(vcfg.son===2)return;const m=MAT[id]||'t',k=romper?.78:1; // al romper suena algo más grave, y detrás caen los trocitos
+  if(m==='t'){tono(300*k,150,.09,'triangle',.18);ruido(.07,1100*k,.7,'lowpass',.18)}
+  else if(m==='h'){ruido(.1,2600*k,.8,'bandpass',.16);ruido(.06,5200,.7,'highpass',.045,.03)}
+  else if(m==='a'){ruido(.13,1900*k,.6,'bandpass',.145)}
+  else if(m==='d'){tono(560*k,230,.05,'triangle',.17);ruido(.04,3200,.7,'highpass',.1)}
+  else if(m==='m'){tono(540*k,350,.06,'triangle',.2);ruido(.025,1500,2,'bandpass',.12)}
+  else if(m==='w'){tono(300,romper?170:760,.13,'sine',.15)}
+  else if(m==='c'){tono(2100*k,1950*k,.16,'sine',.045);tono(3150*k,2950*k,.1,'sine',.027)}
+  else if(m==='o'){tono(1319,1300,.2,'sine',.05);tono(1976,1950,.26,'sine',.035,.05);ruido(.03,4200,.7,'highpass',.035)}
+  else{tono(880*k,1175*k,.07,'sine',.1)}
+  if(romper&&m!=='w')ruido(.09,1500,.5,'lowpass',.12,.03)}
 function oink(){beep(260,.12,'sawtooth',.06);setTimeout(()=>beep(200,.15,'sawtooth',.06),110)}
 function fanfare(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'square',.06),i*110))}
 let voice=null;
@@ -447,10 +484,15 @@ function voiceScore(v){
 }
 function esVoices(){try{return speechSynthesis.getVoices().map(v=>({v,sc:voiceScore(v)})).filter(x=>x.sc>=0).sort((a,b)=>b.sc-a.sc).map(x=>x.v)}catch(e){return[]}}
 function pickVoice(){const vs=esVoices();voice=vs.find(v=>v.name===vcfg.name)||vs[0]||null;if(!document.getElementById('voz').hidden)renderVoz()}
+// Debajo de la versión, cómo va el juego en este aparato: imágenes por segundo y con qué detalle se está dibujando (en uno antiguo se baja solo).
+let verTxt='';
+function pintaVer(){const d=Math.min(window.devicePixelRatio||1,calidad);
+  document.getElementById('vozVer').textContent=verTxt+(verTxt?' · ':'')+Math.round(1000/Math.max(1,lento))+' imágenes/s · detalle ×'+String(d).replace('.',',')}
 function renderVoz(){
   {const i=document.getElementById('palIn');if(document.activeElement!==i)i.value=palabra.txt}
   // qué versión del juego está cargada: la fecha en que se publicó la página que se está viendo (sirve para saber si ya ha llegado un cambio)
-  try{const f=new Date(document.lastModified);document.getElementById('vozVer').textContent=isNaN(f)?'':'Versión del '+f.toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(e){}
+  try{const f=new Date(document.lastModified);verTxt=isNaN(f)?'':'Versión del '+f.toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(e){}
+  pintaVer();
   const list=document.getElementById('vozList'),vs=esVoices();list.textContent='';
   if(!vs.length){const p=document.createElement('p');p.textContent='Este dispositivo no tiene voces en español. Instala una en los ajustes del sistema (Accesibilidad, texto a voz) y vuelve a abrir el juego.';list.appendChild(p)}
   vs.forEach(v=>{const b=document.createElement('button');b.className='vopt';b.setAttribute('aria-pressed',voice===v);
@@ -901,6 +943,7 @@ function checkReto(){
 }
 function winReto(){
   const r=reto;r.won=true;stars++;ajusta(r,true);$('starN').textContent=stars;
+  {const e=$('stars');e.classList.remove('gana');void e.offsetWidth;e.classList.add('gana')} // el contador da un latido
   if(r.kind==='letra'&&r.pal&&r.pal===palabra.txt){palabra.i=(r.pos+1)%r.pal.length;guardaPalabra()}
   $('reto').classList.add('done');$('rHard').hidden=true;$('rSay').hidden=true;$('rClose').hidden=true;$('retoOpc').hidden=true;
   if(ecuacion(r))$('retoEq').innerHTML=ecuacion(r,true); // la cuenta, ya completa
@@ -957,8 +1000,10 @@ const HOUSE=[[0,0,4,0,0],[0,4,4,4,0],[4,4,4,4,4],[8,9,8,8,8],[8,8,8,-1,8],[8,8,8
 function stampHouse(x,y){
   while(y<ROWS-1&&!solid(x,y+1))y++;           // baja hasta el suelo
   while(y>1&&solid(x,y))y--;                    // o sube si has tocado dentro de la tierra
+  const ahoraC=Date.now();
   HOUSE.forEach((row,ry)=>row.forEach((v,rx)=>{const cx=x-2+rx,cy=y-(HOUSE.length-1)+ry;
-    if(!v||cx<0||cx>=COLS||cy<0||cy>=ROWS||pigIn(cx,cy)||enCopia(cx,cy)||enJunta(cx,cy))return;grid[idx(cx,cy)]=v<0?0:v}));
+    if(!v||cx<0||cx>=COLS||cy<0||cy>=ROWS||pigIn(cx,cy)||enCopia(cx,cy)||enJunta(cx,cy))return;grid[idx(cx,cy)]=v<0?0:v;
+    if(v>0)pops.set(idx(cx,cy),ahoraC+(HOUSE.length-1-ry)*55)})); // se levanta fila a fila, de abajo arriba
   [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
 }
 function act(e){
@@ -994,13 +1039,13 @@ function act(e){
       say(reto.kind==='serie'?`Mira la serie: ${reto.seq.map(i=>NAME[i]).join(', ')}. ¿Qué toca ahora?`
         :g.miss<2?`Eso es ${UN[current]}. Mira el modelo: en ese sitio va otro bloque.`:`Mira el modelo: ahí va ${DEF[g.b]}.`);return}
     if(!g&&enCopia(x,y)){beep(220,.1,'triangle',.06);say('En el modelo ese hueco está vacío. Ahí no va nada.');return}
-    foto();grid[i]=current;beep(300+current*40,.06);if(g)say(NAME[current],false)}
-  else{if(!grid[i])return;foto();const v=grid[i];burst(x,y,v);grid[i]=0;beep(150,.07,'triangle',.08);if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
+    foto();grid[i]=current;pops.set(i,Date.now());suena(current);if(g)say(NAME[current],false)}
+  else{if(!grid[i])return;foto();const v=grid[i];burst(x,y,v);grid[i]=0;suena(v,true);if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
   checkReto();save();
 }
 let ult=null;
 function cifra(n){if(ult)particles.push({x:ult.x+.5,y:ult.y-.15,life:60,txt:String(n)})} // el número que se acaba de decir sube flotando desde el bloque
-function burst(x,y,id){for(let k=0;k<8;k++)particles.push({x:x+.5,y:y+.5,vx:(Math.random()-.5)*.12,vy:-Math.random()*.12,life:30,id})}
+function burst(x,y,id){for(let k=0;k<8;k++)particles.push({x:x+.1+(k&1)*.45+Math.random()*.1,y:y+.1+(k>>1&1)*.45+Math.random()*.1,vx:((k&1)-.5)*.06+(Math.random()-.5)*.09,vy:-.03-Math.random()*.1,life:24+Math.random()*12,id,sx:(k&1)*8,sy:(k>>1&1)*8})} // se parte en trozos de su propio dibujo (las cuatro esquinas, dos veces)
 // Cada dedo se sigue por separado. Si se levanta sin haberse movido es un toque y actúa donde se posó;
 // si se desliza más de un tercio de bloque es un arrastre: mueve el mundo de lado y no pone ni pica nada.
 // Con dos dedos, separarlos o juntarlos cambia el tamaño de los bloques (un paso por gesto). Mientras la distancia entre
@@ -1055,13 +1100,14 @@ function tick(){
   if(camGoal!==null){camC+=(camGoal-camC)*.12;if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}}
   if(camGoalR!==null){camR+=(camGoalR-camR)*.12;if(Math.abs(camGoalR-camR)<.02){camR=camGoalR;camGoalR=null}}
   clampCam();
+  if(fr%30===0&&!document.getElementById('voz').hidden)pintaVer();
   const maxC=COLS-W/S,maxR=ROWS-H/S;
   nightAmt+=((night?1:0)-nightAmt)*.05;const na=nightAmt;
   // cielo
-  const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,`rgb(${lerp(95,10,na)},${lerp(180,14,na)},${lerp(236,48,na)})`);
-  g.addColorStop(1,`rgb(${lerp(191,44,na)},${lerp(230,52,na)},${lerp(251,110,na)})`);
-  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  {const k=H+'|'+Math.round(na*250);if(k!==cieloK){cieloK=k;cieloG=ctx.createLinearGradient(0,0,0,H); // solo se rehace mientras anochece o amanece
+    cieloG.addColorStop(0,`rgb(${lerp(95,10,na)},${lerp(180,14,na)},${lerp(236,48,na)})`);
+    cieloG.addColorStop(1,`rgb(${lerp(191,44,na)},${lerp(230,52,na)},${lerp(251,110,na)})`)}}
+  ctx.fillStyle=cieloG;ctx.fillRect(0,0,W,H);
   if(na>.05){skyStars.forEach(s=>{ctx.globalAlpha=na*(.55+.45*Math.sin(fr/30+s.p));ctx.fillStyle='#fff6e0';ctx.fillRect(s.x*W,s.y*H,s.s,s.s)});ctx.globalAlpha=1}
   // sol que se esconde y luna que sale
   const sx=W-S*2.2,sy=S*.6+na*H;
@@ -1078,12 +1124,18 @@ function tick(){
   // bajo tierra, lo que se pica deja ver roca oscura en vez de cielo
   if(y1>=SUELO+4){const cy=(SUELO+4)*S,g2=ctx.createLinearGradient(0,cy,0,cy+S);g2.addColorStop(0,'rgba(46,33,24,0)');g2.addColorStop(1,'rgba(46,33,24,1)');
     ctx.fillStyle=g2;ctx.fillRect(x0*S,cy,(x1-x0+1)*S,S);ctx.fillStyle='#2e2118';ctx.fillRect(x0*S,cy+S,(x1-x0+1)*S,(y1-SUELO-4)*S)}
-  const lights=[];
-  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const v=grid[idx(x,y)];if(!v)continue;
+  const lights=[],ahora=Date.now();let saltan=null;
+  if(pops.size&&fr%40===0)pops.forEach((t,k)=>{if(ahora-t>POP)pops.delete(k)}); // los que se quedaron fuera de la vista
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=idx(x,y),v=grid[i];if(!v)continue;
+    if(pops.size&&pops.has(i)){const t=(ahora-pops.get(i))/POP;if(t>=1)pops.delete(i);else{if(t>=0)(saltan=saltan||[]).push(x,y,v,t);if(v===13)lights.push([x,y,3.6]);continue}}
     ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(v===13&&((fr>>3)+x*3+y)&1?tex.llama2:tex[v],x*S,y*S,S,S);ctx.globalAlpha=1;
     if(v===13){lights.push([x,y,3.6]);if(Math.random()<.02)particles.push({x:x+.42+Math.random()*.16,y:y+.2,vx:(Math.random()-.5)*.012,vy:-.05,life:22,col:'#ffd43b'})}
     else if(v===9&&na>.05){ctx.fillStyle=`rgba(255,214,90,${.5*na})`;ctx.fillRect(x*S,y*S,S,S);lights.push([x,y,1.6])}
     else if(v!==11&&v!==7&&v!==9){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(x*S,y*S+S-2,S,2)}}
+  // Los bloques recién puestos entran con un saltito: nacen algo más pequeños, se pasan un pelín de su tamaño y se asientan (menos de dos décimas de segundo).
+  // Se pintan los últimos para que, mientras se pasan, queden por encima de sus vecinos.
+  if(saltan)for(let k=0;k<saltan.length;k+=4){const x=saltan[k],y=saltan[k+1],v=saltan[k+2],u=saltan[k+3]-1,d=Math.round(S*(.55+.45*(1+3.6*u*u*u+2.6*u*u))),o=Math.round((S-d)/2);
+    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(tex[v],x*S+o,y*S+o,d,d);ctx.globalAlpha=1}
   // juntar: un + entre las dos torres y un marco amarillo en los bloques que ya se han contado
   if(reto&&reto.kind==='junta'&&!reto.won){const r=reto,px=(r.cs+1.5)*S,py=(r.bs-(Math.max(r.a,r.bq)-1)/2+.5)*S,l=S*.32,g=S*.09;
     ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(px-l+3,py-g+3,2*l,2*g);ctx.fillRect(px-g+3,py-l+3,2*g,2*l);
@@ -1124,23 +1176,23 @@ function tick(){
     if(q.txt){q.y-=.016;q.life--;ctx.font=`${S*.55}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.globalAlpha=Math.min(1,q.life/15);
       ctx.fillStyle='#2a1d14';ctx.fillText(q.txt,q.x*S+3,q.y*S+3);ctx.fillStyle='#ffd43b';ctx.fillText(q.txt,q.x*S,q.y*S);ctx.globalAlpha=1;ctx.textAlign='start';return q.life>0}
     q.vy+=.0075;q.x+=q.vx;q.y+=q.vy;q.life--;
-    if(q.col){ctx.fillStyle=q.col;ctx.fillRect(q.x*S,q.y*S,S/6,S/6)}else ctx.drawImage(tex[q.id],q.x*S,q.y*S,S/5,S/5);return q.life>0});
+    if(q.col){ctx.fillStyle=q.col;ctx.fillRect(q.x*S,q.y*S,S/6,S/6)}
+    else{if(q.life<8)ctx.globalAlpha=q.life/8;ctx.drawImage(tex[q.id],q.sx,q.sy,8,8,q.x*S,q.y*S,S*.28,S*.28);ctx.globalAlpha=1}return q.life>0});
   ctx.restore();
 
   // oscuridad de la noche, con luz de antorchas y ventanas
   if(na>.02){
-    lctx.globalCompositeOperation='source-over';lctx.clearRect(0,0,W,H);lctx.fillStyle=`rgba(8,12,48,${.6*na})`;lctx.fillRect(0,0,W,H);
-    lctx.globalCompositeOperation='destination-out';
-    lights.forEach(([x,y,r])=>{const lx=(x+.5-camC)*S,ly=(y+.5)*S+offY,rr=r*S*(1+.04*Math.sin(fr/6+x));
-      const lg=lctx.createRadialGradient(lx,ly,0,lx,ly,rr);lg.addColorStop(0,'rgba(0,0,0,1)');lg.addColorStop(1,'rgba(0,0,0,0)');
-      lctx.fillStyle=lg;lctx.fillRect(lx-rr,ly-rr,rr*2,rr*2)});
-    ctx.drawImage(light,0,0,W,H);
-    // y alrededor de cada antorcha, un resplandor cálido que tiembla un poco
-    ctx.globalCompositeOperation='lighter';
-    lights.forEach(([x,y,r])=>{if(r<3)return;const lx=(x+.5-camC)*S,ly=(y+.4)*S+offY,rr=r*S*(.92+.06*Math.sin(fr/5+x*2));
-      const lg=ctx.createRadialGradient(lx,ly,0,lx,ly,rr);lg.addColorStop(0,`rgba(255,170,70,${.42*na})`);lg.addColorStop(.5,`rgba(255,140,40,${.16*na})`);lg.addColorStop(1,'rgba(255,140,40,0)');
-      ctx.fillStyle=lg;ctx.fillRect(lx-rr,ly-rr,rr*2,rr*2)});
-    ctx.globalCompositeOperation='source-over';
+    if(!lights.length){ctx.fillStyle=`rgba(8,12,48,${.6*na})`;ctx.fillRect(0,0,W,H)} // sin luces a la vista no hace falta el lienzo aparte
+    else{
+      lctx.globalCompositeOperation='source-over';lctx.clearRect(0,0,light.width,light.height);lctx.fillStyle=`rgba(8,12,48,${.6*na})`;lctx.fillRect(0,0,light.width,light.height);
+      lctx.globalCompositeOperation='destination-out';
+      lights.forEach(([x,y,r])=>{const lx=(x+.5-camC)*S/LQ,ly=((y+.5)*S+offY)/LQ,rr=r*S*(1+.04*Math.sin(fr/6+x))/LQ;lctx.drawImage(luzSpr.hueco,lx-rr,ly-rr,rr*2,rr*2)});
+      // y alrededor de cada antorcha, un resplandor cálido que tiembla un poco (en el mismo lienzo pequeño: a pantalla completa solo se pinta una capa, haya las antorchas que haya)
+      lctx.globalCompositeOperation='source-over';lctx.globalAlpha=na;
+      lights.forEach(([x,y,r])=>{if(r<3)return;const lx=(x+.5-camC)*S/LQ,ly=((y+.4)*S+offY)/LQ,rr=r*S*(.92+.06*Math.sin(fr/5+x*2))/LQ;lctx.drawImage(luzSpr.calida,lx-rr,ly-rr,rr*2,rr*2)});
+      lctx.globalAlpha=1;
+      ctx.drawImage(light,0,0,light.width*LQ,light.height*LQ); // ampliada tal cual, sin suavizar: es bastante más rápido y en una mancha tan difusa no se ve la diferencia
+    }
   }
   // deslizadores: qué trozo del mundo se ve, a lo ancho (abajo) y a lo alto (a la derecha). El mundo se mueve arrastrando el dedo;
   // las barras solo aparecen mientras se mueve y se apagan solas
@@ -1163,7 +1215,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
