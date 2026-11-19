@@ -27,7 +27,7 @@
    marca la página con .sin-gap y aquí se separan con márgenes para que no salgan pegados */
 .sin-gap #bar>*+*,.sin-gap #mundosCard>*+*,.sin-gap #mundosList>*+*{margin-top:10px}
 .sin-gap #hud>*+*,.sin-gap #tab>*+*{margin-top:8px}
-.sin-gap #vozCard>*+*{margin-top:12px}.sin-gap #vozList>*+*{margin-top:6px}
+.sin-gap #vozCard>*+*,.sin-gap #usoCard>*+*{margin-top:12px}.sin-gap #vozList>*+*{margin-top:6px}
 .sin-gap #blocks>*+*,.sin-gap #flechas>*+*,.sin-gap #reto>*+*,.sin-gap #stars>*+*,.sin-gap .mundo>*+*{margin-left:8px}
 .sin-gap #tools>*+*,.sin-gap .vrow>*+*,.sin-gap #retoOpc>*+*{margin-left:6px}
 .sin-gap #zoomDots>*+*{margin-left:4px}
@@ -56,7 +56,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #zoomDots i{display:block;background:var(--ink);opacity:.35}#zoomDots i:nth-child(1){width:10px;height:10px}#zoomDots i:nth-child(2){width:7px;height:7px}#zoomDots i:nth-child(3){width:5px;height:5px}
 #zoomDots i.on{opacity:1;background:var(--sel)}
 #vozBtn,#undoBtn,#zoomBtn{position:absolute;left:10px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
-#voz,#mundos{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
+#voz,#mundos,#uso{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
 /* selector de mundos: tres huecos con su miniatura; el 🔄 de la derecha (cambiarlo por uno nuevo) es para el adulto */
 #mundosCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,460px);max-height:100%;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;touch-action:pan-y}
 #mundosList{display:flex;flex-direction:column;gap:10px}
@@ -69,7 +69,16 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .mnew{flex:0 0 44px;border:3px solid var(--slot);background:var(--panel-2);font-size:18px;font-family:system-ui;padding:0;opacity:.7}
 #vozCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,420px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
   font-family:system-ui,sans-serif;font-size:15px;overflow-y:auto;touch-action:pan-y}
-#vozCard h2{margin:0;font-family:var(--pixel);font-size:13px}
+#vozCard h2,#usoCard h2{margin:0;font-family:var(--pixel);font-size:13px}
+#usoCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,560px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
+  font-family:system-ui,sans-serif;font-size:14px;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+#uso{z-index:6}
+#usoTxt h3{margin:12px 0 4px;font-size:14px;color:var(--sel)}#usoTxt h3:first-child{margin-top:0}
+#usoTxt p{margin:0 0 4px;line-height:1.4}
+#usoDias{display:flex;align-items:flex-end;height:64px;margin:6px 0 2px}
+#usoDias div{flex:1;margin:0 2px;background:var(--sel);min-height:2px;position:relative}
+#usoDias span{position:absolute;left:0;right:0;bottom:-18px;text-align:center;font-size:11px;opacity:.8}
+#usoArea{width:100%;height:120px;box-sizing:border-box;font:12px/1.3 system-ui,sans-serif}
 #vozCard p{margin:0;line-height:1.4}
 #vozList{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:52px;touch-action:pan-y}
 .vrow{display:flex;gap:6px}
@@ -214,6 +223,15 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
   <div id="pers" hidden>
     <div id="persCard" role="dialog" aria-label="Elige un personaje"></div>
   </div>
+  <div id="uso" hidden>
+    <div id="usoCard" role="dialog" aria-label="Cómo juega">
+      <h2>Cómo juega</h2>
+      <div id="usoTxt"></div>
+      <div class="vrow"><button class="vopt" id="usoCopia">Copiar resumen</button><button class="vopt" id="usoBorra">Borrar datos</button></div>
+      <textarea id="usoArea" readonly hidden></textarea>
+      <button class="vopt" id="usoClose" style="text-align:center">Cerrar</button>
+    </div>
+  </div>
   <div id="voz" hidden>
     <div id="vozCard" role="dialog" aria-label="Ajustes del juego">
       <h2>Ajustes</h2>
@@ -229,6 +247,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <div class="vrow"><input id="palIn" type="text" maxlength="14" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ej.: PATO"><button class="vopt" id="palOk">Guardar</button></div>
       <div class="vlabel">Nivel de partida de los retos (luego sube o baja solo)</div>
       <div class="vrow" id="vozNivel"></div>
+      <button class="vopt" id="usoBtn" style="text-align:center">📊 Cómo juega</button>
       <button class="vopt" id="vozClose" style="text-align:center">Cerrar</button>
       <div class="vlabel" id="vozVer" style="text-align:center;margin:0"></div>
     </div>
@@ -477,7 +496,7 @@ function ponZoom(z,auto){
 }
 function cambiaZoom(d){ // d = -1 acerca (bloques más grandes), +1 aleja
   if(!ponZoom(zoomAhora+d,false)){beep(200,.08,'triangle',.06);return}
-  beep(d<0?660:440,.07);say(['Bloques grandes','Bloques medianos','Bloques pequeños'][zoomAhora],true,true);
+  cu('zoom');beep(d<0?660:440,.07);say(['Bloques grandes','Bloques medianos','Bloques pequeños'][zoomAhora],true,true);
 }
 function resize(){
   W=wrap.clientWidth;H=wrap.clientHeight;const dpr=Math.min(window.devicePixelRatio||1,calidad);
@@ -611,7 +630,7 @@ $('tPut').onclick=()=>{setMode('put');beep(500,.05);say('Poner',true,true)};
 $('tDig').onclick=()=>{setMode('dig');beep(400,.05);say('¡A picar!',true,true)};
 $('tPig').onclick=()=>{setMode('pig');oink();say('Toca para poner un cerdito',true,true)};
 $('tHouse').onclick=()=>{setMode('house');beep(520,.06);say('Toca para poner una casa',true,true)};
-$('tNight').onclick=()=>{night=!night;$('tNight').textContent=night?'☀️':'🌙';beep(night?330:660,.15,'triangle',.07);say(night?'Buenas noches':'Buenos días',true,true);save();
+$('tNight').onclick=()=>{cu('noche');night=!night;$('tNight').textContent=night?'☀️':'🌙';beep(night?330:660,.15,'triangle',.07);say(night?'Buenas noches':'Buenos días',true,true);save();
   if(!night)setTimeout(()=>{if(!night)amanece()},1500)}; // al hacerse de día, lo plantado crece
 $('tMusic').onclick=()=>tocaMusica();
 // 🌍 abre el selector de mundos: tres huecos con su miniatura. Tocar uno entra en él (si está vacío, se crea).
@@ -623,7 +642,7 @@ function miniatura(w){ // el mundo a un píxel por bloque: la franja de 16 filas
   x.fillStyle='#f2a0b0';(w.pigs||[]).forEach(p=>x.fillRect(p[0],p[1]-F,1,1));return c;
 }
 function irAMundo(i,nuevo){ // guarda el mundo actual y entra en el i; con `nuevo`, lo crea de cero
-  save();closeReto();antes=null;$('undoBtn').classList.add('off');particles=[];
+  cu('mundo');save();closeReto();antes=null;$('undoBtn').classList.add('off');particles=[];
   mundo=i;if(nuevo||!mundos[i]){night=false;nightAmt=0;genWorld()}else abre(mundos[i]);
   $('tNight').textContent=night?'☀️':'🌙';clampCam();save();
 }
@@ -990,7 +1009,7 @@ function renderReto(){
   $('retoSlots').className=(reto.kind==='torre'||reto.kind==='alta')?'torre':'';
   drawSlots();
   $('rHard').hidden=!['pon','torre','pica','cerdos'].includes(reto.kind);$('rSay').hidden=false;$('rClose').hidden=false;
-  const prog=reto.kind==='programa';progUI(prog);if(prog)renderTab();wrap.classList.add('conreto');
+  const prog=reto.kind==='programa';progUI(prog);if(prog)renderTab();wrap.classList.add('conreto');cr(reto.kind,'n');reto.t0=Date.now();
 }
 function checkReto(){
   if(!reto||reto.won)return;
@@ -1009,6 +1028,7 @@ function checkReto(){
 }
 function winReto(){
   const r=reto;r.won=true;stars++;ajusta(r,true);$('starN').textContent=stars;
+  cr(r.kind,'ok');cr(r.kind,'s',Math.min(600,Math.round((Date.now()-(r.t0||Date.now()))/1000)));if(tropezo(r))cr(r.kind,'e');
   {const e=$('stars');e.classList.remove('gana');void e.offsetWidth;e.classList.add('gana')} // el contador da un latido
   if(r.kind==='letra'&&r.pal&&r.pal===palabra.txt){palabra.i=(r.pos+1)%r.pal.length;guardaPalabra()}
   $('reto').classList.add('done');$('rHard').hidden=true;$('rSay').hidden=true;$('rClose').hidden=true;$('retoOpc').hidden=true;
@@ -1035,8 +1055,9 @@ function fireworks(){
       particles.push({x:cx,y:cy,vx:Math.cos(a)*v,vy:Math.sin(a)*v-.05,life:50+Math.random()*30,col:cols[(k+i)%cols.length]})}}
 }
 $('tReto').onclick=()=>{if(reto&&!reto.won){say(phrase(reto));return}if(!reto)startReto()};
-$('rSay').onclick=()=>reto&&say(phrase(reto));
-$('rClose').onclick=()=>{const r=reto;if(r&&!r.won&&intentado(r)){ajusta(r,false);save()}closeReto();beep(300,.06)};
+$('rSay').onclick=()=>{if(reto){cr(reto.kind,'rep');say(phrase(reto))}};
+$('rClose').onclick=()=>{const r=reto;if(r&&!r.won){cr(r.kind,intentado(r)?'x':'v');if(tropezo(r))cr(r.kind,'e')} // a medias (x) o cerrado sin intentarlo (v)
+  if(r&&!r.won&&intentado(r)){ajusta(r,false);save()}closeReto();beep(300,.06)};
 $('rHard').onclick=()=>{if(!reto)return;const max=reto.kind==='torre'?8:(reto.kind==='cerdos'?Math.min(8,reto.n+MAXPIGS-pigs.length):10);
   if(reto.n>=max){say('¡Ya es el más difícil!');return}
   reto.n=Math.min(max,reto.n+2);reto.slots=reto.n;renderReto();reto.shown=progress(reto);say('¡Más difícil! '+phrase(reto))};
@@ -1048,7 +1069,7 @@ function estado(){return{grid:grid.slice(),pigs:pigs.map(p=>({...p})),reto,dug:r
 function foto(){antes=estado();rehecho=true;$('undoBtn').classList.remove('off')}
 function undo(){
   if(!antes){say('No hay nada que deshacer.');return}
-  const a=antes;antes=estado();
+  cu('deshacer');const a=antes;antes=estado();
   grid=a.grid;pigs=a.pigs;
   if(reto&&reto===a.reto){reto.dug=a.dug;reto.added=a.added}
   rehecho=!rehecho;beep(rehecho?440:330,.08,'triangle',.07);say(rehecho?'Rehacer':'Deshacer',true,true);
@@ -1072,6 +1093,88 @@ function stampHouse(x,y){
     if(v>0)pops.set(idx(cx,cy),ahoraC+(HOUSE.length-1-ry)*55)})); // se levanta fila a fila, de abajo arriba
   [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
 }
+// --- cómo juega: contadores de uso ---
+// Todo se guarda en este aparato (localStorage, clave bloquesUso) y no se envía a ningún sitio: no hay servidor al que enviarlo.
+// No se guarda qué hace en cada momento, solo sumas: segundos jugados por día (y cuántos de ellos en retos o en la aventura), cuántas veces se usa
+// cada cosa y, por tipo de reto, cuántos empieza, consigue, deja a medias o cierra sin intentar. El tiempo solo cuenta si se ha tocado la pantalla
+// en el último minuto. Se ve en Ajustes > Cómo juega, y desde ahí se puede copiar como texto o borrar.
+let uso={v:1,desde:'',dias:{},f:{},pon:{},r:{},a:{n:0,fin:0,todas:0,manz:0,muro:0,pers:[0,0,0,0,0,0]}},usoSucio=false,usoT=0,tocoT=0,diaK='',diaT=0;
+const fechaK=d=>d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+try{const u=JSON.parse(localStorage.getItem('bloquesUso'));if(u&&u.v===1){Object.assign(uso,u);uso.a=Object.assign({n:0,fin:0,todas:0,manz:0,muro:0,pers:[0,0,0,0,0,0]},u.a)}}catch(e){}
+if(!uso.desde)uso.desde=fechaK(new Date());
+{const viejo=fechaK(new Date(Date.now()-120*864e5));Object.keys(uso.dias).forEach(k=>{if(k<viejo)delete uso.dias[k]})} // de los días, se guardan los últimos 120
+const hoyUso=()=>{const t=Date.now();if(t-diaT>30000){diaT=t;diaK=fechaK(new Date())}return uso.dias[diaK]||(uso.dias[diaK]={t:0,r:0,a:0,s:0})};
+const cu=(k,n=1)=>{uso.f[k]=(uso.f[k]||0)+n;usoSucio=true};                                              // una función usada
+const cr=(kind,campo,n=1)=>{const r=uso.r[kind]||(uso.r[kind]={n:0,ok:0,x:0,v:0,e:0,s:0,rep:0});r[campo]=(r[campo]||0)+n;usoSucio=true}; // algo de un reto
+function usoGuarda(){if(!usoSucio)return;usoSucio=false;try{localStorage.setItem('bloquesUso',JSON.stringify(uso))}catch(e){}}
+function usoTiempo(ms){const t=Date.now();if(t-tocoT>60000)return;const d=hoyUso(),s=ms/1000;d.t+=s;if(reto&&!reto.won)d.r+=s;else if(av.on)d.a+=s;usoSucio=true;
+  if(t-usoT>15000){usoT=t;usoGuarda()}}
+['touchstart','touchend','mousedown','keydown'].forEach(n=>document.addEventListener(n,()=>{const t=Date.now();if(t-tocoT>6e5){hoyUso().s++;usoSucio=true}tocoT=t},true)); // diez minutos sin tocar: sesión nueva
+['pagehide','visibilitychange'].forEach(n=>window.addEventListener(n,usoGuarda));
+const RETO_N={pon:'Poner bloques',torre:'Torre',pica:'Picar',cerdos:'Contar cerditos',serie:'Series',suma:'Sumas',resta:'Restas',alta:'Torre más alta',copia:'Copiar el modelo',programa:'Programar al cerdito',junta:'Juntar y contar',letra:'Rellenar la letra'};
+// el resumen, en secciones de líneas de texto: sirve igual para pintarlo que para copiarlo
+function usoResumen(){
+  const S=[],mm=s=>{const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'},pc=(a,b)=>b?Math.round(100*a/b)+' %':'—';
+  const ks=Object.keys(uso.dias).sort(),con=ks.filter(k=>uso.dias[k].t>=30),tot=ks.reduce((a,k)=>a+uso.dias[k].t,0),tr=ks.reduce((a,k)=>a+uso.dias[k].r,0),ta=ks.reduce((a,k)=>a+uso.dias[k].a,0),ses=ks.reduce((a,k)=>a+uso.dias[k].s,0);
+  const fecha=k=>{const p=k.split('-');return new Date(+p[0],p[1]-1,+p[2]).toLocaleDateString('es-ES',{day:'numeric',month:'short'})};
+  const L=['Datos desde el '+fecha(uso.desde)+'. Días con juego: '+con.length+'.'];
+  if(tot>=30){L.push('Tiempo total: '+mm(tot)+' · media por día jugado: '+mm(tot/Math.max(1,con.length))+' · sesiones: '+ses+'.');
+    L.push('Reparto: construir '+pc(tot-tr-ta,tot)+' · retos '+pc(tr,tot)+' · aventura '+pc(ta,tot)+'.')}
+  else L.push('Todavía no hay tiempo de juego anotado.');
+  S.push(['Resumen',L]);
+  // retos
+  const R=Object.keys(RETO_N).map(k=>Object.assign({k,n:0,ok:0,x:0,v:0,e:0,s:0},uso.r[k])).filter(r=>r.n>0).sort((a,b)=>b.n-a.n);
+  const juicio=r=>r.n<3?'⚪':(r.x+r.e)/r.n>=.5||r.ok/r.n<.5?'🔴':r.ok/r.n>=.8&&r.e/r.n<=.2?'🟢':'🟡'; // rojo: la mitad con tropiezo o a medias, o menos de la mitad conseguidos
+  const pl=(n,uno,varios)=>n+' '+(n===1?uno:varios);
+  if(R.length){S.push(['Retos (🟢 lo domina · 🟡 en su punto · 🔴 le cuesta · ⚪ pocos datos)',R.map(r=>{const e=niv[FAM[r.k]||r.k];
+    return juicio(r)+' '+RETO_N[r.k]+': '+pl(r.n,'empezado','empezados')+' · '+pl(r.ok,'conseguido','conseguidos')+' ('+pc(r.ok,r.n)+')'+(r.e?' · '+r.e+' con tropiezo':'')+(r.x?' · '+pl(r.x,'dejado a medias','dejados a medias'):'')+(r.v?' · '+pl(r.v,'cerrado sin intentar','cerrados sin intentar'):'')+(r.ok?' · '+Math.round(r.s/r.ok)+' s de media':'')+(e?' · nivel '+e[0]:'')})])}
+  else S.push(['Retos',['Todavía no ha empezado ninguno.']]);
+  // lo que más usa
+  const U=[],bl=Object.keys(uso.pon).map(k=>[+k,uso.pon[k]]).sort((a,b)=>b[1]-a[1]),nb=bl.reduce((a,b)=>a+b[1],0),F=uso.f;
+  if(nb)U.push('Bloques puestos: '+nb+'. Los que más: '+bl.slice(0,5).map(b=>(NAME[b[0]]||'bloque')+' ('+b[1]+')').join(', ')+'.');
+  const hs=[['pica','picar'],['casa','casas'],['cerdo','cerditos añadidos'],['noche','día y noche'],['musica','música'],['deshacer','deshacer'],['zoom','lupa'],['mundo','cambios de mundo']].filter(q=>F[q[0]]).sort((a,b)=>F[b[0]]-F[a[0]]);
+  if(hs.length)U.push('Herramientas: '+hs.map(q=>q[1]+' '+F[q[0]]).join(' · ')+'.');
+  S.push(['Lo que más usa',U.length?U:['Todavía nada.']]);
+  // aventura
+  const A=uso.a;
+  if(A.n){const fav=A.pers.indexOf(Math.max.apply(null,A.pers));
+    S.push(['Aventura',['Carreras: '+A.n+' · llega a la bandera en '+A.fin+' ('+pc(A.fin,A.n)+') · con las ocho manzanas: '+A.todas+'.',
+      (A.fin?'Manzanas por carrera terminada: '+(A.manz/A.fin).toFixed(1).replace('.',',')+' de 8. ':'')+'Veces que un muro alto le ha cortado el paso: '+A.muro+'.','Personaje favorito: '+PERS[fav].n.toLowerCase()+' ('+pl(A.pers[fav],'vez','veces')+').']])}
+  // ideas: qué potenciar y qué revisar, con reglas sencillas sobre lo anterior
+  const I=[],dom=R.filter(r=>juicio(r)==='🟢'),cue=R.filter(r=>juicio(r)==='🔴'),evi=R.filter(r=>r.n>=3&&r.v/r.n>=.4),nunca=Object.keys(RETO_N).filter(k=>!uso.r[k]||!uso.r[k].n);
+  if(cue.length)I.push('Le cuesta: '+cue.map(r=>RETO_N[r.k].toLowerCase()).join(', ')+'. El nivel ya le baja solo; ayuda hacer uno de esos con él al lado.');
+  if(evi.length)I.push('Suele cerrar sin intentar: '+evi.map(r=>RETO_N[r.k].toLowerCase()).join(', ')+'. Puede que no entienda qué se le pide.');
+  if(dom.length)I.push('Domina: '+dom.map(r=>RETO_N[r.k].toLowerCase()).join(', ')+'. Si todos los suyos están en verde, sube el nivel de partida en Ajustes.');
+  if(tot>=600&&tr/tot<.12)I.push('Casi todo el tiempo es construir ('+pc(tot-tr-ta,tot)+'): proponle un reto (⭐) al empezar.');
+  if(R.length>=4&&nunca.length)I.push('Aún no le ha salido: '+nunca.map(k=>RETO_N[k].toLowerCase()).join(', ')+' (los retos salen al azar).');
+  if(A.n>=3&&A.muro>=A.n)I.push('En la aventura se para a menudo en muros: enséñale a tocar 🎮, construir una escalera y volver.');
+  if(A.fin>=3&&A.manz/A.fin<6)I.push('En la aventura se deja manzanas: las de arriba piden saltar (⬆️ o tocar el mundo).');
+  if(I.length)S.push(['Ideas',I]);
+  return S;
+}
+function renderUso(){
+  const e=$('usoTxt');e.textContent='';$('usoArea').hidden=true;
+  usoResumen().forEach((s,i)=>{const t=document.createElement('h3');t.textContent=s[0];e.appendChild(t);
+    s[1].forEach(l=>{const p=document.createElement('p');p.textContent=l;e.appendChild(p)});
+    if(i===0){ // los minutos de los últimos siete días, en barras
+      const g=document.createElement('div');g.id='usoDias';const ds=[];for(let k=6;k>=0;k--){const d=new Date(Date.now()-k*864e5),q=uso.dias[fechaK(d)];ds.push([d,q?q.t/60:0])}
+      const mx=Math.max(10,Math.max.apply(null,ds.map(d=>d[1])));
+      ds.forEach(d=>{const b=document.createElement('div');b.style.height=Math.round(100*d[1]/mx)+'%';b.title=Math.round(d[1])+' min';
+        const n=document.createElement('span');n.textContent=d[0].toLocaleDateString('es-ES',{weekday:'narrow'})+' '+Math.round(d[1]);b.appendChild(n);g.appendChild(b)});
+      const c=document.createElement('p');c.textContent='Minutos de los últimos siete días:';e.appendChild(c);e.appendChild(g);const sp=document.createElement('p');sp.style.height='16px';e.appendChild(sp)}});
+  const p=document.createElement('p');p.style.opacity='.7';p.style.marginTop='10px';p.textContent='Estos datos se guardan solo en este aparato y no se envían a ningún sitio.';e.appendChild(p);
+}
+$('usoBtn').onclick=()=>{usoGuarda();$('uso').hidden=false;renderUso()};
+$('usoClose').onclick=()=>{$('uso').hidden=true};
+$('uso').addEventListener('click',e=>{if(e.target===$('uso'))$('uso').hidden=true});
+$('usoCopia').onclick=()=>{const txt='Mundo de Bloques · cómo juega\n\n'+usoResumen().map(s=>s[0].toUpperCase()+'\n'+s[1].join('\n')).join('\n\n'),a=$('usoArea');
+  a.value=txt;a.hidden=false;a.focus();a.select();try{a.setSelectionRange(0,txt.length)}catch(e){} // queda a la vista y seleccionado, por si el navegador no deja copiar solo
+  let ok=false;try{ok=document.execCommand('copy')}catch(e){}
+  const hecho=()=>{const b=$('usoCopia');b.textContent='Copiado ✓';setTimeout(()=>{b.textContent='Copiar resumen'},2000)};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(hecho,()=>{});
+  if(ok)hecho()};
+$('usoBorra').onclick=()=>{if(!confirm('¿Borrar los datos de uso de este aparato? El mundo, las estrellas y los niveles no se tocan.'))return;
+  uso={v:1,desde:fechaK(new Date()),dias:{},f:{},pon:{},r:{},a:{n:0,fin:0,todas:0,manz:0,muro:0,pers:[0,0,0,0,0,0]}};usoSucio=true;usoGuarda();renderUso()};
 // --- modo aventura: recorrer el mundo con un personaje ---
 // 🎮 abre el panel de personajes; al elegir uno, la barra de bloques se cambia por un mando (⬅️ ➡️ para andar, ⬆️ o tocar el mundo para saltar)
 // y el personaje sale del borde izquierdo. Tiene que llegar a la bandera del borde derecho; por el camino hay manzanas, que la voz va contando.
@@ -1120,7 +1223,7 @@ function troncos(){const t=av.tronco=new Uint8Array(COLS*ROWS);
 // la fila del suelo en una columna (sin contar copas ni troncos): ahí se apoyan los pies
 function pisoDe(x){for(let y=0;y<ROWS;y++){const v=grid[y*COLS+x];if(v&&!NOSOLID[v]&&v!==5&&!av.tronco[y*COLS+x])return y}return ROWS}
 function nuevaCarrera(){
-  av.x=1.5;av.y=pisoDe(1);av.vy=0;av.cara=1;av.cog=0;av.fin=false;av.vivo=true;av.yc=av.y;
+  av.x=1.5;av.y=pisoDe(1);av.vy=0;av.cara=1;av.cog=0;av.fin=false;av.vivo=true;av.yc=av.y;uso.a.n++;usoSucio=true;
   let fx=COLS-2;av.meta={x:fx,y:pisoDe(fx)};
   av.manz=[];
   for(let k=1;k<=NMANZ;k++){const x=Math.round(3+k*(COLS-8)/(NMANZ+1)),p=pisoDe(x);
@@ -1130,7 +1233,7 @@ function nuevaCarrera(){
 }
 function pintaManz(){const e=$('avManz');e.textContent='';av.manz.forEach(m=>{const c=lienzo(16,16);c.getContext('2d').drawImage(tex.manzana,0,0);if(!m.c)c.className='no';e.appendChild(c)})}
 function entraAventura(k){
-  paraMusica();av.pers=k;troncos();
+  paraMusica();av.pers=k;troncos();uso.a.pers[k]=(uso.a.pers[k]||0)+1;usoSucio=true;
   if(!av.vivo||av.fin)nuevaCarrera();else{while(chocaP(av.x,av.y)&&av.y>1)av.y-=1;pintaManz()} // si al construir se le ha tapado, sale por arriba
   av.on=true;av.pI=av.pD=av.kI=av.kD=false;av.salto=0;av.empuje=0;camGoal=camGoalR=null;
   $('blocks').hidden=$('tools').hidden=true;$('mando').hidden=false;$('jugarBtn').setAttribute('aria-pressed',true);resize();
@@ -1154,7 +1257,7 @@ function avPaso(dt){const a=av;
         if(alto===1&&!solidoP(Math.floor(a.x),r-1)){a.vy=-8.2;a.suelo=false}
         else if(alto>=2){a.empuje+=dt;if(a.empuje>1.1&&Date.now()-a.avisoT>(alto>2?25000:15000)){a.avisoT=Date.now();a.empuje=0;
           if(alto===2)say('Para subir ahí, salta.');
-          else{say('Es muy alto para saltar. Toca el mando y construye una escalera.');const b=$('jugarBtn');b.classList.add('ask');setTimeout(()=>b.classList.remove('ask'),2500)}}}}}}
+          else{uso.a.muro++;usoSucio=true;say('Es muy alto para saltar. Toca el mando y construye una escalera.');const b=$('jugarBtn');b.classList.add('ask');setTimeout(()=>b.classList.remove('ask'),2500)}}}}}}
   // de arriba abajo
   const ny=a.y+a.vy*dt;
   if(!chocaP(a.x,ny)){a.y=ny;a.suelo=false}
@@ -1167,7 +1270,7 @@ function avPaso(dt){const a=av;
     ult={x:m.x,y:m.y};cifra(a.cog);say(a.cog===1?'Una':NUM[a.cog][0].toUpperCase()+NUM[a.cog].slice(1),false);if(vcfg.son!==2){tono(880,1320,.1,'triangle',.1);tono(1320,1760,.12,'triangle',.07,.08)}
     const e=$('avManz').children[a.manz.indexOf(m)];if(e)e.className=''});
   // la bandera
-  if(Math.abs(a.x-(a.meta.x+.5))<.8&&Math.abs(a.y-a.meta.y)<1.6){a.fin=true;const todas=a.cog===NMANZ; // la estrella es para quien llega con todas: para las altas hay que saltar
+  if(Math.abs(a.x-(a.meta.x+.5))<.8&&Math.abs(a.y-a.meta.y)<1.6){a.fin=true;const todas=a.cog===NMANZ;uso.a.fin++;uso.a.manz+=a.cog;if(todas)uso.a.todas++;usoSucio=true; // la estrella es para quien llega con todas: para las altas hay que saltar
     if(todas){stars++;$('starN').textContent=stars;const e=$('stars');e.classList.remove('gana');void e.offsetWidth;e.classList.add('gana');fireworks()}
     fanfare();pigs.forEach(p=>{p.vy=-.17;p.joy=60});a.vy=-SALTO*.8;
     say('¡Has llegado a la bandera! '+(todas?'¡Y con todas las manzanas! ¡Una estrella!':(a.cog===1?'Has cogido una manzana':'Has cogido '+NUM[a.cog]+' manzanas')+' de '+NUM[NMANZ]+'. ¡A ver si la próxima vez las coges todas!'));
@@ -1226,7 +1329,7 @@ function tocaMusica(){
   if(musica){paraMusica();return}
   if(reto&&!reto.won){beep(200,.08,'triangle',.06);say('Cuando acabes el reto, tocamos música.',true,true);return}
   const x0=Math.max(0,Math.ceil(camC)),x1=Math.min(COLS-1,Math.floor(camC+W/S)-1);
-  musica={x0,x1,t0:Date.now()+700,ult:x0-1,notas:[]};$('tMusic').setAttribute('aria-pressed',true);say('¡Música!',true,true);
+  cu('musica');musica={x0,x1,t0:Date.now()+700,ult:x0-1,notas:[]};$('tMusic').setAttribute('aria-pressed',true);say('¡Música!',true,true);
 }
 function pasoMusica(ahora){const m=musica;
   if(reto&&!reto.won){paraMusica();return}
@@ -1302,8 +1405,8 @@ function act(e){
     if(p){p.vy=-.175;p.joy=40;oink();return}
     if(solid(x,y))return;
     if(pigs.length>=MAXPIGS){say('¡Ya hay muchos cerditos!');return}
-    foto();addPig(x,y);pigs[pigs.length-1].joy=30;oink();if(reto)reto.added++;
-  }else if(mode==='house'){foto();stampHouse(x,y)}
+    foto();addPig(x,y);pigs[pigs.length-1].joy=30;oink();cu('cerdo');if(reto)reto.added++;
+  }else if(mode==='house'){foto();stampHouse(x,y);cu('casa')}
   else if(enCopia(x,y)===1){say('Ese es el modelo. Haz uno igual en el cuadro amarillo.');return} // el modelo no se toca
   else if(mode==='put'){
     const pg=pigs.find(p=>Math.floor(p.x+.5)===x&&Math.floor(p.y+.5)===y);
@@ -1320,8 +1423,8 @@ function act(e){
       say(reto.kind==='serie'?`Mira la serie: ${reto.seq.map(i=>NAME[i]).join(', ')}. ¿Qué toca ahora?`
         :g.miss<2?`Eso es ${UN[current]}. Mira el modelo: en ese sitio va otro bloque.`:`Mira el modelo: ahí va ${DEF[g.b]}.`);return}
     if(!g&&enCopia(x,y)){beep(220,.1,'triangle',.06);say('En el modelo ese hueco está vacío. Ahí no va nada.');return}
-    foto();grid[i]=current;pops.set(i,Date.now());suena(current);if(g)say(NAME[current],false);else if(current===14)semillaPuesta(i)}
-  else{if(!grid[i])return;foto();const v=grid[i];burst(x,y,v);grid[i]=0;suena(v,true);if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
+    foto();grid[i]=current;pops.set(i,Date.now());suena(current);uso.pon[current]=(uso.pon[current]||0)+1;usoSucio=true;if(g)say(NAME[current],false);else if(current===14)semillaPuesta(i)}
+  else{if(!grid[i])return;foto();const v=grid[i];burst(x,y,v);grid[i]=0;suena(v,true);cu('pica');if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
   checkReto();save();
 }
 let ult=null;
@@ -1374,6 +1477,7 @@ function marco(x,y,w,h,col,dash){ // recuadro con sombra oscura debajo, para que
 const lerp=(a,b,t)=>Math.round(a+(b-a)*t);
 function tick(){
   fr++;
+  if(tAnt)usoTiempo(Math.min(1000,Date.now()-tAnt));
   const dms=tAnt?Math.min(50,Date.now()-tAnt):16; // milisegundos desde el fotograma anterior (con tope, por si la pestaña estuvo parada)
   // Si el aparato va justo (un iPad antiguo), se dibuja con menos resolución: al ser pixelado apenas se nota y el juego va suelto.
   // Se mira la media de lo que tarda cada fotograma y, si no llega a unos 28 por segundo, se baja medio punto (hasta 1) y se vuelve a medir.
@@ -1508,7 +1612,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

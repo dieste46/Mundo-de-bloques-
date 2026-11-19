@@ -59,6 +59,18 @@ En **Copia el modelo** aparece una construcción en un marco y hay que hacerla i
 
 Dificultad por tramos (nivel 0–3 fácil, 4–7 medio, 8+ difícil): modelos de 3–4 bloques → con huecos → de 6–8 bloques y tres tipos; tableros en línea recta → con una esquina y una piedra → más grandes con varias piedras.
 
+## Cómo juega (Ajustes > 📊)
+
+Un panel para el adulto con lo que el juego ha ido contando, para ver por dónde ayudar o qué potenciar:
+
+- **Resumen:** días con juego, tiempo total, media por día, sesiones, minutos de los últimos siete días y cómo se reparte el tiempo entre construir, retos y aventura.
+- **Retos, por tipo:** cuántos empieza, cuántos consigue, cuántos con tropiezo (necesitó la pista), cuántos deja a medias y cuántos cierra sin intentar, el tiempo medio y el nivel en el que está. Cada tipo lleva un color: 🟢 lo domina (consigue el 80 % o más casi sin tropiezos), 🔴 le cuesta (la mitad con tropiezo o a medias, o menos de la mitad conseguidos), 🟡 en su punto, ⚪ menos de tres jugados.
+- **Lo que más usa:** bloques y herramientas.
+- **Aventura:** carreras, banderas, manzanas, veces que un muro le corta el paso y personaje favorito.
+- **Ideas:** unas pocas frases sacadas de lo anterior con reglas sencillas (qué le cuesta, qué cierra sin intentar, qué domina, qué no le ha salido aún).
+
+Los datos se guardan solo en el aparato (`localStorage`, clave `bloquesUso`) y no se envían a ningún sitio: el juego no tiene servidor. No se guarda qué hace en cada momento, solo sumas, y de los días se conservan los últimos 120. El tiempo solo cuenta si se ha tocado la pantalla en el último minuto. Desde el panel se pueden copiar como texto o borrar (borrar no toca el mundo, las estrellas ni los niveles). Cada aparato lleva su propia cuenta.
+
 ## Estructura
 
 ```
