@@ -257,48 +257,72 @@ function rng(s){return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}}
 function shade(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;
   r=Math.max(0,Math.min(255,r*f|0));g=Math.max(0,Math.min(255,g*f|0));b=Math.max(0,Math.min(255,b*f|0));return`rgb(${r},${g},${b})`}
 function lienzo(w,h){const cv=document.createElement('canvas');cv.width=w;cv.height=h;return cv}
-// ruido en dos capas (manchas de 2×2 y grano fino encima) para que no parezca la nieve de un televisor
-function noiseTex(c,base,amt,seed){const r=rng(seed),m=[];for(let i=0;i<T*T/4;i++)m.push(r());
-  for(let y=0;y<T;y++)for(let x=0;x<T;x++){c.fillStyle=shade(base,1+((m[(y>>1)*(T/2)+(x>>1)]-.5)*.7+(r()-.5)*.5)*amt);c.fillRect(x,y,1,1)}}
+// Fondo de un material: su color con manchas suaves de 2×2. Nada de grano píxel a píxel, que acaba pareciendo la nieve de un televisor.
+function fondo(c,base,amt,r){for(let y=0;y<T;y+=2)for(let x=0;x<T;x+=2){c.fillStyle=shade(base,1+(r()-.5)*amt);c.fillRect(x,y,2,2)}}
+// Pinceladas: n trocitos de un color, de 1 píxel o de hasta "largo" en horizontal (o en vertical). Los que se salen por un borde entran por el otro,
+// así el bloque empalma con sus vecinos sin que se vea la junta.
+function toques(c,r,col,n,largo=1,vert=false){c.fillStyle=col;for(let i=0;i<n;i++){const x=r()*T|0,y=r()*T|0,l=1+(r()*largo|0),w=vert?1:l,h=vert?l:1;
+  c.fillRect(x,y,w,h);c.fillRect(x-T,y,w,h);c.fillRect(x,y-T,w,h)}}
 function rects(c,col,list){c.fillStyle=col;list.forEach(([x,y,w,h])=>c.fillRect(x,y,w||1,h||1))}
 // dibujo hecho con letras: cada letra es un color de la paleta y el punto, transparente
 function sprite(rows,pal){const cv=lienzo(rows[0].length,rows.length),c=cv.getContext('2d');
   rows.forEach((row,y)=>[...row].forEach((ch,x)=>{if(pal[ch]){c.fillStyle=pal[ch];c.fillRect(x,y,1,1)}}));return cv}
-const tex={};
-function makeTex(id){
-  const cv=lienzo(T,T),c=cv.getContext('2d'),r=rng(id*97+1);
-  const motas=(col,n)=>{c.fillStyle=col;for(let i=0;i<n;i++)c.fillRect(r()*T|0,r()*T|0,1,1)};
+// Cada bloque tiene varias versiones de su dibujo: mismos colores y mismo motivo, con los detalles en otro sitio. En el mundo, cada casilla usa
+// siempre la misma (la elige varMap según su posición, sin guardar nada), así que una pared o un prado no se ven como un sello repetido.
+// tex[id] es la versión "de catálogo" (botones, pistas, trocitos); texV[id], todas.
+const tex={},texV={};
+const NVAR={1:4,2:4,3:4,4:6,5:4,6:3,8:3,10:3,12:3};
+const varMap=(()=>{const r=rng(4242),a=new Uint8Array(COLS*ROWS);for(let i=0;i<a.length;i++)a[i]=r()*256|0;return a})();
+const cara=(v,i)=>{const t=texV[v];return t.length>1?t[varMap[i]%t.length]:t[0]};
+function pinta(id,k){
+  const cv=lienzo(T,T),c=cv.getContext('2d'),r=rng(id*97+1+k*1013);
+  const tierra=()=>{fondo(c,'#8a5a36',.1,r);toques(c,r,'#774c2c',15,2);toques(c,r,'#9b6941',10,2);
+    for(let i=0;i<3;i++){const x=r()*14|0,y=1+(r()*13|0);rects(c,'#ad7a4c',[[x,y,2]]);rects(c,'#68421f',[[x,y+1,2]])}}; // piedrecitas: claro arriba y su sombra debajo
   switch(id){
-    case 1: noiseTex(c,'#8a5a36',.35,1); // hierba: tierra con un manto verde de borde irregular
-      for(let x=0;x<T;x++){const h=4+(r()*3|0);for(let y=0;y<h;y++){c.fillStyle=shade('#5cb83a',(y===0?1.12:y===h-1?.8:1)+(r()-.5)*.22);c.fillRect(x,y,1,1)}}break;
-    case 2: noiseTex(c,'#8a5a36',.38,2);rects(c,'#6f4628',[[2,3,2],[10,1,2],[6,8,2],[13,11,2],[3,13,2],[9,5]]);rects(c,'#a87044',[[5,2],[12,6],[1,9],[8,12],[14,3]]);break;
-    case 3: noiseTex(c,'#8b8f94',.2,3);rects(c,'#6e7276',[[1,3,4],[9,2,3],[5,7,5],[12,9,3],[2,11,3],[8,13,4],[0,6],[15,5]]);rects(c,'#a6aaae',[[2,2,3],[6,6,3],[9,12,3],[13,8,2]]);break;
-    case 4:{const veta=[.72,1,1.06,.96,1,.74,1.04,.98,1,1.05,.72,1,.95,1.04,1,.76]; // madera: vetas verticales y surcos de corteza
-      for(let x=0;x<T;x++)for(let y=0;y<T;y++){c.fillStyle=shade('#9c6a3c',veta[x]*(1+(r()-.5)*.1));c.fillRect(x,y,1,1)}
-      rects(c,'#5a3a1e',[[3,3,1,3],[12,8,1,4],[7,12,1,3],[13,1,1,2],[2,10,1,2]])}break;
-    case 5: noiseTex(c,'#3f9a34',.45,5);motas('#2b6e24',18);motas('#5cc04a',12);break;
-    case 6: noiseTex(c,'#e9d79a',.13,6);motas('#cdbb7e',10);motas('#f6e8b4',6);break;
-    case 7: noiseTex(c,'#3a7fd9',.1,7);rects(c,'#7fb6f0',[[1,2,5],[9,4,5],[3,8,6],[11,11,4],[1,13,4]]);rects(c,'#2f6cc0',[[2,3,4],[10,5,4],[4,9,5],[12,12,3]]);break;
+    case 1:{tierra();const V=['#79d24e','#5cb83a','#4ea232','#3f8a28']; // hierba: tierra con un manto verde de borde irregular
+      for(let x=0;x<T;x++){const h=4+(r()*2.4|0)+(r()<.18?1:0);
+        for(let y=0;y<h;y++){c.fillStyle=y===0?V[0]:y===h-1?V[3]:r()<.22?V[2]:r()<.12?V[0]:V[1];c.fillRect(x,y,1,1)}
+        if(r()<.5){c.fillStyle='#68421f';c.fillRect(x,h,1,1)}}}break; // la sombra de la hierba sobre la tierra
+    case 2: tierra();break;
+    case 3: fondo(c,'#8b8f94',.07,r);toques(c,r,'#7d8186',8,2);toques(c,r,'#999da2',6,2); // piedra: vetas oscuras con su canto claro debajo, repartidas por alturas
+      for(let i=0;i<5;i++){const x=r()*T|0,y=i*3+1+(r()*2|0),l=3+(r()*3|0);[0,-T].forEach(o=>{rects(c,'#696d71',[[x+o,y,l]]);rects(c,'#a9adb1',[[x+o+1,y+1,l-1]])})}break;
+    case 4:{const veta=[.72,1,1.06,.96,1,.74,1.04,.98,1,1.05,.72,1,.95,1.04,1,.76]; // madera: vetas verticales (iguales en todas las versiones, para que el tronco siga) y surcos de corteza
+      for(let x=0;x<T;x++){c.fillStyle=shade('#9c6a3c',veta[x]);c.fillRect(x,0,1,T)}
+      for(let i=0;i<7;i++){const x=r()*T|0,y=r()*T|0,l=2+(r()*4|0);c.fillStyle=shade('#9c6a3c',veta[x]*(r()<.5?.93:1.07));[0,-T].forEach(o=>c.fillRect(x,y+o,1,l))}
+      [2,7,12,8].forEach(x0=>{const x=x0+(r()<.3?1:0),y=r()*T|0,l=2+(r()*3|0);c.fillStyle='#5a3a1e';[0,-T].forEach(o=>c.fillRect(x,y+o,1,l))});
+      if(k===1){rects(c,'#9c6a3c',[[5,5,6,7]]);rects(c,'#5a3a1e',[[7,6,2],[6,7,1,3],[9,7,1,3],[7,10,2]]);rects(c,'#7d5230',[[7,7,2,3]]);rects(c,'#5a3a1e',[[8,8]]);rects(c,'#b07c48',[[7,7]])}}break; // una de las versiones lleva un nudo
+    case 5: fondo(c,'#3f9a34',.15,r);toques(c,r,'#2f7a28',9,2);toques(c,r,'#2f7a28',5,2,true);toques(c,r,'#55b545',9,2);toques(c,r,'#24621e',4);toques(c,r,'#74d05a',4);break; // hojas: manchas de sombra y de luz, pocas y en grupitos
+    case 6: fondo(c,'#e9d79a',.05,r);toques(c,r,'#d6c486',8,2);toques(c,r,'#f6e9b8',7,2);toques(c,r,'#c9b676',3);break;
+    case 7: fondo(c,'#3a7fd9',.04,r);break; // el agua se termina más abajo: sus ondas se mueven
     case 8: c.fillStyle='#c7c2b8';c.fillRect(0,0,T,T); // ladrillos de 7×3 con junta, una hilera sí y otra no desplazada
       for(let row=0;row<4;row++)for(let b=-1;b<3;b++){const x=b*8+(row%2?4:0),y=row*4,f=1+(r()-.5)*.25;
         rects(c,shade('#b34a33',f),[[x,y,7,3]]);rects(c,shade('#b34a33',f*1.14),[[x,y,7,1]]);rects(c,shade('#b34a33',f*.84),[[x,y+2,7,1]])}break;
     case 9: c.fillStyle='#cdeefa';c.fillRect(0,0,T,T);rects(c,'#8cc7dc',[[0,0,T,1],[0,T-1,T,1],[0,0,1,T],[T-1,0,1,T]]);
       rects(c,'#ffffff',[[5,2,2],[4,3,2],[3,4,2],[2,5,2],[12,9],[11,10],[10,11],[9,12]]);break;
-    case 10: noiseTex(c,'#f2c230',.2,10);rects(c,'#ffe27a',[[0,0,T,1],[0,0,1,T]]);rects(c,'#b8860b',[[0,T-1,T,1],[T-1,0,1,T]]);
-      rects(c,'#fff3a6',[[4,3],[3,4,3],[4,5],[11,9],[10,10,3],[11,11]]);rects(c,'#c9981a',[[8,5,3],[4,9,2],[6,12,3],[12,4,2]]);break;
-    case 11: tex[id]=sprite([
+    case 10:{fondo(c,'#f2c230',.09,r);toques(c,r,'#d9a91f',6,3);toques(c,r,'#f9d85a',5,2); // oro: lingote con canto claro y oscuro, y dos destellos que cambian de sitio
+      rects(c,'#ffe27a',[[0,0,T,1],[0,0,1,T]]);rects(c,'#b8860b',[[0,T-1,T,1],[T-1,0,1,T]]);
+      const P=[[4,4,11,10],[11,4,5,11],[5,9,10,5]][k%3];[[P[0],P[1]],[P[2],P[3]]].forEach(([x,y])=>rects(c,'#fff3a6',[[x,y-1],[x-1,y,3],[x,y+1]]))}break;
+    case 11: return sprite([
       '................','......RRRR......','.....RRRRRR.....','....RRRYYRRR....','....RRYyyYRR....','....RRYyyYRR....','....rRRYYRRr....','.....rrRRrr.....',
       '......rrrr......','.......Gg.......','.......Gg.......','...GG..Gg.......','....GGGGg.gG....','.......GgGG.....','.......Gg.......','.......Gg.......'],
-      {R:'#e8414b',r:'#c22f3a',Y:'#ffd43b',y:'#f2a71b',G:'#3f9a34',g:'#2b6e24'});return;
-    case 12: noiseTex(c,'#f4f8fb',.05,12);rects(c,'#d6e4ee',[[2,3],[6,6],[11,2],[13,9],[4,11],[9,13],[7,9,2]]);break;
-    case 13: tex[id]=sprite([
+      {R:'#e8414b',r:'#c22f3a',Y:'#ffd43b',y:'#f2a71b',G:'#3f9a34',g:'#2b6e24'});
+    case 12: fondo(c,'#f4f8fb',.02,r);toques(c,r,'#dde8f0',6,2);toques(c,r,'#ffffff',6,2);break;
+    case 13: return sprite([
       '.......O........','......OOO.......','......OYO.......','.....OYYYO......','.....OYWYO......','......OWO.......','......BBb.......','......BBb.......',
       '.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......'],
-      {O:'#ff7a1a',Y:'#ffd43b',W:'#fff3a6',B:'#8a5a36',b:'#6b4626'});return;
+      {O:'#ff7a1a',Y:'#ffd43b',W:'#fff3a6',B:'#8a5a36',b:'#6b4626'});
   }
-  tex[id]=cv;
+  return cv;
 }
-BLOCKS.forEach(b=>makeTex(b.id));
+BLOCKS.forEach(b=>{texV[b.id]=[];for(let k=0;k<(NVAR[b.id]||1);k++)texV[b.id].push(pinta(b.id,k));tex[b.id]=texV[b.id][0]});
+// El agua tiene 16 fotogramas: sus ondas (una raya clara con su sombra debajo) se deslizan un píxel cada vez, unas hacia un lado y otras hacia el otro,
+// y dan la vuelta por el borde. Todas las casillas de agua enseñan el mismo fotograma, así que el vaivén es de todo el charco a la vez.
+const agua=[];
+{const L=[[1,2,5],[9,4,5],[3,8,6],[11,11,4],[1,13,4]],D=[[2,3,4],[10,5,4],[4,9,5],[12,12,3]];
+  for(let f=0;f<T;f++){const cv=lienzo(T,T),c=cv.getContext('2d');c.drawImage(tex[7],0,0);
+    const pon=(col,l,i)=>{const x=((l[0]+(i%2?-f:f))%T+T)%T;c.fillStyle=col;c.fillRect(x,l[1],l[2],1);c.fillRect(x-T,l[1],l[2],1)};
+    L.forEach((l,i)=>pon('#7fb6f0',l,i));D.forEach((l,i)=>pon('#2f6cc0',l,i));agua.push(cv)}
+  tex[7]=texV[7][0]=agua[0]}
 // segunda postura de la llama, para que la antorcha parpadee
 tex.llama2=sprite([
   '................','.......O........','.....OOO........','.....OYOO.......','.....OYYO.......','......OYWO......','......BBb.......','......BBb.......',
@@ -1124,18 +1148,19 @@ function tick(){
   // bajo tierra, lo que se pica deja ver roca oscura en vez de cielo
   if(y1>=SUELO+4){const cy=(SUELO+4)*S,g2=ctx.createLinearGradient(0,cy,0,cy+S);g2.addColorStop(0,'rgba(46,33,24,0)');g2.addColorStop(1,'rgba(46,33,24,1)');
     ctx.fillStyle=g2;ctx.fillRect(x0*S,cy,(x1-x0+1)*S,S);ctx.fillStyle='#2e2118';ctx.fillRect(x0*S,cy+S,(x1-x0+1)*S,(y1-SUELO-4)*S)}
-  const lights=[],ahora=Date.now();let saltan=null;
+  const lights=[],ahora=Date.now(),olas=agua[(ahora/200|0)&15];let saltan=null; // el agua avanza un píxel cada dos décimas de segundo (por reloj)
   if(pops.size&&fr%40===0)pops.forEach((t,k)=>{if(ahora-t>POP)pops.delete(k)}); // los que se quedaron fuera de la vista
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=idx(x,y),v=grid[i];if(!v)continue;
     if(pops.size&&pops.has(i)){const t=(ahora-pops.get(i))/POP;if(t>=1)pops.delete(i);else{if(t>=0)(saltan=saltan||[]).push(x,y,v,t);if(v===13)lights.push([x,y,3.6]);continue}}
-    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(v===13&&((fr>>3)+x*3+y)&1?tex.llama2:tex[v],x*S,y*S,S,S);ctx.globalAlpha=1;
+    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(v===13?(((fr>>3)+x*3+y)&1?tex.llama2:tex[13]):v===7?olas:cara(v,i),x*S,y*S,S,S);ctx.globalAlpha=1;
+    if(v===7&&y>0&&!grid[i-COLS]){ctx.fillStyle='rgba(214,236,255,.5)';ctx.fillRect(x*S,y*S,S,Math.max(2,Math.round(S/16)))} // la superficie del agua: una línea clara donde encima hay aire
     if(v===13){lights.push([x,y,3.6]);if(Math.random()<.02)particles.push({x:x+.42+Math.random()*.16,y:y+.2,vx:(Math.random()-.5)*.012,vy:-.05,life:22,col:'#ffd43b'})}
     else if(v===9&&na>.05){ctx.fillStyle=`rgba(255,214,90,${.5*na})`;ctx.fillRect(x*S,y*S,S,S);lights.push([x,y,1.6])}
     else if(v!==11&&v!==7&&v!==9){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(x*S,y*S+S-2,S,2)}}
   // Los bloques recién puestos entran con un saltito: nacen algo más pequeños, se pasan un pelín de su tamaño y se asientan (menos de dos décimas de segundo).
   // Se pintan los últimos para que, mientras se pasan, queden por encima de sus vecinos.
   if(saltan)for(let k=0;k<saltan.length;k+=4){const x=saltan[k],y=saltan[k+1],v=saltan[k+2],u=saltan[k+3]-1,d=Math.round(S*(.55+.45*(1+3.6*u*u*u+2.6*u*u))),o=Math.round((S-d)/2);
-    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(tex[v],x*S+o,y*S+o,d,d);ctx.globalAlpha=1}
+    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(v===7?olas:cara(v,idx(x,y)),x*S+o,y*S+o,d,d);ctx.globalAlpha=1}
   // juntar: un + entre las dos torres y un marco amarillo en los bloques que ya se han contado
   if(reto&&reto.kind==='junta'&&!reto.won){const r=reto,px=(r.cs+1.5)*S,py=(r.bs-(Math.max(r.a,r.bq)-1)/2+.5)*S,l=S*.32,g=S*.09;
     ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(px-l+3,py-g+3,2*l,2*g);ctx.fillRect(px-g+3,py-l+3,2*g,2*l);
@@ -1215,7 +1240,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
