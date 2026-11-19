@@ -242,12 +242,12 @@ const SUELO=19, SUBE=10;
 const BLOCKS=[
   {id:1,name:'Hierba'},{id:2,name:'Tierra'},{id:3,name:'Piedra'},{id:4,name:'Madera'},
   {id:5,name:'Hojas'},{id:6,name:'Arena'},{id:7,name:'Agua'},{id:8,name:'Ladrillo'},
-  {id:9,name:'Cristal'},{id:10,name:'Oro'},{id:11,name:'Flor'},{id:12,name:'Nieve'},{id:13,name:'Antorcha'}
+  {id:9,name:'Cristal'},{id:10,name:'Oro'},{id:11,name:'Flor'},{id:14,name:'Semilla'},{id:12,name:'Nieve'},{id:13,name:'Antorcha'}
 ];
 const PLURAL={2:'bloques de tierra',3:'bloques de piedra',4:'bloques de madera',6:'bloques de arena',8:'ladrillos',9:'cristales',
   10:'bloques de oro',11:'flores',12:'bloques de nieve',13:'antorchas'};
 const NUM=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte'];
-const NOSOLID={7:1,11:1,13:1}, TRANSP={7:.8,9:.55};
+const NOSOLID={7:1,11:1,13:1,14:1,15:1}, TRANSP={7:.8,9:.55}; // 14 es la semilla plantada y 15 el arbolito en que se convierte (no está en el inventario)
 
 // ¿entiende este navegador "gap" en flex? (dos hijos sin alto en columna con gap de 1px miden 1px si sí)
 {const f=document.createElement('div');f.style.cssText='display:flex;flex-direction:column;gap:1px;position:absolute;visibility:hidden';
@@ -309,6 +309,14 @@ function pinta(id,k){
       '......rrrr......','.......Gg.......','.......Gg.......','...GG..Gg.......','....GGGGg.gG....','.......GgGG.....','.......Gg.......','.......Gg.......'],
       {R:'#e8414b',r:'#c22f3a',Y:'#ffd43b',y:'#f2a71b',G:'#3f9a34',g:'#2b6e24'});
     case 12: fondo(c,'#f4f8fb',.02,r);toques(c,r,'#dde8f0',6,2);toques(c,r,'#ffffff',6,2);break;
+    case 14: return sprite([ // semilla plantada: un brote con dos hojas sobre su montoncito de tierra
+      '................','................','................','................','................','................','................','....GG....GG....',
+      '...GGgG..GgGG...','....GGgGGgGG....','......GggG......','.......Gg.......','.......Gg.......','.....ttGgtt.....','....tTTTTTTt....','...tTTTTTTTTt...'],
+      {G:'#5cb83a',g:'#3f8a28',T:'#8a5a36',t:'#6f4628'});
+    case 15: return sprite([ // arbolito: lo que es la semilla tras una noche
+      '................','.....LLLLL......','....LLlLLLL.....','...LLLLLLlLL....','...LlLLLLLLL....','...LLLLlLLLd....','....LLLLLLdd....','.....dLLLdd.....',
+      '......dBbd......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......'],
+      {L:'#3f9a34',l:'#55b545',d:'#2f7a28',B:'#9c6a3c',b:'#6f4628'});
     case 13: return sprite([
       '.......O........','......OOO.......','......OYO.......','.....OYYYO......','.....OYWYO......','......OWO.......','......BBb.......','......BBb.......',
       '.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......','.......Bb.......'],
@@ -317,6 +325,7 @@ function pinta(id,k){
   return cv;
 }
 BLOCKS.forEach(b=>{texV[b.id]=[];for(let k=0;k<(NVAR[b.id]||1);k++)texV[b.id].push(pinta(b.id,k));tex[b.id]=texV[b.id][0]});
+tex[15]=pinta(15,0);texV[15]=[tex[15]];
 // El agua tiene 16 fotogramas: sus ondas (una raya clara con su sombra debajo) se deslizan un píxel cada vez, unas hacia un lado y otras hacia el otro,
 // y dan la vuelta por el borde. Todas las casillas de agua enseñan el mismo fotograma, así que el vaivén es de todo el charco a la vez.
 const agua=[];
@@ -405,8 +414,8 @@ function addPig(x,y){
 // --- guardado (solo en este navegador) ---
 // Hay tres mundos, cada uno con sus bloques, sus cerditos, su hora y su vista. Las estrellas y los niveles son del niño, no del mundo.
 // El mundo en el que se está vive en grid/pigs/night/camC; los otros esperan guardados en `mundos`.
-let mundo=0,mundos=[null,null,null];
-const empaqueta=()=>({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,camC,camR});
+let mundo=0,mundos=[null,null,null],vuelve=false,alVolver=false;
+const empaqueta=()=>({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,camC,camR,t:Date.now()}); // t: cuándo se guardó, para saber si ha pasado una noche de verdad
 const valido=w=>!!w&&Array.isArray(w.grid)&&w.grid.length===COLS*ROWS;
 function crece(w){ // un mundo de cuando el mapa tenía 16 filas: se le añade cielo por arriba y piedra (con algo de oro) por abajo, sin tocar lo construido
   if(!w||!Array.isArray(w.grid)||w.grid.length!==COLS*16)return w;
@@ -416,7 +425,8 @@ function crece(w){ // un mundo de cuando el mapa tenía 16 filas: se le añade c
   return{grid:g,pigs:(w.pigs||[]).map(p=>[p[0],p[1]+SUBE]),night:w.night,camC:w.camC};
 }
 function save(){try{mundos[mundo]=empaqueta();localStorage.setItem('bloques2',JSON.stringify({mundo,mundos,stars,base,niv}))}catch(e){}}
-function abre(w){grid=w.grid;pigs=[];(w.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));night=!!w.night;nightAmt=night?1:0;if(typeof w.camC==='number')camC=w.camC;camR=typeof w.camR==='number'?w.camR:vista()}
+function abre(w){grid=w.grid;pigs=[];(w.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));night=!!w.night;nightAmt=night?1:0;if(typeof w.camC==='number')camC=w.camC;camR=typeof w.camR==='number'?w.camR:vista();
+  vuelve=typeof w.t==='number'&&Date.now()-w.t>6*36e5} // seis horas sin tocar este mundo cuentan como una noche (ver tick)
 function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));if(!d)return false;
   if(Array.isArray(d.mundos)){mundos=[0,1,2].map(i=>{const w=crece(d.mundos[i]);return valido(w)?w:null});mundo=mundos[d.mundo|0]?d.mundo|0:mundos.findIndex(Boolean)}
   else if(valido(crece(d))){mundos=[crece({grid:d.grid,pigs:d.pigs,night:d.night,camC:d.camC}),null,null];mundo=0} // guardado de antes, con un solo mundo
@@ -481,7 +491,7 @@ function tono(f0,f1,d,type,vol,t0=0){try{const a=audio(),o=a.createOscillator(),
   g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);
   o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.02)}catch(e){}}
 // de qué está hecho cada bloque: t tierra y hierba, h hojas, a arena y nieve, d duro (piedra, ladrillo), m madera (y la antorcha), w agua, c cristal, o oro, f flor
-const MAT={1:'t',2:'t',3:'d',4:'m',5:'h',6:'a',7:'w',8:'d',9:'c',10:'o',11:'f',12:'a',13:'m'};
+const MAT={1:'t',2:'t',3:'d',4:'m',5:'h',6:'a',7:'w',8:'d',9:'c',10:'o',11:'f',12:'a',13:'m',14:'f',15:'h'};
 function suena(id,romper){if(vcfg.son===2)return;const m=MAT[id]||'t',k=romper?.78:1; // al romper suena algo más grave, y detrás caen los trocitos
   if(m==='t'){tono(300*k,150,.09,'triangle',.18);ruido(.07,1100*k,.7,'lowpass',.18)}
   else if(m==='h'){ruido(.1,2600*k,.8,'bandpass',.16);ruido(.06,5200,.7,'highpass',.045,.03)}
@@ -573,10 +583,11 @@ $('tPut').onclick=()=>{setMode('put');beep(500,.05);say('Poner',true,true)};
 $('tDig').onclick=()=>{setMode('dig');beep(400,.05);say('¡A picar!',true,true)};
 $('tPig').onclick=()=>{setMode('pig');oink();say('Toca para poner un cerdito',true,true)};
 $('tHouse').onclick=()=>{setMode('house');beep(520,.06);say('Toca para poner una casa',true,true)};
-$('tNight').onclick=()=>{night=!night;$('tNight').textContent=night?'☀️':'🌙';beep(night?330:660,.15,'triangle',.07);say(night?'Buenas noches':'Buenos días',true,true);save()};
+$('tNight').onclick=()=>{night=!night;$('tNight').textContent=night?'☀️':'🌙';beep(night?330:660,.15,'triangle',.07);say(night?'Buenas noches':'Buenos días',true,true);save();
+  if(!night)setTimeout(()=>{if(!night)amanece()},1500)}; // al hacerse de día, lo plantado crece
 // 🌍 abre el selector de mundos: tres huecos con su miniatura. Tocar uno entra en él (si está vacío, se crea).
 // Cambiar un mundo ya hecho por uno nuevo es cosa del adulto, tras la puerta, para que ningún toque suelto borre nada.
-const COLOR={1:'#5cb83a',2:'#8a5a36',3:'#8b8f94',4:'#9c6a3c',5:'#3f9a34',6:'#e9d79a',7:'#3a7fd9',8:'#b34a33',9:'#cdeefa',10:'#f2c230',11:'#e8414b',12:'#f4f8fb',13:'#ff7a1a'};
+const COLOR={1:'#5cb83a',2:'#8a5a36',3:'#8b8f94',4:'#9c6a3c',5:'#3f9a34',6:'#e9d79a',7:'#3a7fd9',8:'#b34a33',9:'#cdeefa',10:'#f2c230',11:'#e8414b',12:'#f4f8fb',13:'#ff7a1a',14:'#5cb83a',15:'#3f9a34'};
 function miniatura(w){ // el mundo a un píxel por bloque: la franja de 16 filas alrededor del suelo, que es donde está casi todo
   const F=SUELO-10,c=lienzo(COLS,16),x=c.getContext('2d');x.fillStyle=w.night?'#1c2452':'#7ec8f2';x.fillRect(0,0,COLS,16);
   w.grid.forEach((v,i)=>{if(v){x.fillStyle=COLOR[v];x.fillRect(i%COLS,(i/COLS|0)-F,1,1)}});
@@ -621,7 +632,7 @@ let reto=null,lastKind='',camGoal=null,camGoalR=null,camFila=null;
 const NAME={};BLOCKS.forEach(b=>NAME[b.id]=b.name.toLowerCase());
 const SING={4:'bloque de madera',6:'bloque de arena',8:'ladrillo',9:'cristal',10:'bloque de oro',12:'bloque de nieve'};
 // para explicar un fallo al copiar: "Eso es un ladrillo" / "ahí va el oro"
-const UN={1:'hierba',2:'tierra',3:'piedra',4:'madera',5:'hojas',6:'arena',7:'agua',8:'un ladrillo',9:'un cristal',10:'oro',11:'una flor',12:'nieve',13:'una antorcha'};
+const UN={1:'hierba',2:'tierra',3:'piedra',4:'madera',5:'hojas',6:'arena',7:'agua',8:'un ladrillo',9:'un cristal',10:'oro',11:'una flor',12:'nieve',13:'una antorcha',14:'una semilla'};
 const DEF={4:'la madera',6:'la arena',8:'el ladrillo',9:'el cristal',10:'el oro',12:'la nieve'};
 const EDU=[10,8,9,12,6,4];
 const pick=a=>a[Math.random()*a.length|0];
@@ -1032,6 +1043,54 @@ function stampHouse(x,y){
     if(v>0)pops.set(idx(cx,cy),ahoraC+(HOUSE.length-1-ry)*55)})); // se levanta fila a fila, de abajo arriba
   [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
 }
+// --- el mundo hace cosas solo ---
+// Reacciones: muchas veces por segundo se mira una casilla al azar y, si se dan las condiciones, cambia. Son tres y ninguna rompe nada que no se pueda rehacer:
+//  · la nieve que tiene una antorcha pegada se derrite y queda agua;
+//  · la tierra con aire encima y agua al lado se cubre de hierba;
+//  · en la hierba junto al agua acaba saliendo una flor (como mucho una cada pocas casillas).
+// Mientras hay un reto abierto no pasa nada de esto, para no cambiar lo que se está contando o copiando.
+let reacMs=0,reacOff=/[?&]prueba/.test(location.search);const avisos={}; // en las pruebas automáticas las reacciones solo corren cuando la prueba las pide
+function avisa(k,t){const a=avisos[k]||(avisos[k]={n:0,t:0});if(a.n>=2||Date.now()-a.t<40000)return;a.n++;a.t=Date.now();say(t,true,true)} // cada cosa se explica un par de veces, no más
+const aLaVista=(x,y)=>x>=camC-1&&x<=camC+W/S&&y>=camR-1&&y<=camR+H/S;
+function cambia(i,nuevo,regla,callado){
+  grid[i]=nuevo;if(callado)return;
+  const x=i%COLS,y=i/COLS|0;pops.set(i,Date.now());
+  if(aLaVista(x,y)){const col=regla==='derrite'?'#dff1ff':'#79d24e';
+    for(let k=0;k<6;k++)particles.push({x:x+.2+Math.random()*.6,y:y+.3+Math.random()*.4,vx:(Math.random()-.5)*.03,vy:-.05-Math.random()*.04,life:26,col});
+    suena(regla==='derrite'?7:11);
+    avisa(regla,regla==='derrite'?'¡La antorcha ha derretido la nieve!':regla==='riega'?'El agua ha hecho crecer la hierba.':'¡Ha salido una flor junto al agua!')}
+  save();
+}
+function reacciona(callado){
+  const i=Math.random()*COLS*ROWS|0,v=grid[i];if(v!==12&&v!==2&&v!==1)return;
+  const x=i%COLS,y=i/COLS|0;
+  const cerca=id=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const X=x+dx,Y=y+dy;if((dx||dy)&&X>=0&&X<COLS&&Y>=0&&Y<ROWS&&grid[Y*COLS+X]===id)return true}return false};
+  if(v===12){if(cerca(13)&&Math.random()<.6)cambia(i,7,'derrite',callado);return}
+  if(y<1||grid[i-COLS]||!cerca(7))return; // tierra o hierba: hace falta aire encima y agua al lado
+  if(v===2){if(Math.random()<.4)cambia(i,1,'riega',callado);return}
+  if(Math.random()<.012){for(let dx=-2;dx<=2;dx++){const X=x+dx;if(X>=0&&X<COLS&&grid[i-COLS+dx]===11)return}cambia(i-COLS,11,'flor',callado)}
+}
+// Semillas: plantada sobre tierra o hierba, cada vez que amanece crece un paso: semilla -> arbolito -> árbol de verdad (tronco de madera y copa de hojas,
+// como los que trae el mundo). El árbol solo ocupa huecos vacíos; si no tiene sitio encima, espera. Devuelve cuántas plantas han crecido.
+function amanece(callado){
+  if(reto&&!reto.won)return 0;
+  const ahora=Date.now();let brotes=0,arboles=0;
+  for(let i=0;i<grid.length;i++){const v=grid[i];if(v!==14&&v!==15)continue;const x=i%COLS,y=i/COLS|0;
+    if(v===14){const s=y<ROWS-1?grid[i+COLS]:0;if(s===1||s===2){grid[i]=15;if(!callado)pops.set(i,ahora);brotes++}continue}
+    if(y<4||grid[i-COLS]||grid[i-2*COLS]||pigIn(x,y)||pigIn(x,y-1)||pigIn(x,y-2))continue;
+    for(let k=0;k<3;k++){grid[i-k*COLS]=4;if(!callado)pops.set(i-k*COLS,ahora+k*70)}
+    for(let dy=3;dy<=4;dy++)for(let dx=-1;dx<=1;dx++){const X=x+dx,j=i-dy*COLS+dx;if(X<0||X>=COLS||grid[j]||pigIn(X,y-dy))continue;grid[j]=5;if(!callado)pops.set(j,ahora+dy*70)}
+    arboles++}
+  if(brotes+arboles){save();
+    if(!callado){[523,659,784].forEach((f,k)=>setTimeout(()=>beep(f,.1,'triangle',.06),k*90));say(arboles?'¡Mira! El arbolito ya es un árbol.':'¡Mira! La semilla ha brotado.',true,true)}}
+  return brotes+arboles;
+}
+let semillaT=0;
+function semillaPuesta(i){const s=i+COLS<grid.length?grid[i+COLS]:0,bien=s===1||s===2;
+  if(!bien&&Date.now()-semillaT>15000){semillaT=Date.now();say('La semilla necesita tierra debajo para crecer.',true,true)}
+  else if(bien)avisa('semilla','Una semilla. Cuando pase la noche, crecerá.')}
+// si al volver al juego las plantas han crecido solas, se cuenta en cuanto se toca el mundo (en iOS la voz solo puede arrancar dentro de un toque)
+['touchend','click'].forEach(t=>wrap.addEventListener(t,()=>{if(alVolver){alVolver=false;say('¡Mira! Mientras no estabas, tus plantas han crecido.',true,true)}}));
 function act(e){
   let {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
   if(enJunta(x,y)){const r=reto;if(r.contando)return; // contar tocando: cada bloque nuevo dice el número siguiente
@@ -1065,7 +1124,7 @@ function act(e){
       say(reto.kind==='serie'?`Mira la serie: ${reto.seq.map(i=>NAME[i]).join(', ')}. ¿Qué toca ahora?`
         :g.miss<2?`Eso es ${UN[current]}. Mira el modelo: en ese sitio va otro bloque.`:`Mira el modelo: ahí va ${DEF[g.b]}.`);return}
     if(!g&&enCopia(x,y)){beep(220,.1,'triangle',.06);say('En el modelo ese hueco está vacío. Ahí no va nada.');return}
-    foto();grid[i]=current;pops.set(i,Date.now());suena(current);if(g)say(NAME[current],false)}
+    foto();grid[i]=current;pops.set(i,Date.now());suena(current);if(g)say(NAME[current],false);else if(current===14)semillaPuesta(i)}
   else{if(!grid[i])return;foto();const v=grid[i];burst(x,y,v);grid[i]=0;suena(v,true);if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
   checkReto();save();
 }
@@ -1121,6 +1180,11 @@ function tick(){
   // Si el aparato va justo (un iPad antiguo), se dibuja con menos resolución: al ser pixelado apenas se nota y el juego va suelto.
   // Se mira la media de lo que tarda cada fotograma y, si no llega a unos 28 por segundo, se baja medio punto (hasta 1) y se vuelve a medir.
   // (El umbral queda por debajo de 30 a propósito: un móvil en modo de bajo consumo va a 30 clavados y bajarle la resolución no le ayudaría.)
+  // el mundo reacciona: unas 1700 casillas al azar por segundo (a cada una le toca más o menos una vez por segundo), medido por reloj. Con un reto abierto, nada.
+  // Así la nieve tarda un segundo o dos en derretirse y la hierba dos o tres en salir: lo justo para que se vea que ha sido por la antorcha o por el agua.
+  if(tAnt&&!reacOff&&!(reto&&!reto.won)){reacMs+=Math.min(100,Date.now()-tAnt);let n=Math.min(60,reacMs/.6|0);reacMs-=n*.6;while(n-->0)reacciona()}
+  // al volver a un mundo que lleva horas sin tocarse: ha pasado la noche, así que lo plantado crece y el agua ha hecho lo suyo (sin ruido ni saltitos: ya estaba así)
+  if(vuelve&&fr>40){vuelve=false;if(!(reto&&!reto.won)){for(let k=0;k<60000;k++)reacciona(true);if(amanece(true))alVolver=true;save()}}
   {const t=Date.now();if(tAnt)lento=lento*.95+Math.min(100,t-tAnt)*.05;tAnt=t;
     if(lento>36&&fr-frCal>150&&calidad>1){calidad=Math.max(1,Math.min(calidad,window.devicePixelRatio||1)-.5);frCal=fr;lento=16;resize()}}
   if(camGoal!==null){camC+=(camGoal-camC)*.12;if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}}
@@ -1242,7 +1306,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
