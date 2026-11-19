@@ -148,6 +148,24 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .fl{flex:1;min-width:0;height:54px;background:var(--panel-2);border:4px solid var(--slot);padding:0;font-size:24px;font-family:system-ui}
 #fGo{background:#5cb83a;border-color:#2b6e24;color:#fff}
 #tools{display:flex;gap:6px}
+/* modo aventura: el botón del mando (arriba a la derecha), el mando que ocupa el sitio de la barra, y el panel para elegir personaje */
+#jugarBtn{position:absolute;right:10px;top:10px;width:52px;height:52px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:26px;font-family:system-ui}
+#jugarBtn[aria-pressed="true"],#jugarBtn.ask{background:var(--sel);border-color:var(--sel-edge)}
+#world.conreto #jugarBtn{display:none}
+#mando{display:flex;height:122px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.sin-gap #bar>#mando{margin-top:0}
+#pad{flex:0 0 44%;display:flex;touch-action:none}
+#pad span{flex:1;display:grid;place-items:center;background:var(--panel-2);border:4px solid var(--slot);font-size:40px;font-family:system-ui}
+#pad span+span{margin-left:8px}
+#pad span.on,#salta.on{background:var(--sel);border-color:var(--sel-edge)}
+#avManz{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;margin:0 8px}
+#avManz canvas{width:26px;height:26px;margin:2px;image-rendering:pixelated}
+#avManz canvas.no{opacity:.25}
+#salta{flex:0 0 28%;background:var(--panel-2);border:4px solid var(--slot);font-size:44px;font-family:system-ui;padding:0;touch-action:none}
+#pers{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
+#persCard{background:var(--panel);border:4px solid var(--sel);padding:8px;display:flex;flex-wrap:wrap;justify-content:center;max-width:336px;box-sizing:border-box}
+.pers{width:96px;height:96px;margin:4px;background:var(--panel-2);border:4px solid var(--slot);padding:0}
+.pers canvas{width:72px;height:72px;image-rendering:pixelated}
 .tool{flex:1;min-width:0;height:52px;background:var(--panel-2);border:4px solid var(--slot);padding:0;font-size:24px;font-family:system-ui}
 .tool[aria-pressed="true"],.tool.ask{background:var(--sel);border-color:var(--sel-edge)}
 #tReto.call{animation:pulse 1.4s ease-in-out infinite}
@@ -164,6 +182,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
   <div id="world">
     <canvas id="cv"></canvas>
     <div id="stars" aria-label="Estrellas ganadas"><span class="e">⭐</span><span id="starN">0</span></div>
+    <button id="jugarBtn" aria-label="Jugar con un personaje" aria-pressed="false">🎮</button>
     <div id="hud">
       <div id="reto" hidden>
         <button class="rb" id="rSay" aria-label="Repetir el reto">🔊</button>
@@ -191,6 +210,9 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <div id="mundosList"></div>
       <button class="vopt" id="mundosClose" style="text-align:center" aria-label="Cerrar">✖</button>
     </div>
+  </div>
+  <div id="pers" hidden>
+    <div id="persCard" role="dialog" aria-label="Elige un personaje"></div>
   </div>
   <div id="voz" hidden>
     <div id="vozCard" role="dialog" aria-label="Ajustes del juego">
@@ -230,6 +252,11 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <button class="tool" id="tMusic" aria-label="Música" aria-pressed="false">🎵</button>
       <button class="tool call" id="tReto" aria-label="Reto nuevo">⭐</button>
       <button class="tool" id="tNew" aria-label="Mis mundos">🌍</button>
+    </div>
+    <div id="mando" hidden>
+      <div id="pad" aria-label="Andar"><span id="padI">⬅️</span><span id="padD">➡️</span></div>
+      <div id="avManz" aria-label="Manzanas cogidas"></div>
+      <button id="salta" aria-label="Saltar">⬆️</button>
     </div>
   </div>
 </div>
@@ -426,7 +453,7 @@ function crece(w){ // un mundo de cuando el mapa tenía 16 filas: se le añade c
   return{grid:g,pigs:(w.pigs||[]).map(p=>[p[0],p[1]+SUBE]),night:w.night,camC:w.camC};
 }
 function save(){try{mundos[mundo]=empaqueta();localStorage.setItem('bloques2',JSON.stringify({mundo,mundos,stars,base,niv}))}catch(e){}}
-function abre(w){grid=w.grid;pigs=[];(w.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));night=!!w.night;nightAmt=night?1:0;if(typeof w.camC==='number')camC=w.camC;camR=typeof w.camR==='number'?w.camR:vista();
+function abre(w){if(av.on)saleAventura();av.vivo=false;grid=w.grid;pigs=[];(w.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));night=!!w.night;nightAmt=night?1:0;if(typeof w.camC==='number')camC=w.camC;camR=typeof w.camR==='number'?w.camR:vista();
   vuelve=typeof w.t==='number'&&Date.now()-w.t>6*36e5} // seis horas sin tocar este mundo cuentan como una noche (ver tick)
 function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));if(!d)return false;
   if(Array.isArray(d.mundos)){mundos=[0,1,2].map(i=>{const w=crece(d.mundos[i]);return valido(w)?w:null});mundo=mundos[d.mundo|0]?d.mundo|0:mundos.findIndex(Boolean)}
@@ -1045,6 +1072,142 @@ function stampHouse(x,y){
     if(v>0)pops.set(idx(cx,cy),ahoraC+(HOUSE.length-1-ry)*55)})); // se levanta fila a fila, de abajo arriba
   [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
 }
+// --- modo aventura: recorrer el mundo con un personaje ---
+// 🎮 abre el panel de personajes; al elegir uno, la barra de bloques se cambia por un mando (⬅️ ➡️ para andar, ⬆️ o tocar el mundo para saltar)
+// y el personaje sale del borde izquierdo. Tiene que llegar a la bandera del borde derecho; por el camino hay manzanas, que la voz va contando.
+// Reglas pensadas para cinco años: un escalón de un bloque se sube solo, con un salto se suben dos, no hay enemigos ni forma de perder, y los troncos
+// de los árboles no estorban (se pasa por delante). Lo que sea más alto de dos bloques corta el paso: entonces se toca 🎮 para salir, se construye una
+// escalera o se quita lo que estorba, y al volver a entrar se sigue donde se estaba. Todo el movimiento va por reloj (bloques por segundo).
+const PERS=(()=>{
+  const cuad=[['..LLll...llLL...','..LLll...llLL...','..DDdd...ddDD...'],['..LLll...llLL...','..LLdd...ddLL...','..DD.......DD...']];
+  const espejo=a=>{const b=lienzo(16,16),c=b.getContext('2d');c.translate(16,0);c.scale(-1,1);c.drawImage(a,0,0);return b};
+  const haz=(n,cuerpo,patas,pal)=>{const der=patas.map(p=>sprite(cuerpo.concat(p),pal));return{n,der,izq:der.map(espejo)}};
+  const V='................';
+  const cerdo=[0,1].map(l=>{const b=lienzo(16,16);b.getContext('2d').drawImage(pigTex[l+'00'],0,4);return b});
+  return[{n:'Cerdito',der:cerdo,izq:cerdo.map(espejo)},
+    haz('Gato',[V,V,V,'.........O...O..','O........OO.OO..','O........OOOOO..','O........OKOKO..','OO.......OOPOO..','.OOOOOOOOOOOOO..','.OoOOoOOOOWWWO..','.OoOOoOOOOOWO...','.OOOOOOOOOOOO...','..OOOOOOOOOOO...'],
+      cuad,{O:'#f29a3e',o:'#d97b22',W:'#fff1dc',K:'#2a1d14',P:'#f2788c',L:'#f29a3e',l:'#d97b22',D:'#fff1dc',d:'#e6d5bb'}),
+    haz('Conejo',['..........W..W..','..........W..W..','..........Wp.Wp.','..........Wp.Wp.','..........WW.WW.','.........WWWWWW.','.........WKWWKW.','.........WWPPWW.','.cWWWWWWWWWWWWW.','ccWWWWWWWWWWWW..','.cWWWWWWWWWWWW..','..WWWWWWWWWWgg..','..gWWWWWWWWgg...'],
+      cuad,{W:'#f3f3f6',g:'#cfd2da',c:'#ffffff',p:'#f2a0b0',P:'#f2788c',K:'#2a1d14',L:'#f3f3f6',l:'#cfd2da',D:'#cfd2da',d:'#b9bcc6'}),
+    haz('Gallina',[V,'...........RR...','..........RRRR..','..........WWWW..','..........WKWWYY','.W........WWWWY.','.WW.......WWWR..','.WWW.....WWWW...','.WWWWWWWWWWWW...','..WWWgWWWWWWW...','..WWggggWWWWW...','..WWWgggWWWW....','...WWWWWWWW.....'],
+      [['.....O...O......','.....O...O......','....OO..OO......'],['.....O...O......','....O.....O.....','...OO.....OO....']],
+      {W:'#fbfbf7',g:'#d9d9d0',R:'#e8414b',Y:'#ffb52e',O:'#f2901e',K:'#2a1d14'}),
+    haz('Rana',[V,V,V,V,V,'..........WW.WW.','.........GWKGWKG','.........GGGGGGG','....GGGGGGGGGGGG','..GGGGGGGGGddddd','.GGGGGGGGGGYYYY.','.GGGGGGGGGYYYY..','.GGGGGGGGGGYY...'],
+      [['.GGGG....GG.....','GGgGG....GG.....','GGGG....GGG.....'],['.GGG.....GG.....','.GG.......GG....','GGG.......GGG...']],
+      {G:'#5cb83a',g:'#3f8a28',d:'#3f8a28',Y:'#d4eb8f',W:'#ffffff',K:'#2a1d14'}),
+    haz('Dinosaurio',[V,V,'.........DDDDD..','........sDDDDDD.','........DDDWKDD.','.......sDDDDDDDD','........DDDDdddd','......sDDDDD....','.......DDDDDD...','DD....DDDDbbDa..','.DDD.DDDDbbbD...','..DDDDDDDbbbD...','...DDDDDDDbb....'],
+      [['....DD..DD......','....DD..DD......','...DDD.DDD......'],['....DD..DD......','...DD....DD.....','..DDD....DDD....']],
+      {D:'#3fa7c9',d:'#2c7f9c',b:'#d9f0f5',a:'#2c7f9c',s:'#ffd43b',W:'#ffffff',K:'#2a1d14'})];
+})();
+const bandera=sprite(['....pP..........','....pPRRRRRR....','....pPRRRRRRRR..','....pPRRYYRRRRR.','....pPRRYYRRRR..','....pPRRRRRRR...','....pPRRRRR.....','....pP..........',
+  '....pP..........','....pP..........','....pP..........','....pP..........','....pP..........','....pP..........','....pP..........','...pppPP........'],
+  {P:'#f1ead8',p:'#a89f88',R:'#e8414b',Y:'#ffd43b'});
+const ANDA=4.6,GRAV=26,SALTO=11,NMANZ=8; // bloques por segundo, bloques por segundo al cuadrado... El salto sube algo más de dos bloques y cruza tres.
+const av={on:false,vivo:false,fin:false,pers:0,x:0,y:0,vy:0,suelo:false,cara:1,pI:false,pD:false,kI:false,kD:false,salto:0,coyote:0,paso:0,yc:0,manz:[],cog:0,meta:null,empuje:0,avisoT:0,tronco:null};
+// el personaje ocupa una caja de 0,6 de ancho por 0,8 de alto; (x, y) es el centro de sus pies
+function solidoP(x,y){if(x<0||x>=COLS||y>=ROWS)return true;if(y<0)return false;const i=y*COLS+x,v=grid[i];return !!v&&!NOSOLID[v]&&!av.tronco[i]}
+function chocaP(x,y){const x1=Math.floor(x+.299),y1=Math.floor(y-.001);
+  for(let yy=Math.floor(y-.8);yy<=y1;yy++)for(let xx=Math.floor(x-.3);xx<=x1;xx++)if(solidoP(xx,yy))return true;return false}
+// El decorado, por delante del cual se pasa sin chocar: los troncos de los árboles (madera apilada que termina en hojas)
+// y las casas del botón 🏠 (son un dibujo de frente: no tendría sentido que fueran un muro).
+function troncos(){const t=av.tronco=new Uint8Array(COLS*ROWS);
+  for(let x=0;x<COLS;x++)for(let y=ROWS-1;y>0;y--){if(grid[y*COLS+x]!==4)continue;let y2=y;while(y2>0&&grid[(y2-1)*COLS+x]===4)y2--;
+    if(y2>0&&grid[(y2-1)*COLS+x]===5)for(let k=y2;k<=y;k++)t[k*COLS+x]=1;y=y2}
+  const HA=HOUSE.length,HW=HOUSE[0].length;
+  for(let y=0;y+HA<=ROWS;y++)for(let x=0;x+HW<=COLS;x++){
+    let n=0;HOUSE.forEach((row,ry)=>row.forEach((v,rx)=>{if(v>0&&grid[(y+ry)*COLS+x+rx]===v)n++}));
+    if(n>=17)HOUSE.forEach((row,ry)=>row.forEach((v,rx)=>{if(v>0&&grid[(y+ry)*COLS+x+rx]===v)t[(y+ry)*COLS+x+rx]=1}))}} // 17 de sus 22 bloques: aunque le falte o le sobre alguno, sigue siendo una casa
+// la fila del suelo en una columna (sin contar copas ni troncos): ahí se apoyan los pies
+function pisoDe(x){for(let y=0;y<ROWS;y++){const v=grid[y*COLS+x];if(v&&!NOSOLID[v]&&v!==5&&!av.tronco[y*COLS+x])return y}return ROWS}
+function nuevaCarrera(){
+  av.x=1.5;av.y=pisoDe(1);av.vy=0;av.cara=1;av.cog=0;av.fin=false;av.vivo=true;av.yc=av.y;
+  let fx=COLS-2;av.meta={x:fx,y:pisoDe(fx)};
+  av.manz=[];
+  for(let k=1;k<=NMANZ;k++){const x=Math.round(3+k*(COLS-8)/(NMANZ+1)),p=pisoDe(x);
+    const alta=k%3===0&&p>=4&&!solidoP(x,p-2)&&!solidoP(x,p-3); // una de cada tres queda en el aire: hay que saltar para cogerla
+    av.manz.push({x,y:alta?p-3:p-1,c:false})}
+  pintaManz();
+}
+function pintaManz(){const e=$('avManz');e.textContent='';av.manz.forEach(m=>{const c=lienzo(16,16);c.getContext('2d').drawImage(tex.manzana,0,0);if(!m.c)c.className='no';e.appendChild(c)})}
+function entraAventura(k){
+  paraMusica();av.pers=k;troncos();
+  if(!av.vivo||av.fin)nuevaCarrera();else{while(chocaP(av.x,av.y)&&av.y>1)av.y-=1;pintaManz()} // si al construir se le ha tapado, sale por arriba
+  av.on=true;av.pI=av.pD=av.kI=av.kD=false;av.salto=0;av.empuje=0;camGoal=camGoalR=null;
+  $('blocks').hidden=$('tools').hidden=true;$('mando').hidden=false;$('jugarBtn').setAttribute('aria-pressed',true);resize();
+  say('¡A correr! Coge las manzanas y llega a la bandera.');
+}
+function saleAventura(){
+  av.on=false;av.pI=av.pD=av.kI=av.kD=false;if(av.fin)av.vivo=false;
+  $('blocks').hidden=$('tools').hidden=false;$('mando').hidden=true;$('jugarBtn').setAttribute('aria-pressed',false);padPinta();resize();save();
+}
+function avPaso(dt){const a=av;
+  const dir=a.fin?0:((a.pD||a.kD)?1:0)-((a.pI||a.kI)?1:0);if(dir)a.cara=dir;
+  a.coyote=a.suelo?.1:a.coyote-dt;
+  if(a.salto>0){a.salto-=dt;if(a.coyote>0&&!a.fin){a.vy=-SALTO;a.suelo=false;a.coyote=0;a.salto=0;if(vcfg.son!==2)tono(420,760,.12,'sine',.09)}}
+  a.vy=Math.min(a.vy+GRAV*dt,20);
+  // de lado: si choca con un escalón de un bloque, lo sube solo con un saltito; con algo más alto, se para
+  if(dir){const nx=a.x+dir*ANDA*dt;
+    if(!chocaP(nx,a.y)){a.x=nx;a.paso+=dt;a.empuje=0}
+    else{const fx=Math.floor(nx+dir*.3),r=Math.floor(a.y-.001),pegado=(dir>0?fx-.3:fx+1.3)-dir*.001; // fx: la columna con la que choca
+      if(!chocaP(pegado,a.y))a.x=pegado;
+      if(a.suelo){let alto=0;while(alto<4&&solidoP(fx,r-alto))alto++;
+        if(alto===1&&!solidoP(Math.floor(a.x),r-1)){a.vy=-8.2;a.suelo=false}
+        else if(alto>=2){a.empuje+=dt;if(a.empuje>1.1&&Date.now()-a.avisoT>(alto>2?25000:15000)){a.avisoT=Date.now();a.empuje=0;
+          if(alto===2)say('Para subir ahí, salta.');
+          else{say('Es muy alto para saltar. Toca el mando y construye una escalera.');const b=$('jugarBtn');b.classList.add('ask');setTimeout(()=>b.classList.remove('ask'),2500)}}}}}}
+  // de arriba abajo
+  const ny=a.y+a.vy*dt;
+  if(!chocaP(a.x,ny)){a.y=ny;a.suelo=false}
+  else if(a.vy>0){a.y=Math.floor(ny-.001);a.vy=0;a.suelo=true} // cae sobre un bloque: los pies quedan justo encima
+  else{a.y=Math.floor(ny-.8)+1.8;a.vy=0}                       // se da en la cabeza
+  if(a.suelo)a.yc=a.y;else if(Math.abs(a.y-a.yc)>4)a.yc=a.y;
+  if(a.fin)return;
+  // manzanas: cada una, su número en voz alta y flotando
+  a.manz.forEach(m=>{if(m.c||Math.abs(m.x+.5-a.x)>.75||Math.abs(m.y+.5-(a.y-.4))>.8)return;m.c=true;a.cog++;
+    ult={x:m.x,y:m.y};cifra(a.cog);say(a.cog===1?'Una':NUM[a.cog][0].toUpperCase()+NUM[a.cog].slice(1),false);if(vcfg.son!==2){tono(880,1320,.1,'triangle',.1);tono(1320,1760,.12,'triangle',.07,.08)}
+    const e=$('avManz').children[a.manz.indexOf(m)];if(e)e.className=''});
+  // la bandera
+  if(Math.abs(a.x-(a.meta.x+.5))<.8&&Math.abs(a.y-a.meta.y)<1.6){a.fin=true;const todas=a.cog===NMANZ; // la estrella es para quien llega con todas: para las altas hay que saltar
+    if(todas){stars++;$('starN').textContent=stars;const e=$('stars');e.classList.remove('gana');void e.offsetWidth;e.classList.add('gana');fireworks()}
+    fanfare();pigs.forEach(p=>{p.vy=-.17;p.joy=60});a.vy=-SALTO*.8;
+    say('¡Has llegado a la bandera! '+(todas?'¡Y con todas las manzanas! ¡Una estrella!':(a.cog===1?'Has cogido una manzana':'Has cogido '+NUM[a.cog]+' manzanas')+' de '+NUM[NMANZ]+'. ¡A ver si la próxima vez las coges todas!'));
+    save();setTimeout(()=>{if(av.on&&av.fin)saleAventura()},6000)}
+}
+function avDibuja(ahora){const a=av;
+  a.manz.forEach(m=>{if(!m.c)ctx.drawImage(tex.manzana,(m.x+.1)*S,(m.y+.1+Math.sin(ahora/300+m.x)*.06)*S,S*.8,S*.8)});
+  ctx.drawImage(bandera,a.meta.x*S,(a.meta.y-1.5)*S,S*1.5,S*1.5);
+  const p=PERS[a.pers];ctx.drawImage((a.cara>0?p.der:p.izq)[a.suelo?Math.floor(a.paso*7)%2:1],(a.x-.5)*S,(a.y-1)*S,S,S);
+}
+// el mando: una sola pieza para izquierda y derecha (así el dedo puede deslizar de un lado a otro sin levantarse) y un botón de salto.
+// Varios dedos a la vez: uno anda y otro salta.
+const padT=new Map();
+function padPinta(){let i=false,d=false;padT.forEach(v=>{if(v<0)i=true;else d=true});av.pI=i&&av.on;av.pD=d&&av.on;$('padI').className=av.pI?'on':'';$('padD').className=av.pD?'on':''}
+{const pad=$('pad'),sal=$('salta'),lado=x=>{const r=pad.getBoundingClientRect();return x<r.left+r.width/2?-1:1};
+  const salta=on=>{if(on&&av.on)av.salto=.15;sal.className=on?'on':''};
+  if(window.PointerEvent){
+    pad.addEventListener('pointerdown',e=>{e.preventDefault();try{pad.setPointerCapture(e.pointerId)}catch(_){}padT.set(e.pointerId,lado(e.clientX));padPinta()});
+    pad.addEventListener('pointermove',e=>{if(padT.has(e.pointerId)){padT.set(e.pointerId,lado(e.clientX));padPinta()}});
+    ['pointerup','pointercancel'].forEach(t=>pad.addEventListener(t,e=>{padT.delete(e.pointerId);padPinta()}));
+    sal.addEventListener('pointerdown',e=>{e.preventDefault();salta(true)});['pointerup','pointercancel','pointerleave'].forEach(t=>sal.addEventListener(t,()=>salta(false)));
+  }else{
+    const cada=(e,f)=>{e.preventDefault();for(let k=0;k<e.changedTouches.length;k++)f(e.changedTouches[k])};
+    pad.addEventListener('touchstart',e=>{cada(e,t=>padT.set(t.identifier,lado(t.clientX)));padPinta()},{passive:false});
+    pad.addEventListener('touchmove',e=>{cada(e,t=>{if(padT.has(t.identifier))padT.set(t.identifier,lado(t.clientX))});padPinta()},{passive:false});
+    ['touchend','touchcancel'].forEach(n=>pad.addEventListener(n,e=>{cada(e,t=>padT.delete(t.identifier));padPinta()},{passive:false}));
+    sal.addEventListener('touchstart',e=>{e.preventDefault();salta(true)},{passive:false});['touchend','touchcancel'].forEach(n=>sal.addEventListener(n,e=>{e.preventDefault();salta(false)},{passive:false}));
+    pad.addEventListener('mousedown',e=>{padT.set('raton',lado(e.clientX));padPinta()});window.addEventListener('mouseup',()=>{padT.delete('raton');padPinta();salta(false)});
+    sal.addEventListener('mousedown',()=>salta(true));
+  }
+  window.addEventListener('keydown',e=>{if(!av.on)return;if(e.key==='ArrowLeft')av.kI=true;else if(e.key==='ArrowRight')av.kD=true;else if(e.key===' '||e.key==='ArrowUp'){if(!e.repeat)av.salto=.15}else return;e.preventDefault()});
+  window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft')av.kI=false;else if(e.key==='ArrowRight')av.kD=false});
+  // el panel de personajes
+  const card=$('persCard');
+  PERS.forEach((p,k)=>{const b=document.createElement('button');b.className='pers';b.setAttribute('aria-label',p.n);const c=lienzo(16,16);c.getContext('2d').drawImage(p.der[0],0,0);b.appendChild(c);
+    b.onclick=()=>{$('pers').hidden=true;beep(660,.06);entraAventura(k)};card.appendChild(b)});
+  $('pers').addEventListener('click',e=>{if(e.target===$('pers'))$('pers').hidden=true});
+  $('jugarBtn').onclick=()=>{if(av.on){saleAventura();beep(440,.06);say('A construir',true,true);return}
+    $('pers').hidden=false;beep(660,.06);say('¿Con quién quieres jugar?',true,true)};
+}
 // --- el cerdito músico ---
 // Al tocar 🎵 un cerdito recorre las columnas que se ven en pantalla, de izquierda a derecha, saltando de cima en cima. Al caer en cada una suena su nota:
 // más aguda cuanto más alta está la cima (escala pentatónica: suene lo que suene, queda bien), y con el timbre del bloque que hay arriba
@@ -1124,6 +1287,7 @@ function semillaPuesta(i){const s=i+COLS<grid.length?grid[i+COLS]:0,bien=s===1||
 // si al volver al juego las plantas han crecido solas, se cuenta en cuanto se toca el mundo (en iOS la voz solo puede arrancar dentro de un toque)
 ['touchend','click'].forEach(t=>wrap.addEventListener(t,()=>{if(alVolver){alVolver=false;say('¡Mira! Mientras no estabas, tus plantas han crecido.',true,true)}}));
 function act(e){
+  if(av.on)return;
   let {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
   if(enJunta(x,y)){const r=reto;if(r.contando)return; // contar tocando: cada bloque nuevo dice el número siguiente
     const k=x+','+y;if(r.cont.includes(k)){beep(300,.05);return}
@@ -1169,7 +1333,8 @@ function burst(x,y,id){for(let k=0;k<8;k++)particles.push({x:x+.1+(k&1)*.45+Math
 // ellos apenas cambia no es un pellizco: así una palma apoyada no impide tocar con otro dedo.
 const dedos=new Map();let panId=null,ocupadoT=0,pinza=null;
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-function baja(id,x,y){dedos.set(id,{clientX:x,clientY:y,x,y,cam:camC,camR,drag:false});
+function baja(id,x,y){if(av.on){av.salto=.15;return} // en la aventura, tocar el mundo es saltar
+  dedos.set(id,{clientX:x,clientY:y,x,y,cam:camC,camR,drag:false});
   if(dedos.size===2){const [a,b]=[...dedos.values()];pinza={d0:Math.max(1,dist(a,b)),hecho:false}}}
 function mueve(id,x,y){const d=dedos.get(id);if(!d)return;d.x=x;d.y=y;
   if(pinza&&dedos.size===2){const [a,b]=[...dedos.values()],k=dist(a,b)/pinza.d0;
@@ -1209,6 +1374,7 @@ function marco(x,y,w,h,col,dash){ // recuadro con sombra oscura debajo, para que
 const lerp=(a,b,t)=>Math.round(a+(b-a)*t);
 function tick(){
   fr++;
+  const dms=tAnt?Math.min(50,Date.now()-tAnt):16; // milisegundos desde el fotograma anterior (con tope, por si la pestaña estuvo parada)
   // Si el aparato va justo (un iPad antiguo), se dibuja con menos resolución: al ser pixelado apenas se nota y el juego va suelto.
   // Se mira la media de lo que tarda cada fotograma y, si no llega a unos 28 por segundo, se baja medio punto (hasta 1) y se vuelve a medir.
   // (El umbral queda por debajo de 30 a propósito: un móvil en modo de bajo consumo va a 30 clavados y bajarle la resolución no le ayudaría.)
@@ -1219,6 +1385,8 @@ function tick(){
   if(vuelve&&fr>40){vuelve=false;if(!(reto&&!reto.won)){for(let k=0;k<60000;k++)reacciona(true);if(amanece(true))alVolver=true;save()}}
   {const t=Date.now();if(tAnt)lento=lento*.95+Math.min(100,t-tAnt)*.05;tAnt=t;
     if(lento>36&&fr-frCal>150&&calidad>1){calidad=Math.max(1,Math.min(calidad,window.devicePixelRatio||1)-.5);frCal=fr;lento=16;resize()}}
+  if(av.on){const n=dms>25?2:1;for(let k=0;k<n;k++)avPaso(dms/1000/n); // el personaje, y la vista detrás de él
+    const f=Math.min(1,dms/1000*5);camC+=(av.x-W/S*.45-camC)*f;camR+=(av.yc-H/S*.62-camR)*f;camGoal=camGoalR=null}
   if(camGoal!==null){camC+=(camGoal-camC)*.12;if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}}
   if(camGoalR!==null){camR+=(camGoalR-camR)*.12;if(Math.abs(camGoalR-camR)<.02){camR=camGoalR;camGoalR=null}}
   clampCam();
@@ -1295,6 +1463,7 @@ function tick(){
     }
     drawPig(p,asleep&&p.joy<=0)});
   if(musica)pasoMusica(ahora);
+  if(av.vivo)avDibuja(ahora);
   // trocitos y fuegos artificiales
   particles=particles.filter(q=>{
     if(q.txt){q.y-=.016;q.life--;ctx.font=`${S*.55}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.globalAlpha=Math.min(1,q.life/15);
@@ -1325,7 +1494,7 @@ function tick(){
   if(barA>0){ctx.globalAlpha=Math.min(1,barA);
     if(maxC>0){const x0=16,w=W-40,y=H-16,tw=Math.max(28,w*(W/S)/COLS);
       ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x0-2,y-2,w+4,10);ctx.fillStyle='#fff6e0';ctx.fillRect(x0+(w-tw)*camC/maxC,y,tw,6)}
-    if(maxR>0){const y0=16,hh=H-48,x=W-16,th=Math.max(28,hh*(H/S)/ROWS);
+    if(maxR>0&&!av.on){const y0=16,hh=H-48,x=W-16,th=Math.max(28,hh*(H/S)/ROWS); // en la aventura solo se deja la de abajo, que hace de "cuánto falta"
       ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x-2,y0-2,10,hh+4);ctx.fillStyle='#fff6e0';ctx.fillRect(x,y0+(hh-th)*camR/maxR,6,th)}
     ctx.globalAlpha=1}
   requestAnimationFrame(tick);
@@ -1339,7 +1508,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},ultNotas:()=>ultNotas};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

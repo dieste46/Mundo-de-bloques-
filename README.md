@@ -27,6 +27,19 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 - **El mundo es grande: 48 bloques de ancho por 32 de alto.** El suelo queda hacia la mitad: por encima hay cielo de sobra para construir alto y por debajo, tierra y piedra para picar hondo, con oro escondido (más cuanto más abajo).
 - **Arrastrar mueve el mundo**, no pinta: deslizar el dedo desplaza el paisaje a los lados y también arriba y abajo. Mientras la vista se mueve aparecen dos deslizadores (abajo el de izquierda-derecha, a la derecha el de arriba-abajo) que indican en qué parte del mundo estás; al parar se apagan solos. Cuando empieza un reto, la vista va sola hasta él. No hay flechas ni botones de desplazamiento.
 
+## Aventura (botón 🎮)
+
+Recorrer el propio mundo con un personaje, de izquierda a derecha, hasta una bandera.
+
+- **Se elige personaje** cada vez: cerdito, gato, conejo, gallina, rana o dinosaurio (dibujos propios de 16×16).
+- **La barra se cambia por un mando:** ⬅️ ➡️ para andar (es una sola pieza: el dedo puede deslizar de un lado a otro sin levantarse) y ⬆️ para saltar. Tocar el mundo también salta. Con teclado, flechas y espacio.
+- **Hay ocho manzanas** repartidas por el camino; la voz las va contando y se encienden en el mando. Una de cada tres queda en el aire: hay que saltar para cogerla. Llegar a la bandera con las ocho da una estrella; con menos, la voz dice cuántas de ocho y anima a repetir.
+- **Pensado para cinco años:** un escalón de un bloque se sube solo, con un salto se suben dos, y no hay enemigos ni forma de perder. Los troncos de los árboles y las casas del botón 🏠 son decorado: se pasa por delante.
+- **Lo que mide tres bloques o más corta el paso.** La voz lo dice y entonces se toca 🎮 para salir, se construye una escalera (o se quita lo que estorba) y al volver a entrar se sigue donde se estaba, con las mismas manzanas. Es la gracia del modo: construir, probar y cambiar.
+- El terreno que genera el juego nunca corta el paso (comprobado recorriendo cientos de mundos recién creados).
+
+El movimiento del personaje va por reloj (bloques por segundo), así que corre igual en un iPad viejo que en uno nuevo. Las constantes están juntas: `ANDA`, `GRAV`, `SALTO` y `NMANZ`. Para añadir un personaje basta otro dibujo en `PERS`.
+
 ## Retos (botón ⭐)
 
 | Reto | Qué trabaja | Fallo y pista |
