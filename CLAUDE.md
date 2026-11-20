@@ -39,7 +39,7 @@ Antes de dar un cambio por bueno: `pruebas/todas.js` en los dos modos, y probarl
 
 Cloudflare Pages, proyecto `mundobloque`: la rama `main` se publica en `https://mundobloque.pages.dev`, sin compilación y con la raíz del repositorio como salida. Cada otra rama tiene su vista previa en `https://<rama>.mundobloque.pages.dev`, con su propio guardado. Como la salida es la raíz, todo lo que hay en el repositorio queda publicado.
 
-`.github/workflows/pages.yml` sigue publicando en GitHub Pages de forma provisional, solo para poder exportar lo guardado desde el sitio antiguo. Se borra cuando la mudanza esté hecha.
+Antes se publicaba en GitHub Pages; ya no. Lo guardado va por dirección web, así que lo jugado allí no aparece aquí.
 
 ## Guardado y nube
 

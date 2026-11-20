@@ -128,8 +128,6 @@ Cloudflare Pages, proyecto `mundobloque`, conectado al repositorio `dieste46/mun
 
 Nada depende de la ruta: todo son rutas relativas, y el manifest tiene `start_url` y `scope` en `./`. La página se precarga en el service worker como `./` y no como `index.html`, porque Cloudflare redirige `/index.html` a `/`.
 
-El workflow `.github/workflows/pages.yml` sigue publicando en GitHub Pages de forma provisional, para poder exportar lo guardado desde el sitio antiguo. Cuando la mudanza esté hecha, se borra.
-
 La sincronización en la nube no está aquí: la hará un servicio aparte (mundo-api) que se enchufará en `guardado.js`.
 
 ## Dispositivos antiguos
