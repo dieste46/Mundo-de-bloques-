@@ -89,7 +89,8 @@ pruebas/              pruebas automáticas (Playwright) y un servidor local que 
 CLAUDE.md             cómo está organizado, reglas y cómo probarlo, para quien toque el código
 sw.js                 service worker: precarga y caché para jugar sin conexión
 manifest.json         PWA
-*.png                 iconos: una B hecha con bloques del juego (los genera un script con las mismas texturas)
+*.png                 iconos: una escena de su mundo (árbol, sol, flor y cerdito) hecha con las texturas del juego
+herramientas/         el script que genera los iconos (node herramientas/iconos.js, con el servidor local en marcha)
 fonts/                Press Start 2P alojada en el repo (licencia OFL en fonts/OFL.txt)
 ```
 

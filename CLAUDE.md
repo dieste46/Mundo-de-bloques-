@@ -8,6 +8,7 @@ Juego de construir con bloques en 2D, con retos por voz, para un niño de unos 5
 - `guardado.js`: lo único que toca el almacenamiento. Interfaz: `Guardado.cargar(parte)`, `Guardado.guardar(estado, parte)`, `Guardado.exportar()` y `Guardado.importar(texto, aplicar)`.
 - `sw.js` y `manifest.json`: PWA que funciona sin conexión. Al añadir un archivo al juego, ponlo en `ASSETS` de `sw.js` y sube `CACHE`.
 - `pruebas/`: pruebas automáticas con Playwright y un servidor local.
+- `herramientas/iconos.js`: genera los cuatro iconos con las texturas del juego. Si cambian, sube `CACHE` en `sw.js`.
 
 ## Reglas que no se rompen
 

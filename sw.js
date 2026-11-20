@@ -1,7 +1,7 @@
 // Guarda el juego entero al instalarse, así funciona sin conexión desde la primera visita.
 // "Red primero": con conexión siempre coge lo último; sin conexión (o si la red no contesta en 3 s) tira de la caché.
 // Al añadir un archivo nuevo al juego, ponlo en ASSETS y sube el número de CACHE.
-const CACHE = 'bloques-v3';
+const CACHE = 'bloques-v4';
 // La página se guarda solo como './': Cloudflare Pages redirige /index.html a /, y una respuesta redirigida no sirve para abrir la página desde la caché.
 const ASSETS = [
   './',
