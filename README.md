@@ -124,7 +124,7 @@ El service worker solo funciona en `localhost` o por HTTPS.
 
 ## Publicar
 
-Cloudflare Pages, proyecto `mundobloque`, conectado al repositorio: sin comando de compilación y con la raíz como directorio de salida. La rama `main` se publica en `https://mundobloque.pages.dev` y cada otra rama tiene su vista previa en `https://<rama>.mundobloque.pages.dev`, con su propio guardado.
+Cloudflare Pages, proyecto `mundobloque`, conectado al repositorio `dieste46/mundobloque`. Ajustes de compilación del proyecto: *Framework preset* «None», *Build command* vacío y *Build output directory* `/` (la raíz): no hay nada que compilar, se publican los archivos tal cual. La rama `main` se publica en `https://mundobloque.pages.dev` y cada otra rama tiene su vista previa en `https://<rama>.mundobloque.pages.dev`, con su propio guardado.
 
 Nada depende de la ruta: todo son rutas relativas, y el manifest tiene `start_url` y `scope` en `./`. La página se precarga en el service worker como `./` y no como `index.html`, porque Cloudflare redirige `/index.html` a `/`.
 
