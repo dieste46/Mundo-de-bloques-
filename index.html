@@ -27,7 +27,7 @@
    marca la página con .sin-gap y aquí se separan con márgenes para que no salgan pegados */
 .sin-gap #bar>*+*,.sin-gap #mundosCard>*+*,.sin-gap #mundosList>*+*{margin-top:10px}
 .sin-gap #hud>*+*,.sin-gap #tab>*+*{margin-top:8px}
-.sin-gap #vozCard>*+*,.sin-gap #usoCard>*+*{margin-top:12px}.sin-gap #vozList>*+*{margin-top:6px}
+.sin-gap #vozCard>*+*,.sin-gap #usoCard>*+*,.sin-gap #copiaCard>*+*{margin-top:12px}.sin-gap #vozList>*+*{margin-top:6px}
 .sin-gap #blocks>*+*,.sin-gap #flechas>*+*,.sin-gap #reto>*+*,.sin-gap #stars>*+*,.sin-gap .mundo>*+*{margin-left:8px}
 .sin-gap #tools>*+*,.sin-gap .vrow>*+*,.sin-gap #retoOpc>*+*{margin-left:6px}
 .sin-gap #zoomDots>*+*{margin-left:4px}
@@ -56,7 +56,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #zoomDots i{display:block;background:var(--ink);opacity:.35}#zoomDots i:nth-child(1){width:10px;height:10px}#zoomDots i:nth-child(2){width:7px;height:7px}#zoomDots i:nth-child(3){width:5px;height:5px}
 #zoomDots i.on{opacity:1;background:var(--sel)}
 #vozBtn,#undoBtn,#zoomBtn{position:absolute;left:10px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
-#voz,#mundos,#uso{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
+#voz,#mundos,#uso,#copia{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
 /* selector de mundos: tres huecos con su miniatura; el 🔄 de la derecha (cambiarlo por uno nuevo) es para el adulto */
 #mundosCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,460px);max-height:100%;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;touch-action:pan-y}
 #mundosList{display:flex;flex-direction:column;gap:10px}
@@ -72,7 +72,15 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #vozCard h2,#usoCard h2{margin:0;font-family:var(--pixel);font-size:13px}
 #usoCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,560px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
   font-family:system-ui,sans-serif;font-size:14px;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
-#uso{z-index:6}
+#uso,#copia{z-index:6}
+#copiaCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,520px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
+  font-family:system-ui,sans-serif;font-size:14px;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+#copiaCard h2{margin:0;font-family:var(--pixel);font-size:13px}
+#copiaCard p{margin:0;line-height:1.4}
+#copiaSal,#copiaEnt{width:100%;height:76px;box-sizing:border-box;font:12px/1.3 monospace;-webkit-user-select:text;user-select:text}
+#copiaElegir{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#copiaFile{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0} /* el selector de archivos ocupa todo el botón, invisible: tocarlo lo abre */
+#copiaMsg{min-height:1.4em;color:var(--sel)}
 #usoTxt h3{margin:12px 0 4px;font-size:14px;color:var(--sel)}#usoTxt h3:first-child{margin-top:0}
 #usoTxt p{margin:0 0 4px;line-height:1.4}
 #usoDias{display:flex;align-items:flex-end;height:64px;margin:6px 0 2px}
@@ -223,6 +231,20 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
   <div id="pers" hidden>
     <div id="persCard" role="dialog" aria-label="Elige un personaje"></div>
   </div>
+  <div id="copia" hidden>
+    <div id="copiaCard" role="dialog" aria-label="Copia de seguridad">
+      <h2>Copia de seguridad</h2>
+      <p>La copia lleva los tres mundos, las estrellas, los niveles, la palabra de la semana y los contadores de «Cómo juega». Sirve para guardarla o para pasar el juego a otro aparato.</p>
+      <div class="vlabel">Exportar: la copia de este aparato</div>
+      <textarea id="copiaSal" readonly aria-label="Texto de la copia"></textarea>
+      <div class="vrow"><button class="vopt" id="copiaCopiar">Copiar</button><button class="vopt" id="copiaArchivo">Guardar archivo</button></div>
+      <div class="vlabel">Importar: pega una copia o elige su archivo. Sustituye todo lo guardado en este aparato.</div>
+      <textarea id="copiaEnt" placeholder="Pega aquí el texto de la copia" aria-label="Copia que se va a importar" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+      <div class="vrow"><label class="vopt" id="copiaElegir">Elegir archivo<input id="copiaFile" type="file" accept=".json,application/json,text/plain"></label><button class="vopt" id="copiaImportar">Importar</button></div>
+      <p id="copiaMsg" role="status"></p>
+      <button class="vopt" id="copiaClose" style="text-align:center">Cerrar</button>
+    </div>
+  </div>
   <div id="uso" hidden>
     <div id="usoCard" role="dialog" aria-label="Cómo juega">
       <h2>Cómo juega</h2>
@@ -247,6 +269,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <div class="vrow"><input id="palIn" type="text" maxlength="14" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ej.: PATO"><button class="vopt" id="palOk">Guardar</button></div>
       <div class="vlabel">Nivel de partida de los retos (luego sube o baja solo)</div>
       <div class="vrow" id="vozNivel"></div>
+      <button class="vopt" id="copiaBtn" style="text-align:center">💾 Copia de seguridad</button>
       <button class="vopt" id="usoBtn" style="text-align:center">📊 Cómo juega</button>
       <button class="vopt" id="vozClose" style="text-align:center">Cerrar</button>
       <div class="vlabel" id="vozVer" style="text-align:center;margin:0"></div>
@@ -280,6 +303,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
   </div>
 </div>
 
+<script src="guardado.js"></script>
 <script>
 (()=>{
 const T=16, COLS=48, ROWS=32, MAXPIGS=20;
@@ -471,10 +495,10 @@ function crece(w){ // un mundo de cuando el mapa tenía 16 filas: se le añade c
   for(let i=COLS*(16+SUBE);i<g.length;i++)g[i]=r()<.08?10:3;
   return{grid:g,pigs:(w.pigs||[]).map(p=>[p[0],p[1]+SUBE]),night:w.night,camC:w.camC};
 }
-function save(){try{mundos[mundo]=empaqueta();localStorage.setItem('bloques2',JSON.stringify({mundo,mundos,stars,base,niv}))}catch(e){}}
+function save(){try{mundos[mundo]=empaqueta();Guardado.guardar({mundo,mundos,stars,base,niv})}catch(e){}} // dónde y cómo se guarda lo decide guardado.js
 function abre(w){if(av.on)saleAventura();av.vivo=false;grid=w.grid;pigs=[];(w.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));night=!!w.night;nightAmt=night?1:0;if(typeof w.camC==='number')camC=w.camC;camR=typeof w.camR==='number'?w.camR:vista();
   vuelve=typeof w.t==='number'&&Date.now()-w.t>6*36e5} // seis horas sin tocar este mundo cuentan como una noche (ver tick)
-function load(){try{const d=JSON.parse(localStorage.getItem('bloques2'));if(!d)return false;
+function load(){try{const d=Guardado.cargar();if(!d)return false;
   if(Array.isArray(d.mundos)){mundos=[0,1,2].map(i=>{const w=crece(d.mundos[i]);return valido(w)?w:null});mundo=mundos[d.mundo|0]?d.mundo|0:mundos.findIndex(Boolean)}
   else if(valido(crece(d))){mundos=[crece({grid:d.grid,pigs:d.pigs,night:d.night,camC:d.camC}),null,null];mundo=0} // guardado de antes, con un solo mundo
   else return false;
@@ -554,7 +578,7 @@ function oink(){beep(260,.12,'sawtooth',.06);setTimeout(()=>beep(200,.15,'sawtoo
 function fanfare(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'square',.06),i*110))}
 let voice=null;
 const vcfg={name:'',rate:.95,pitch:1,son:0,zoom:1}; // son: 0 = todo, 1 = la voz solo habla en los retos, 2 = silencio // tono natural: subirlo hace que las voces buenas (mejoradas, premium) suenen raras
-try{Object.assign(vcfg,JSON.parse(localStorage.getItem('bloquesVoz'))||{});if(vcfg.pitch===1.1)vcfg.pitch=1}catch(e){}
+try{Object.assign(vcfg,Guardado.cargar('voz')||{});if(vcfg.pitch===1.1)vcfg.pitch=1}catch(e){}
 // puntúa las voces instaladas (igual que en Mini Juegos): primero español de España y calidad alta; fuera las que suenan a robot
 function voiceScore(v){
   const lang=(v.lang||'').replace('_','-').toLowerCase();if(!lang.startsWith('es'))return -1;
@@ -595,7 +619,7 @@ function marcaSon(){document.getElementById('vozBtn').textContent=vcfg.son===2?'
 document.getElementById('palOk').onclick=()=>{const t=limpiaPalabra(document.getElementById('palIn').value);
   palabra={txt:t,i:0};guardaPalabra();document.getElementById('palIn').value=t;document.getElementById('palIn').blur();
   say(t?`Palabra de la semana: ${t.toLowerCase()}.`:'Sin palabra de la semana: letras sueltas.',false)};
-function saveVoz(){try{localStorage.setItem('bloquesVoz',JSON.stringify(vcfg))}catch(e){}}
+function saveVoz(){Guardado.guardar(vcfg,'voz')}
 function sample(){say('A ver si eres capaz de poner tres bloques de oro.',false)}
 try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice}catch(e){}
 let sayT,dicho=null; // dicho: la última frase; Safari antiguo puede no decirla si el objeto se recoge antes de que suene
@@ -722,10 +746,10 @@ const POOL=['AEIOU','AEIOUMPLSTND','ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'];
 // palabra de la semana: la escribe el adulto en ajustes; se guardan solo sus letras, en mayúscula y con sus tildes (para que la voz
 // la diga bien y se vea como en el cole); para dibujar cada letra con bloques se usa la letra sin tilde
 let palabra={txt:'',i:0};
-try{Object.assign(palabra,JSON.parse(localStorage.getItem('bloquesPalabra'))||{})}catch(e){}
+try{Object.assign(palabra,Guardado.cargar('palabra')||{})}catch(e){}
 const limpiaPalabra=s=>(s||'').toUpperCase().replace(/[^A-ZÑÁÉÍÓÚÜ]/g,'').slice(0,12);
 const baseLetra=c=>c==='Ñ'?c:c.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-function guardaPalabra(){try{localStorage.setItem('bloquesPalabra',JSON.stringify(palabra))}catch(e){}}
+function guardaPalabra(){Guardado.guardar(palabra,'palabra')}
 const MODELOS=[
   [['AA','BB'],['AB','AB'],['AB','BA'],['A','B','A']],
   [['A.','AA'],['.A.','BBB'],['A.A','BBB'],['AB','BA','AB'],['A.','AB','AA']],
@@ -1094,19 +1118,20 @@ function stampHouse(x,y){
   [392,494,587].forEach((f,i)=>setTimeout(()=>beep(f,.1),i*70));
 }
 // --- cómo juega: contadores de uso ---
-// Todo se guarda en este aparato (localStorage, clave bloquesUso) y no se envía a ningún sitio: no hay servidor al que enviarlo.
+// Todo se guarda en este aparato (la parte 'uso' de guardado.js) y este juego no lo envía a ningún sitio.
 // No se guarda qué hace en cada momento, solo sumas: segundos jugados por día (y cuántos de ellos en retos o en la aventura), cuántas veces se usa
 // cada cosa y, por tipo de reto, cuántos empieza, consigue, deja a medias o cierra sin intentar. El tiempo solo cuenta si se ha tocado la pantalla
 // en el último minuto. Se ve en Ajustes > Cómo juega, y desde ahí se puede copiar como texto o borrar.
 let uso={v:1,desde:'',dias:{},f:{},pon:{},r:{},a:{n:0,fin:0,todas:0,manz:0,muro:0,pers:[0,0,0,0,0,0]}},usoSucio=false,usoT=0,tocoT=0,diaK='',diaT=0;
 const fechaK=d=>d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
-try{const u=JSON.parse(localStorage.getItem('bloquesUso'));if(u&&u.v===1){Object.assign(uso,u);uso.a=Object.assign({n:0,fin:0,todas:0,manz:0,muro:0,pers:[0,0,0,0,0,0]},u.a)}}catch(e){}
+try{const u=Guardado.cargar('uso');if(u&&u.v===1){Object.assign(uso,u);uso.a=Object.assign({n:0,fin:0,todas:0,manz:0,muro:0,pers:[0,0,0,0,0,0]},u.a)}}catch(e){}
 if(!uso.desde)uso.desde=fechaK(new Date());
 {const viejo=fechaK(new Date(Date.now()-120*864e5));Object.keys(uso.dias).forEach(k=>{if(k<viejo)delete uso.dias[k]})} // de los días, se guardan los últimos 120
 const hoyUso=()=>{const t=Date.now();if(t-diaT>30000){diaT=t;diaK=fechaK(new Date())}return uso.dias[diaK]||(uso.dias[diaK]={t:0,r:0,a:0,s:0})};
 const cu=(k,n=1)=>{uso.f[k]=(uso.f[k]||0)+n;usoSucio=true};                                              // una función usada
 const cr=(kind,campo,n=1)=>{const r=uso.r[kind]||(uso.r[kind]={n:0,ok:0,x:0,v:0,e:0,s:0,rep:0});r[campo]=(r[campo]||0)+n;usoSucio=true}; // algo de un reto
-function usoGuarda(){if(!usoSucio)return;usoSucio=false;try{localStorage.setItem('bloquesUso',JSON.stringify(uso))}catch(e){}}
+function usoGuarda(){if(!usoSucio)return;usoSucio=false;const d=uso.dias[diaK];if(d)['t','r','a'].forEach(k=>{d[k]=Math.round(d[k]*10)/10}); // décimas de segundo, sin colas de decimales
+  Guardado.guardar(uso,'uso')}
 function usoTiempo(ms){const t=Date.now();if(t-tocoT>60000)return;const d=hoyUso(),s=ms/1000;d.t+=s;if(reto&&!reto.won)d.r+=s;else if(av.on)d.a+=s;usoSucio=true;
   if(t-usoT>15000){usoT=t;usoGuarda()}}
 ['touchstart','touchend','mousedown','keydown'].forEach(n=>document.addEventListener(n,()=>{const t=Date.now();if(t-tocoT>6e5){hoyUso().s++;usoSucio=true}tocoT=t},true)); // diez minutos sin tocar: sesión nueva
@@ -1175,6 +1200,31 @@ $('usoCopia').onclick=()=>{const txt='Mundo de Bloques · cómo juega\n\n'+usoRe
   if(ok)hecho()};
 $('usoBorra').onclick=()=>{if(!confirm('¿Borrar los datos de uso de este aparato? El mundo, las estrellas y los niveles no se tocan.'))return;
   uso={v:1,desde:fechaK(new Date()),dias:{},f:{},pon:{},r:{},a:{n:0,fin:0,todas:0,manz:0,muro:0,pers:[0,0,0,0,0,0]}};usoSucio=true;usoGuarda();renderUso()};
+// --- copia de seguridad (Ajustes): exportar e importar todo lo guardado ---
+// Exportar deja la copia en un cuadro de texto para copiarla (en iOS 12 no hay otra forma) y, donde el navegador lo permite, también como archivo.
+// Importar la comprueba, dice de cuándo es y qué trae, y solo tras confirmar sustituye lo guardado; después recarga para arrancar con ello.
+{const msg=t=>{$('copiaMsg').textContent=t};
+  $('copiaBtn').onclick=()=>{save();usoGuarda();$('copiaSal').value=Guardado.exportar();$('copiaEnt').value='';msg('');
+    $('copiaArchivo').hidden=!('download' in document.createElement('a'));$('copia').hidden=false};
+  $('copiaClose').onclick=()=>{$('copia').hidden=true};
+  $('copia').addEventListener('click',e=>{if(e.target===$('copia'))$('copia').hidden=true});
+  $('copiaCopiar').onclick=()=>{const a=$('copiaSal');a.focus();a.select();try{a.setSelectionRange(0,a.value.length)}catch(e){}
+    let ok=false;try{ok=document.execCommand('copy')}catch(e){}
+    const hecho=()=>msg('Copiada. Pégala en una nota, en un correo o en el otro aparato.'),amano=()=>msg('Mantén el dedo sobre el texto, elige Seleccionar todo y Copiar.');
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(a.value).then(hecho,()=>{if(ok)hecho();else amano()});else if(ok)hecho();else amano()};
+  $('copiaArchivo').onclick=()=>{try{const u=URL.createObjectURL(new Blob([$('copiaSal').value],{type:'application/json'})),a=document.createElement('a');
+    a.href=u;a.download='mundobloque-'+fechaK(new Date())+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),4000);
+    msg('Archivo guardado en las descargas.')}catch(e){msg('Este navegador no deja guardar el archivo: usa Copiar.')}};
+  $('copiaFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();
+    r.onload=()=>{$('copiaEnt').value=String(r.result||'');msg('Archivo leído. Ahora toca Importar.')};r.onerror=()=>msg('No se ha podido leer el archivo.');r.readAsText(f);e.target.value=''};
+  $('copiaImportar').onclick=()=>{const t=$('copiaEnt').value;if(!t.trim()){msg('Pega primero una copia o elige su archivo.');return}
+    const r=Guardado.importar(t,false);if(!r.ok){msg(r.error);return}
+    const q=r.resumen,d=new Date(q.exportado),cuando=q.exportado&&!isNaN(d)?'del '+d.toLocaleString('es-ES',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}):'sin fecha';
+    if(!confirm('La copia es '+cuando+' y trae '+(q.mundos===1?'1 mundo':q.mundos+' mundos')+' y '+(q.estrellas===1?'1 estrella':q.estrellas+' estrellas')+
+      '.\n\nSi sigues, SUSTITUYE todo lo guardado en este aparato: mundos, estrellas y niveles. ¿Importar?')){msg('No se ha importado nada.');return}
+    const a=Guardado.importar(t,true);if(!a.ok){msg(a.error);return}
+    msg('Copia importada. Recargando…');setTimeout(()=>location.reload(),700)};
+}
 // --- modo aventura: recorrer el mundo con un personaje ---
 // 🎮 abre el panel de personajes; al elegir uno, la barra de bloques se cambia por un mando (⬅️ ➡️ para andar, ⬆️ o tocar el mundo para saltar)
 // y el personaje sale del borde izquierdo. Tiene que llegar a la bandera del borde derecho; por el camino hay manzanas, que la voz va contando.
@@ -1270,7 +1320,8 @@ function avPaso(dt){const a=av;
     ult={x:m.x,y:m.y};cifra(a.cog);say(a.cog===1?'Una':NUM[a.cog][0].toUpperCase()+NUM[a.cog].slice(1),false);if(vcfg.son!==2){tono(880,1320,.1,'triangle',.1);tono(1320,1760,.12,'triangle',.07,.08)}
     const e=$('avManz').children[a.manz.indexOf(m)];if(e)e.className=''});
   // la bandera
-  if(Math.abs(a.x-(a.meta.x+.5))<.8&&Math.abs(a.y-a.meta.y)<1.6){a.fin=true;const todas=a.cog===NMANZ;uso.a.fin++;uso.a.manz+=a.cog;if(todas)uso.a.todas++;usoSucio=true; // la estrella es para quien llega con todas: para las altas hay que saltar
+  if(a.x>a.meta.x-.3){a.fin=true; // llegar a su columna cuenta, aunque sea pasando por encima en pleno salto
+    const todas=a.cog===NMANZ;uso.a.fin++;uso.a.manz+=a.cog;if(todas)uso.a.todas++;usoSucio=true; // la estrella es para quien llega con todas: para las altas hay que saltar
     if(todas){stars++;$('starN').textContent=stars;const e=$('stars');e.classList.remove('gana');void e.offsetWidth;e.classList.add('gana');fireworks()}
     fanfare();pigs.forEach(p=>{p.vy=-.17;p.joy=60});a.vy=-SALTO*.8;
     say('¡Has llegado a la bandera! '+(todas?'¡Y con todas las manzanas! ¡Una estrella!':(a.cog===1?'Has cogido una manzana':'Has cogido '+NUM[a.cog]+' manzanas')+' de '+NUM[NMANZ]+'. ¡A ver si la próxima vez las coges todas!'));

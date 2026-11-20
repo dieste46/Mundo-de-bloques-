@@ -59,6 +59,15 @@ En **Copia el modelo** aparece una construcción en un marco y hay que hacerla i
 
 Dificultad por tramos (nivel 0–3 fácil, 4–7 medio, 8+ difícil): modelos de 3–4 bloques → con huecos → de 6–8 bloques y tres tipos; tableros en línea recta → con una esquina y una piedra → más grandes con varias piedras.
 
+## Copia de seguridad (Ajustes > 💾)
+
+- **Exportar** deja en un cuadro de texto la copia completa: los tres mundos, las estrellas, los niveles, la palabra de la semana y los contadores de «Cómo juega» (los ajustes de voz no, que son de cada aparato). Se puede copiar y, donde el navegador lo permite, guardar como archivo `mundobloque-AAAA-MM-DD.json`. En iOS 12 solo copiar.
+- **Importar** acepta la copia pegada o su archivo, comprueba que es válida, dice de cuándo es y qué trae, y pide confirmación: sustituye todo lo guardado en ese aparato. Después el juego se recarga con lo importado.
+- La copia es un JSON con `formato: "mundobloque"` y `version`. Una copia de una versión más nueva que el juego se rechaza con un aviso.
+- Está en los ajustes, detrás de la multiplicación, para que el niño no llegue por accidente.
+
+Sirve para pasar la partida de un aparato a otro o de una dirección web a otra, y como copia por si Safari borra los datos.
+
 ## Cómo juega (Ajustes > 📊)
 
 Un panel para el adulto con lo que el juego ha ido contando, para ver por dónde ayudar o qué potenciar:
@@ -69,12 +78,15 @@ Un panel para el adulto con lo que el juego ha ido contando, para ver por dónde
 - **Aventura:** carreras, banderas, manzanas, veces que un muro le corta el paso y personaje favorito.
 - **Ideas:** unas pocas frases sacadas de lo anterior con reglas sencillas (qué le cuesta, qué cierra sin intentar, qué domina, qué no le ha salido aún).
 
-Los datos se guardan solo en el aparato (`localStorage`, clave `bloquesUso`) y no se envían a ningún sitio: el juego no tiene servidor. No se guarda qué hace en cada momento, solo sumas, y de los días se conservan los últimos 120. El tiempo solo cuenta si se ha tocado la pantalla en el último minuto. Desde el panel se pueden copiar como texto o borrar (borrar no toca el mundo, las estrellas ni los niveles). Cada aparato lleva su propia cuenta.
+Los datos se guardan solo en el aparato (la parte `uso` de `guardado.js`) y este juego no los envía a ningún sitio. No se guarda qué hace en cada momento, solo sumas, y de los días se conservan los últimos 120. El tiempo solo cuenta si se ha tocado la pantalla en el último minuto. Desde el panel se pueden copiar como texto o borrar (borrar no toca el mundo, las estrellas ni los niveles). Cada aparato lleva su propia cuenta.
 
 ## Estructura
 
 ```
 index.html            todo el juego (HTML + CSS + JS)
+guardado.js           lo único que toca el almacenamiento: cargar, guardar, exportar e importar
+pruebas/              pruebas automáticas (Playwright) y un servidor local que imita a Cloudflare Pages
+CLAUDE.md             cómo está organizado, reglas y cómo probarlo, para quien toque el código
 sw.js                 service worker: precarga y caché para jugar sin conexión
 manifest.json         PWA
 *.png                 iconos: una B hecha con bloques del juego (los genera un script con las mismas texturas)
@@ -85,7 +97,7 @@ Los gráficos no son imágenes: las texturas de los bloques (16×16), el cerdito
 
 Cada bloque tiene varias versiones de su dibujo (`NVAR` dice cuántas; `pinta(id,k)` las hace): mismos colores y mismo motivo, con los detalles en otro sitio, para que una pared o un prado no se vean como un sello repetido. Qué versión toca en cada casilla lo decide `varMap` según la posición, así que no cambia de un día a otro ni hay que guardarlo. Los botones, las pistas y los modelos usan siempre la primera (`tex[id]`). Los fondos se pintan con manchas de 2×2 y pinceladas de uno o dos píxeles en pocos tonos, sin grano píxel a píxel. El agua son 16 fotogramas en los que las ondas se deslizan un píxel cada dos décimas de segundo, y donde tiene aire encima lleva una línea clara de superficie.
 
-El progreso (los tres mundos, estrellas, niveles, voz) se guarda solo en el dispositivo (`localStorage`), con cada cambio. Ojo: Safari puede borrar los datos de una web que lleva días sin abrirse; instalada en la pantalla de inicio no le pasa.
+El progreso (los tres mundos, estrellas, niveles, voz) se guarda solo en el dispositivo, con cada cambio, a través de `guardado.js`. Va por dominio: lo jugado en una dirección no aparece en otra (para llevárselo está la copia de seguridad). Ojo: Safari puede borrar los datos de una web que lleva días sin abrirse; instalada en la pantalla de inicio no le pasa.
 
 De noche las antorchas dan luz: abren un claro en la oscuridad con un resplandor cálido, la llama parpadea y suelta alguna chispa. El cristal también brilla. La oscuridad se pinta en un lienzo cuatro veces más pequeño que la pantalla y cada luz es una pegatina redonda hecha una sola vez (`luzSpr`) que se estampa en él: por muchas antorchas que haya, a pantalla completa solo se pinta una capa. No crear degradados nuevos en cada fotograma es lo que más se nota en un aparato viejo.
 
@@ -102,15 +114,23 @@ Si se añade un archivo al juego, hay que ponerlo en `ASSETS` de `sw.js` y subir
 ## Probar en local
 
 ```bash
-python3 -m http.server 8000
-# abre http://localhost:8000
+node pruebas/servidor.js
+# abre http://localhost:8765
 ```
+
+Sirve el juego desde la raíz, como Cloudflare Pages. `node pruebas/todas.js` pasa las pruebas automáticas (necesita Playwright; con `SIN_PUNTERO=1` simula un Safari de iOS 12). Más detalle en `CLAUDE.md`.
 
 El service worker solo funciona en `localhost` o por HTTPS.
 
 ## Publicar
 
-El workflow `.github/workflows/pages.yml` publica en GitHub Pages en cada push a `main`. En el repo: *Settings → Pages → Source: GitHub Actions*.
+Cloudflare Pages, proyecto `mundobloque`, conectado al repositorio: sin comando de compilación y con la raíz como directorio de salida. La rama `main` se publica en `https://mundobloque.pages.dev` y cada otra rama tiene su vista previa en `https://<rama>.mundobloque.pages.dev`, con su propio guardado.
+
+Nada depende de la ruta: todo son rutas relativas, y el manifest tiene `start_url` y `scope` en `./`. La página se precarga en el service worker como `./` y no como `index.html`, porque Cloudflare redirige `/index.html` a `/`.
+
+El workflow `.github/workflows/pages.yml` sigue publicando en GitHub Pages de forma provisional, para poder exportar lo guardado desde el sitio antiguo. Cuando la mudanza esté hecha, se borra.
+
+La sincronización en la nube no está aquí: la hará un servicio aparte (mundo-api) que se enchufará en `guardado.js`.
 
 ## Dispositivos antiguos
 
