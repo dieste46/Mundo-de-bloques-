@@ -438,7 +438,7 @@ const luzSpr=(()=>{const mk=stops=>{const c=document.createElement('canvas');c.w
   stops.forEach(s=>g.addColorStop(s[0],s[1]));x.fillStyle=g;x.fillRect(0,0,64,64);return c};
   return{hueco:mk([[0,'rgba(0,0,0,1)'],[1,'rgba(0,0,0,0)']]),calida:mk([[0,'rgba(255,222,140,.42)'],[.12,'rgba(255,186,86,.36)'],[.5,'rgba(255,150,50,.15)'],[1,'rgba(255,140,40,0)']])}})();
 let S=40,W=300,H=300,offY=0,camC=COLS/2-4,camR=0,grid=[],pigs=[],clouds=[],particles=[];
-let night=false,nightAmt=0,stars=0,fr=0,barCam=null,barA=0,cieloG=null,cieloK=''; // barCam: [columna, fila] de la vista en el fotograma anterior
+let night=false,nightAmt=0,stars=0,fr=0,tf=0,barCam=null,barA=0,cieloG=null,cieloK=''; // barCam: [columna, fila] de la vista en el fotograma anterior
 // resolución de dibujo: empieza en la de la pantalla y baja sola si el aparato no llega (ver tick)
 let calidad=3,tAnt=0,lento=16,frCal=0;
 // bloques recién puestos: casilla → cuándo empieza su salto (ver tick). Va por reloj, no por fotogramas, así dura lo mismo en un iPad viejo que en uno nuevo.
@@ -1362,6 +1362,50 @@ function padPinta(){let i=false,d=false;padT.forEach(v=>{if(v<0)i=true;else d=tr
   $('jugarBtn').onclick=()=>{if(av.on){saleAventura();beep(440,.06);say('A construir',true,true);return}
     $('pers').hidden=false;beep(660,.06);say('¿Con quién quieres jugar?',true,true)};
 }
+// --- vida en el mundo ---
+// Solo es decorado: no toca los bloques ni los retos, va por reloj y son muy pocas cosas a la vez (pensando en el iPad viejo).
+//  · Mariposas, de día: revolotean sobre las flores que se ven. Cuantas más flores, más mariposas (hasta cuatro); sin flores, una.
+//  · Luciérnagas, de noche: puntitos que laten cerca del suelo.
+//  · Un pájaro cruza el cielo de vez en cuando, de día.
+//  · Al pasar de día a noche (y al revés) el horizonte se tiñe de naranja.
+const bichos=[],luces=[];let pajaro=null,pajaroT=0;
+function mariposas(ahora,kt,flores,na){
+  const quiero=na>.55?0:Math.min(4,1+(flores.length>>1)),t=ahora/1000,c0=camC-1,c1=camC+W/S+1;
+  const sitio=()=>flores.length?flores[Math.random()*flores.length|0]:[c0+1+Math.random()*(c1-c0-2),topOf(Math.max(0,Math.min(COLS-1,Math.floor(camC+W/S/2))))-1];
+  while(bichos.length<quiero){const f=sitio();bichos.push({x:f[0]+.5,y:f[1]-1.5,ax:f[0]+.5,ay:f[1],f:Math.random()*6.283,col:['#ffd43b','#fff6e0','#f2a0b0','#9fd0ff'][bichos.length%4],cambio:ahora+3000+Math.random()*5000})}
+  if(bichos.length>quiero&&Math.random()<.02*kt)bichos.pop();
+  if(!bichos.length)return;
+  const u=S/16,a=Math.max(0,Math.min(1,1.4-na*2.4));
+  bichos.forEach(m=>{
+    if(ahora>m.cambio||m.ax<c0-3||m.ax>c1+3){const f=sitio();m.ax=f[0]+.5;m.ay=f[1];m.cambio=ahora+4000+Math.random()*6000}
+    const ox=m.ax+Math.sin(t*1.1+m.f)*1.3,oy=m.ay-.75+Math.sin(t*1.9+m.f*2)*.45,v=Math.min(1,.035*kt);m.x+=(ox-m.x)*v;m.y+=(oy-m.y)*v;
+    const px=Math.round(m.x*S),py=Math.round(m.y*S),abierta=Math.floor(ahora/120+m.f*3)&1;ctx.globalAlpha=a;ctx.fillStyle=m.col;
+    if(abierta){ctx.fillRect(px-3*u,py-2*u,2.5*u,3.5*u);ctx.fillRect(px+.5*u,py-2*u,2.5*u,3.5*u)}else{ctx.fillRect(px-1.8*u,py-1.5*u,1.3*u,2.5*u);ctx.fillRect(px+.5*u,py-1.5*u,1.3*u,2.5*u)}
+    ctx.fillStyle='#2a1d14';ctx.fillRect(px-.5*u,py-1.5*u,u,3*u)});
+  ctx.globalAlpha=1;
+}
+function luciernagas(ahora,kt,na){ // se pintan encima de la oscuridad, en coordenadas de pantalla, para que brillen
+  const quiero=na>.6?5:0,t=ahora/1000,c0=camC,c1=camC+W/S;
+  while(luces.length<quiero){const x=Math.max(0,Math.min(COLS-1,Math.floor(c0+Math.random()*(c1-c0))));luces.push({ax:x+.5,ay:topOf(x)-.2-Math.random()*1.3,f:Math.random()*6.283,cambio:ahora+5000+Math.random()*7000})}
+  if(luces.length>quiero&&Math.random()<.03*kt)luces.pop();
+  luces.forEach(m=>{
+    if(ahora>m.cambio||m.ax<c0-2||m.ax>c1+2){const x=Math.max(0,Math.min(COLS-1,Math.floor(c0+Math.random()*(c1-c0))));m.ax=x+.5;m.ay=topOf(x)-.2-Math.random()*1.3;m.cambio=ahora+5000+Math.random()*7000;m.x=undefined}
+    const ox=m.ax+Math.sin(t*.6+m.f)*.9,oy=m.ay+Math.sin(t*.9+m.f*2)*.4;if(m.x===undefined){m.x=ox;m.y=oy}const v=Math.min(1,.03*kt);m.x+=(ox-m.x)*v;m.y+=(oy-m.y)*v;
+    const px=(m.x-camC)*S,py=m.y*S+offY,late=.35+.65*Math.max(0,Math.sin(t*2.2+m.f*3)),r=S*.16;
+    ctx.globalAlpha=.28*late*na;ctx.fillStyle='#e9ff8a';ctx.fillRect(px-r,py-r,2*r,2*r);ctx.globalAlpha=late*na;ctx.fillStyle='#f6ffc4';ctx.fillRect(px-r*.35,py-r*.35,r*.7,r*.7)});
+  ctx.globalAlpha=1;
+}
+function pajaros(ahora,dms,na){ // en coordenadas de pantalla, por el tercio alto del cielo
+  if(!pajaro){if(!pajaroT)pajaroT=ahora+8000+Math.random()*15000;if(na<.2&&ahora>pajaroT){const d=Math.random()<.5?1:-1;pajaro={x:d>0?-S:W+S,y:H*(.06+Math.random()*.2),d}}return}
+  pajaro.x+=pajaro.d*S*3.4*dms/1000;const u=Math.max(2,S/14),x=Math.round(pajaro.x),y=Math.round(pajaro.y+Math.sin(ahora/400)*S*.12),arriba=Math.floor(ahora/170)&1;
+  ctx.globalAlpha=Math.max(0,1-na*3);ctx.fillStyle='#3b2a1e';ctx.fillRect(x-u,y,2*u,u); // cuerpo, y dos alas que suben y bajan
+  if(arriba){ctx.fillRect(x-3*u,y-u,2*u,u);ctx.fillRect(x+u,y-u,2*u,u);ctx.fillRect(x-4*u,y-2*u,u,u);ctx.fillRect(x+3*u,y-2*u,u,u)}else{ctx.fillRect(x-3*u,y+u,2*u,u);ctx.fillRect(x+u,y+u,2*u,u)}
+  ctx.globalAlpha=1;if(pajaro.x<-2*S||pajaro.x>W+2*S){pajaro=null;pajaroT=ahora+15000+Math.random()*25000}
+}
+// Los cerditos despiertos que están cerca de donde se pone o se pica un bloque se giran a mirarlo y dan un saltito de curiosidad.
+function curiosos(x,y){if(nightAmt>.6)return;const t=Date.now();
+  pigs.forEach(p=>{if(Math.abs(p.x-x)>3.2||Math.abs(p.y-y)>2.2||t<(p.curio||0)||p.vy<-.02||p.vy>.05)return; // solo si está en el suelo (apoyado, su velocidad de caída oscila cerca de cero)
+    p.curio=t+2500;p.mira=t+900;p.vx=Math.abs(p.vx)*(x>=p.x?1:-1);p.vy=-.105})}
 // --- el cerdito músico ---
 // Al tocar 🎵 un cerdito recorre las columnas que se ven en pantalla, de izquierda a derecha, saltando de cima en cima. Al caer en cada una suena su nota:
 // más aguda cuanto más alta está la cima (escala pentatónica: suene lo que suene, queda bien), y con el timbre del bloque que hay arriba
@@ -1390,7 +1434,11 @@ function pasoMusica(ahora){const m=musica;
     if(y<ROWS){const a=Math.max(0,Math.min(17,SUELO+5-y)),f=261.63*Math.pow(2,(Math.floor(a/5)*12+PENTA[a%5])/12);
       nota(f,grid[y*COLS+col]);m.notas.push(Math.round(f));pops.set(y*COLS+col,ahora);particles.push({x:col+.5,y:y-.9,life:50,txt:'♪'})}}
   const u=k<0?0:k-n,ya=topOf(col),yb=col<m.x1?topOf(col+1):ya; // de una cima a la siguiente, con un saltito
-  ctx.drawImage(pigImg(false,u>.5,false),(col+u)*S,(ya+(yb-ya)*u-1-Math.sin(Math.PI*u)*.7)*S+S*.25,S,S*.75);
+  const mx=(col+u)*S,my=(ya+(yb-ya)*u-1-Math.sin(Math.PI*u)*.7)*S+S*.25,px=S/16;
+  ctx.drawImage(pigImg(false,u>.5,false),mx,my,S,S*.75);
+  // su gorro de fiesta, para distinguirlo de los demás cerditos: un cono rojo con una borla amarilla, encima de la cabeza
+  ctx.fillStyle='#e8414b';ctx.fillRect(mx+10*px,my-px,4*px,px*1.1);ctx.fillRect(mx+11*px,my-2*px,2*px,px*1.1);ctx.fillRect(mx+11.5*px,my-3*px,px,px*1.1);
+  ctx.fillStyle='#ffd43b';ctx.fillRect(mx+11.25*px,my-4.4*px,1.5*px,1.5*px);
 }
 // --- el mundo hace cosas solo ---
 // Reacciones: muchas veces por segundo se mira una casilla al azar y, si se dan las condiciones, cambia. Son tres y ninguna rompe nada que no se pueda rehacer:
@@ -1474,8 +1522,8 @@ function act(e){
       say(reto.kind==='serie'?`Mira la serie: ${reto.seq.map(i=>NAME[i]).join(', ')}. ¿Qué toca ahora?`
         :g.miss<2?`Eso es ${UN[current]}. Mira el modelo: en ese sitio va otro bloque.`:`Mira el modelo: ahí va ${DEF[g.b]}.`);return}
     if(!g&&enCopia(x,y)){beep(220,.1,'triangle',.06);say('En el modelo ese hueco está vacío. Ahí no va nada.');return}
-    foto();grid[i]=current;pops.set(i,Date.now());suena(current);uso.pon[current]=(uso.pon[current]||0)+1;usoSucio=true;if(g)say(NAME[current],false);else if(current===14)semillaPuesta(i)}
-  else{if(!grid[i])return;foto();const v=grid[i];burst(x,y,v);grid[i]=0;suena(v,true);cu('pica');if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
+    foto();grid[i]=current;pops.set(i,Date.now());suena(current);curiosos(x,y);uso.pon[current]=(uso.pon[current]||0)+1;usoSucio=true;if(g)say(NAME[current],false);else if(current===14)semillaPuesta(i)}
+  else{if(!grid[i])return;foto();const v=grid[i];burst(x,y,v);grid[i]=0;suena(v,true);cu('pica');curiosos(x,y);if(reto&&reto.kind==='pica'&&v===reto.b)reto.dug++}
   checkReto();save();
 }
 let ult=null;
@@ -1515,11 +1563,11 @@ if(window.PointerEvent){
 }
 
 // --- dibujo ---
-function drawPig(p,asleep){
-  const x=p.x*S,y=p.y*S+S*.25;
-  ctx.drawImage(pigImg(p.vx<0,!asleep&&Math.floor(p.t/8)%2,asleep),x,y,S,S*.75);
+function drawPig(p,asleep,ojoCerrado){ // el dibujo "dormido" es el mismo cerdito con el ojo cerrado: también sirve para el parpadeo
+  const x=p.x*S,y=p.y*S+S*.25,quieto=Date.now()<(p.mira||0);
+  ctx.drawImage(pigImg(p.vx<0,!asleep&&!quieto&&Math.floor(p.t/8)%2,asleep||ojoCerrado),x,y,S,S*.75);
   if(p.joy>0){ctx.fillStyle='#e8414b';ctx.font=`${S*.4}px system-ui`;ctx.fillText('❤',x+S*.3,y-S*.2-(40-Math.min(40,p.joy))*.5)}
-  else if(asleep){ctx.fillStyle='#fff6e0';ctx.font=`${S*.28}px "Press Start 2P",monospace`;ctx.fillText('z',x+S*.75,y-S*.1-Math.sin((fr+p.t)/25)*3)}
+  else if(asleep){ctx.fillStyle='#fff6e0';ctx.font=`${S*.28}px "Press Start 2P",monospace`;ctx.fillText('z',x+S*.75,y-S*.1-Math.sin((tf+p.t)/25)*3)}
 }
 function marco(x,y,w,h,col,dash){ // recuadro con sombra oscura debajo, para que se vea igual de día que de noche
   ctx.setLineDash(dash||[]);ctx.lineWidth=7;ctx.strokeStyle='rgba(42,29,20,.6)';ctx.strokeRect(x,y,w,h);
@@ -1530,6 +1578,7 @@ function tick(){
   fr++;
   if(tAnt)usoTiempo(Math.min(1000,Date.now()-tAnt));
   const dms=tAnt?Math.min(50,Date.now()-tAnt):16; // milisegundos desde el fotograma anterior (con tope, por si la pestaña estuvo parada)
+  const kt=dms/16.667;tf+=kt; // el mismo tiempo, medido en fotogramas de 60 por segundo: así nada va más lento en un aparato que no llega a 60
   // Si el aparato va justo (un iPad antiguo), se dibuja con menos resolución: al ser pixelado apenas se nota y el juego va suelto.
   // Se mira la media de lo que tarda cada fotograma y, si no llega a unos 28 por segundo, se baja medio punto (hasta 1) y se vuelve a medir.
   // (El umbral queda por debajo de 30 a propósito: un móvil en modo de bajo consumo va a 30 clavados y bajarle la resolución no le ayudaría.)
@@ -1542,25 +1591,28 @@ function tick(){
     if(lento>36&&fr-frCal>150&&calidad>1){calidad=Math.max(1,Math.min(calidad,window.devicePixelRatio||1)-.5);frCal=fr;lento=16;resize()}}
   if(av.on){const n=dms>25?2:1;for(let k=0;k<n;k++)avPaso(dms/1000/n); // el personaje, y la vista detrás de él
     const f=Math.min(1,dms/1000*5);camC+=(av.x-W/S*.45-camC)*f;camR+=(av.yc-H/S*.62-camR)*f;camGoal=camGoalR=null}
-  if(camGoal!==null){camC+=(camGoal-camC)*.12;if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}}
-  if(camGoalR!==null){camR+=(camGoalR-camR)*.12;if(Math.abs(camGoalR-camR)<.02){camR=camGoalR;camGoalR=null}}
+  if(camGoal!==null){camC+=(camGoal-camC)*(1-Math.pow(.88,kt));if(Math.abs(camGoal-camC)<.02){camC=camGoal;camGoal=null}}
+  if(camGoalR!==null){camR+=(camGoalR-camR)*(1-Math.pow(.88,kt));if(Math.abs(camGoalR-camR)<.02){camR=camGoalR;camGoalR=null}}
   clampCam();
   if(fr%30===0&&!document.getElementById('voz').hidden)pintaVer();
   const maxC=COLS-W/S,maxR=ROWS-H/S;
-  nightAmt+=((night?1:0)-nightAmt)*.05;const na=nightAmt;
+  nightAmt+=((night?1:0)-nightAmt)*(1-Math.pow(.972,kt));const na=nightAmt; // anochece en un par de segundos, para que dé tiempo a ver el atardecer
   // cielo
   {const k=H+'|'+Math.round(na*250);if(k!==cieloK){cieloK=k;cieloG=ctx.createLinearGradient(0,0,0,H); // solo se rehace mientras anochece o amanece
     cieloG.addColorStop(0,`rgb(${lerp(95,10,na)},${lerp(180,14,na)},${lerp(236,48,na)})`);
     cieloG.addColorStop(1,`rgb(${lerp(191,44,na)},${lerp(230,52,na)},${lerp(251,110,na)})`)}}
   ctx.fillStyle=cieloG;ctx.fillRect(0,0,W,H);
-  if(na>.05){skyStars.forEach(s=>{ctx.globalAlpha=na*(.55+.45*Math.sin(fr/30+s.p));ctx.fillStyle='#fff6e0';ctx.fillRect(s.x*W,s.y*H,s.s,s.s)});ctx.globalAlpha=1}
+  {const a=Math.sin(Math.PI*na)*.75;if(a>.03){const g=ctx.createLinearGradient(0,H*.25,0,H*.95);g.addColorStop(0,'rgba(255,150,70,0)');g.addColorStop(.7,`rgba(255,140,60,${a})`);g.addColorStop(1,`rgba(255,196,110,${a})`);
+    ctx.fillStyle=g;ctx.fillRect(0,H*.25,W,H*.75)}} // solo mientras amanece o anochece
+  if(na>.05){skyStars.forEach(s=>{ctx.globalAlpha=na*(.55+.45*Math.sin(tf/30+s.p));ctx.fillStyle='#fff6e0';ctx.fillRect(s.x*W,s.y*H,s.s,s.s)});ctx.globalAlpha=1}
   // sol que se esconde y luna que sale
   const sx=W-S*2.2,sy=S*.6+na*H;
   ctx.fillStyle='#ffe066';ctx.fillRect(sx,sy,S*1.2,S*1.2);ctx.fillStyle='#fff3a6';ctx.fillRect(sx+S*.25,sy+S*.25,S*.7,S*.7);
   const my=S*.6+(1-na)*H;ctx.fillStyle='#e8ecf4';ctx.fillRect(sx,my,S*1.2,S*1.2);ctx.fillStyle='#c3cad8';ctx.fillRect(sx+S*.2,my+S*.25,S*.3,S*.3);ctx.fillRect(sx+S*.7,my+S*.7,S*.25,S*.25);
   if(!clouds.length)clouds=[0,1,2].map(()=>({x:Math.random()*W,y:20+Math.random()*H*.2,w:60+Math.random()*60}));
-  clouds.forEach(c=>{c.x+=.15;if(c.x>W+20)c.x=-c.w-20;ctx.fillStyle=`rgba(255,255,255,${.9-.6*na})`;
+  clouds.forEach(c=>{c.x+=.15*kt;if(c.x>W+20)c.x=-c.w-20;ctx.fillStyle=`rgba(255,255,255,${.9-.6*na})`;
     ctx.fillRect(c.x,c.y,c.w,S*.5);ctx.fillRect(c.x+c.w*.2,c.y-S*.3,c.w*.5,S*.35)});
+  pajaros(Date.now(),dms,na);
 
   // mundo
   ctx.save();ctx.translate(-Math.round(camC*S),offY);
@@ -1569,13 +1621,14 @@ function tick(){
   // bajo tierra, lo que se pica deja ver roca oscura en vez de cielo
   if(y1>=SUELO+4){const cy=(SUELO+4)*S,g2=ctx.createLinearGradient(0,cy,0,cy+S);g2.addColorStop(0,'rgba(46,33,24,0)');g2.addColorStop(1,'rgba(46,33,24,1)');
     ctx.fillStyle=g2;ctx.fillRect(x0*S,cy,(x1-x0+1)*S,S);ctx.fillStyle='#2e2118';ctx.fillRect(x0*S,cy+S,(x1-x0+1)*S,(y1-SUELO-4)*S)}
-  const lights=[],ahora=Date.now(),olas=agua[(ahora/200|0)&15];let saltan=null; // el agua avanza un píxel cada dos décimas de segundo (por reloj)
+  const lights=[],flores=[],ahora=Date.now(),olas=agua[(ahora/200|0)&15];let saltan=null; // el agua avanza un píxel cada dos décimas de segundo (por reloj)
   if(pops.size&&fr%40===0)pops.forEach((t,k)=>{if(ahora-t>POP)pops.delete(k)}); // los que se quedaron fuera de la vista
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=idx(x,y),v=grid[i];if(!v)continue;
     if(pops.size&&pops.has(i)){const t=(ahora-pops.get(i))/POP;if(t>=1)pops.delete(i);else{if(t>=0)(saltan=saltan||[]).push(x,y,v,t);if(v===13)lights.push([x,y,3.6]);continue}}
-    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(v===13?(((fr>>3)+x*3+y)&1?tex.llama2:tex[13]):v===7?olas:cara(v,i),x*S,y*S,S,S);ctx.globalAlpha=1;
+    ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(v===13?(((Math.floor(tf)>>3)+x*3+y)&1?tex.llama2:tex[13]):v===7?olas:cara(v,i),x*S,y*S,S,S);ctx.globalAlpha=1;
     if(v===7&&y>0&&!grid[i-COLS]){ctx.fillStyle='rgba(214,236,255,.5)';ctx.fillRect(x*S,y*S,S,Math.max(2,Math.round(S/16)))} // la superficie del agua: una línea clara donde encima hay aire
-    if(v===13){lights.push([x,y,3.6]);if(Math.random()<.02)particles.push({x:x+.42+Math.random()*.16,y:y+.2,vx:(Math.random()-.5)*.012,vy:-.05,life:22,col:'#ffd43b'})}
+    if(v===11)flores.push([x,y]);
+    if(v===13){lights.push([x,y,3.6]);if(Math.random()<.02*kt)particles.push({x:x+.42+Math.random()*.16,y:y+.2,vx:(Math.random()-.5)*.012,vy:-.05,life:22,col:'#ffd43b'})}
     else if(v===9&&na>.05){ctx.fillStyle=`rgba(255,214,90,${.5*na})`;ctx.fillRect(x*S,y*S,S,S);lights.push([x,y,1.6])}
     else if(v!==11&&v!==7&&v!==9){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(x*S,y*S+S-2,S,2)}}
   // Los bloques recién puestos entran con un saltito: nacen algo más pequeños, se pasan un pelín de su tamaño y se asientan (menos de dos décimas de segundo).
@@ -1593,37 +1646,44 @@ function tick(){
     ctx.fillStyle='#fff6e0';ctx.fillRect(ax+u*1.5,ay-u/2,u*3,u);ctx.beginPath();ctx.moveTo(ax+u*4.5,ay-u*1.5);ctx.lineTo(ax+u*6.5,ay);ctx.lineTo(ax+u*4.5,ay+u*1.5);ctx.fill();
     // pista: en el modelo parpadea el bloque que toca copiar
     r.ghost.forEach(g=>{if(g.miss<2||grid[idx(g.x,g.y)]===g.b)return;
-      ctx.globalAlpha=.55+.45*Math.sin(fr/8);ctx.strokeStyle='#ffd43b';ctx.lineWidth=4;ctx.strokeRect(g.mx*S+2,g.my*S+2,S-4,S-4);ctx.globalAlpha=1})}
+      ctx.globalAlpha=.55+.45*Math.sin(tf/8);ctx.strokeStyle='#ffd43b';ctx.lineWidth=4;ctx.strokeRect(g.mx*S+2,g.my*S+2,S-4,S-4);ctx.globalAlpha=1})}
   // huecos de la serie, de la copia o de la letra por rellenar
   if(reto&&reto.ghost&&!reto.won)reto.ghost.forEach(g=>{if(lleno(g))return;
     if(reto.kind==='letra'){ctx.fillStyle='rgba(255,246,224,.5)';ctx.fillRect(g.x*S,g.y*S,S,S)} // la letra, en blanco suave: como las de repasar
     if(g.miss>=2&&g.b){ctx.globalAlpha=.4;ctx.drawImage(tex[g.b],g.x*S,g.y*S,S,S)}
-    ctx.globalAlpha=.65+.3*Math.sin(fr/10);ctx.strokeStyle='#fff6e0';ctx.lineWidth=3;ctx.setLineDash([6,5]);
+    ctx.globalAlpha=.65+.3*Math.sin(tf/10);ctx.strokeStyle='#fff6e0';ctx.lineWidth=3;ctx.setLineDash([6,5]);
     ctx.strokeRect(g.x*S+3,g.y*S+3,S-6,S-6);ctx.setLineDash([]);
     if(g.miss<2&&reto.kind==='serie'){ctx.fillStyle='#fff6e0';ctx.font=`${S*.4}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.fillText('?',g.x*S+S/2,g.y*S+S*.72);ctx.textAlign='start'}
     ctx.globalAlpha=1});
   // cerditos (de noche duermen)
   const asleep=na>.6;
   pigs.forEach(p=>{
-    p.t++;if(p.joy>0)p.joy--;
-    p.vy=Math.min(p.vy+.0125,.25);let ny=p.y+p.vy;
+    p.t+=kt;if(p.joy>0)p.joy-=kt;
+    p.vy=Math.min(p.vy+.0125*kt,.25);let ny=p.y+p.vy*kt;
     const cx=Math.floor(p.x+.5);
     if(p.vy>0&&solid(cx,Math.floor(ny+.98))){ny=Math.floor(ny+.98)-1;p.vy=0}
     if(p.vy<0&&solid(cx,Math.floor(ny))){ny=Math.floor(ny)+1;p.vy=0}
     p.y=ny;
-    if(!asleep||p.joy>0){
-      if(Math.random()<.004)p.vx*=-1;
-      const nx=p.x+p.vx,front=Math.floor(nx+(p.vx>0?.9:.1)),row=Math.floor(p.y+.5);
+    const quieto=ahora<(p.mira||0); // se ha parado a mirar algo (un bloque recién puesto, una flor)
+    if((!asleep||p.joy>0)&&!quieto){
+      if(Math.random()<.004*kt)p.vx*=-1;
+      const nx=p.x+p.vx*kt,front=Math.floor(nx+(p.vx>0?.9:.1)),row=Math.floor(p.y+.5);
       if(solid(front,row)){if(!solid(front,row-1)&&p.vy===0)p.vy=-.16;else p.vx*=-1}else p.x=nx;
+      // le gustan las flores: si pasa por una, se para un momento a olerla (y no vuelve a hacerlo hasta pasado un rato)
+      if(p.vy===0&&ahora>(p.flor||0)&&grid[idx(Math.floor(p.x+.5),Math.floor(p.y+.5))]===11&&!(reto&&!reto.won)){p.flor=ahora+14000;p.mira=ahora+1500;p.joy=45}
     }
-    drawPig(p,asleep&&p.joy<=0)});
+    // parpadea de vez en cuando
+    if(!p.parp)p.parp=ahora+1500+Math.random()*4000;
+    if(ahora>p.parp+140)p.parp=ahora+2200+Math.random()*4200;
+    drawPig(p,asleep&&p.joy<=0,ahora>=p.parp)});
+  mariposas(ahora,kt,flores,na);
   if(musica)pasoMusica(ahora);
   if(av.vivo)avDibuja(ahora);
   // trocitos y fuegos artificiales
   particles=particles.filter(q=>{
-    if(q.txt){q.y-=.016;q.life--;ctx.font=`${S*.55}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.globalAlpha=Math.min(1,q.life/15);
+    if(q.txt){q.y-=.016*kt;q.life-=kt;ctx.font=`${S*.55}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.globalAlpha=Math.min(1,q.life/15);
       ctx.fillStyle='#2a1d14';ctx.fillText(q.txt,q.x*S+3,q.y*S+3);ctx.fillStyle='#ffd43b';ctx.fillText(q.txt,q.x*S,q.y*S);ctx.globalAlpha=1;ctx.textAlign='start';return q.life>0}
-    q.vy+=.0075;q.x+=q.vx;q.y+=q.vy;q.life--;
+    q.vy+=.0075*kt;q.x+=q.vx*kt;q.y+=q.vy*kt;q.life-=kt;
     if(q.col){ctx.fillStyle=q.col;ctx.fillRect(q.x*S,q.y*S,S/6,S/6)}
     else{if(q.life<8)ctx.globalAlpha=q.life/8;ctx.drawImage(tex[q.id],q.sx,q.sy,8,8,q.x*S,q.y*S,S*.28,S*.28);ctx.globalAlpha=1}return q.life>0});
   ctx.restore();
@@ -1634,18 +1694,19 @@ function tick(){
     else{
       lctx.globalCompositeOperation='source-over';lctx.clearRect(0,0,light.width,light.height);lctx.fillStyle=`rgba(8,12,48,${.6*na})`;lctx.fillRect(0,0,light.width,light.height);
       lctx.globalCompositeOperation='destination-out';
-      lights.forEach(([x,y,r])=>{const lx=(x+.5-camC)*S/LQ,ly=((y+.5)*S+offY)/LQ,rr=r*S*(1+.04*Math.sin(fr/6+x))/LQ;lctx.drawImage(luzSpr.hueco,lx-rr,ly-rr,rr*2,rr*2)});
+      lights.forEach(([x,y,r])=>{const lx=(x+.5-camC)*S/LQ,ly=((y+.5)*S+offY)/LQ,rr=r*S*(1+.04*Math.sin(tf/6+x))/LQ;lctx.drawImage(luzSpr.hueco,lx-rr,ly-rr,rr*2,rr*2)});
       // y alrededor de cada antorcha, un resplandor cálido que tiembla un poco (en el mismo lienzo pequeño: a pantalla completa solo se pinta una capa, haya las antorchas que haya)
       lctx.globalCompositeOperation='source-over';lctx.globalAlpha=na;
-      lights.forEach(([x,y,r])=>{if(r<3)return;const lx=(x+.5-camC)*S/LQ,ly=((y+.4)*S+offY)/LQ,rr=r*S*(.92+.06*Math.sin(fr/5+x*2))/LQ;lctx.drawImage(luzSpr.calida,lx-rr,ly-rr,rr*2,rr*2)});
+      lights.forEach(([x,y,r])=>{if(r<3)return;const lx=(x+.5-camC)*S/LQ,ly=((y+.4)*S+offY)/LQ,rr=r*S*(.92+.06*Math.sin(tf/5+x*2))/LQ;lctx.drawImage(luzSpr.calida,lx-rr,ly-rr,rr*2,rr*2)});
       lctx.globalAlpha=1;
       ctx.drawImage(light,0,0,light.width*LQ,light.height*LQ); // ampliada tal cual, sin suavizar: es bastante más rápido y en una mancha tan difusa no se ve la diferencia
     }
   }
+  if(na>.3||luces.length)luciernagas(ahora,kt,na);
   // deslizadores: qué trozo del mundo se ve, a lo ancho (abajo) y a lo alto (a la derecha). El mundo se mueve arrastrando el dedo;
   // las barras solo aparecen mientras se mueve y se apagan solas
   if(barCam===null)barCam=[camC,camR];
-  if(Math.abs(camC-barCam[0])>.002||Math.abs(camR-barCam[1])>.002){barA=2;barCam=[camC,camR]}else if(barA>0)barA-=.03;
+  if(Math.abs(camC-barCam[0])>.002||Math.abs(camR-barCam[1])>.002){barA=2;barCam=[camC,camR]}else if(barA>0)barA-=.03*kt;
   if(barA>0){ctx.globalAlpha=Math.min(1,barA);
     if(maxC>0){const x0=16,w=W-40,y=H-16,tw=Math.max(28,w*(W/S)/COLS);
       ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x0-2,y-2,w+4,10);ctx.fillStyle='#fff6e0';ctx.fillRect(x0+(w-tw)*camC/maxC,y,tw,6)}
@@ -1663,7 +1724,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),vida:()=>({mariposas:bichos.length,luciernagas:luces.length,pajaro:!!pajaro}),pajaroYa:()=>{pajaroT=1},uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
