@@ -50,13 +50,13 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 
 /* ajustes de voz y nivel (para el adulto) */
 /* columna de la izquierda: estrellas, ajustes (para el adulto) y deshacer */
-#vozBtn{top:52px}#undoBtn{top:104px}#undoBtn.off{opacity:.4}#zoomBtn{top:156px}
+#vozBtn{top:52px}#undoBtn{top:104px}#undoBtn.off{opacity:.4}#zoomBtn{top:156px}#fotoBtn{top:222px}
 /* bajo la lupa, tres puntos de distinto tamaño: el encendido es el tamaño de bloque que se ve */
 #zoomDots{position:absolute;left:10px;top:202px;width:44px;display:flex;justify-content:center;align-items:center;gap:4px;pointer-events:none}
 #zoomDots i{display:block;background:var(--ink);opacity:.35}#zoomDots i:nth-child(1){width:10px;height:10px}#zoomDots i:nth-child(2){width:7px;height:7px}#zoomDots i:nth-child(3){width:5px;height:5px}
 #zoomDots i.on{opacity:1;background:var(--sel)}
-#vozBtn,#undoBtn,#zoomBtn{position:absolute;left:10px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
-#voz,#mundos,#uso,#copia{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
+#vozBtn,#undoBtn,#zoomBtn,#fotoBtn{position:absolute;left:10px;width:44px;height:44px;border:3px solid var(--slot);background:var(--glass);padding:0;font-size:20px;font-family:system-ui}
+#voz,#mundos,#uso,#copia,#foto{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
 /* selector de mundos: tres huecos con su miniatura; el 🔄 de la derecha (cambiarlo por uno nuevo) es para el adulto */
 #mundosCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,460px);max-height:100%;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;touch-action:pan-y}
 #mundosList{display:flex;flex-direction:column;gap:10px}
@@ -73,6 +73,15 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #usoCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,560px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
   font-family:system-ui,sans-serif;font-size:14px;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
 #uso,#copia{z-index:6}
+@media (max-height:520px){button#fotoBtn{left:62px;top:156px}} /* en un móvil tumbado no cabe debajo de la lupa: va a su lado */
+#world.flash::after{content:'';position:absolute;left:0;top:0;right:0;bottom:0;background:#fff;pointer-events:none;animation:flash .4s ease-out forwards}
+@keyframes flash{from{opacity:.9}to{opacity:0}}
+#fotoCard{background:#fff6e0;border:4px solid var(--sel);width:min(100%,640px);max-height:100%;box-sizing:border-box;padding:12px;overflow:auto;-webkit-overflow-scrolling:touch;color:var(--slot);font-family:system-ui,sans-serif}
+#fotoCv,#fotoImg{display:block;width:100%;height:auto;box-sizing:border-box;border:3px solid var(--slot);image-rendering:pixelated}
+#fotoImg{-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
+#fotoCard p{margin:8px 0 0;line-height:1.4;font-size:14px}
+#fotoCard .vrow{margin-top:10px}#fotoCard .vopt{font-size:22px;color:var(--ink)}#fotoBajar{text-decoration:none;display:flex;align-items:center;justify-content:center;font-size:15px!important}
+#fotoGuardar{flex:0 0 64px;opacity:.75}
 #copiaCard{background:var(--panel);border:4px solid var(--sel);width:min(100%,520px);max-height:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;gap:12px;
   font-family:system-ui,sans-serif;font-size:14px;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
 #copiaCard h2{margin:0;font-family:var(--pixel);font-size:13px}
@@ -95,7 +104,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .vopt small{opacity:.7}
 .vopt[aria-pressed="true"]{background:var(--sel);border-color:var(--sel-edge);color:var(--slot)}
 .vlabel{font-size:12px;opacity:.8;margin-bottom:-6px}
-#palIn,#letIn{flex:2;min-width:0;min-height:44px;box-sizing:border-box;padding:8px 10px;border:3px solid var(--slot);background:#fff6e0;color:var(--slot);font:16px system-ui,sans-serif;text-transform:uppercase;-webkit-user-select:text;user-select:text}
+#palIn,#letIn,#cumD,#cumM{flex:2;min-width:0;min-height:44px;box-sizing:border-box;padding:8px 10px;border:3px solid var(--slot);background:#fff6e0;color:var(--slot);font:16px system-ui,sans-serif;text-transform:uppercase;-webkit-user-select:text;user-select:text}
 
 /* reto: dibujo + casillas que se van llenando; debajo, el tablero del cerdito cuando toca programarlo */
 #hud{position:absolute;left:16px;right:16px;top:10px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
@@ -234,6 +243,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
     <button id="undoBtn" class="off" aria-label="Deshacer lo último">↩️</button>
     <button id="zoomBtn" aria-label="Tamaño de los bloques">🔍</button>
     <div id="zoomDots" aria-hidden="true"><i></i><i></i><i></i></div>
+    <button id="fotoBtn" aria-label="Hacer una foto del mundo">📷</button>
     <div id="toast"></div>
   </div>
   <div id="mundos" hidden>
@@ -249,6 +259,17 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
         <button class="pers modo" id="modoCurso" aria-label="Un recorrido largo" aria-pressed="false">🏁</button>
       </div>
       <div id="persCard" role="dialog" aria-label="Elige un personaje"></div>
+    </div>
+  </div>
+  <div id="foto" hidden>
+    <div id="fotoCard" role="dialog" aria-label="Foto del mundo">
+      <canvas id="fotoCv"></canvas>
+      <div id="fotoAdulto" hidden>
+        <img id="fotoImg" alt="Foto del mundo">
+        <p>Para guardarla en un iPad o un iPhone: mantén el dedo sobre la foto y elige «Guardar en Fotos» (o «Añadir a Fotos»).</p>
+        <div class="vrow"><a class="vopt" id="fotoBajar" download="mundo-de-bloques.jpg" hidden>Descargar</a><button class="vopt" id="fotoEnviar" style="font-size:15px" hidden>Compartir</button></div>
+      </div>
+      <div class="vrow"><button class="vopt" id="fotoGuardar" aria-label="Guardar la foto (para mayores)">💾</button><button class="vopt" id="fotoClose" aria-label="Cerrar la foto">✖️</button></div>
     </div>
   </div>
   <div id="copia" hidden>
@@ -289,6 +310,8 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
       <div class="vrow"><input id="palIn" type="text" maxlength="14" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ej.: PATO"><button class="vopt" id="palOk">Guardar</button></div>
       <div class="vlabel">Letras trabajadas en clase (en fácil salen solo estas; al subir de nivel se van añadiendo las siguientes; vacío, todas según el nivel)</div>
       <div class="vrow"><input id="letIn" type="text" maxlength="27" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ej.: AEIOUMPLSD"><button class="vopt" id="letOk">Guardar</button></div>
+      <div class="vlabel">Cumpleaños: ese día hay fiesta en su mundo (sin día o sin mes, no hay fiesta)</div>
+      <div class="vrow"><select id="cumD" aria-label="Día del cumpleaños"></select><select id="cumM" aria-label="Mes del cumpleaños"></select></div>
       <div class="vlabel">Nivel de partida de los retos (luego sube o baja solo)</div>
       <div class="vrow" id="vozNivel"></div>
       <button class="vopt" id="copiaBtn" style="text-align:center">💾 Copia de seguridad</button>
@@ -644,6 +667,7 @@ function pintaVer(){const d=Math.min(window.devicePixelRatio||1,calidad);
 function renderVoz(){
   {const i=document.getElementById('palIn');if(document.activeElement!==i)i.value=palabra.txt}
   {const i=document.getElementById('letIn');if(document.activeElement!==i)i.value=palabra.letras}
+  pintaCumple();
   // qué versión del juego está cargada: la fecha en que se publicó la página que se está viendo (sirve para saber si ya ha llegado un cambio)
   try{const f=new Date(document.lastModified);verTxt=isNaN(f)?'':'Versión del '+f.toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(e){}
   pintaVer();
@@ -1330,14 +1354,14 @@ function usoResumen(){
   // lo que más usa
   const U=[],bl=Object.keys(uso.pon).map(k=>[+k,uso.pon[k]]).sort((a,b)=>b[1]-a[1]),nb=bl.reduce((a,b)=>a+b[1],0),F=uso.f;
   if(nb)U.push('Bloques puestos: '+nb+'. Los que más: '+bl.slice(0,5).map(b=>(NAME[b[0]]||'bloque')+' ('+b[1]+')').join(', ')+'.');
-  const hs=[['pica','picar'],['casa','casas'],['cerdo','cerditos añadidos'],['noche','día y noche'],['musica','música'],['deshacer','deshacer'],['zoom','lupa'],['mundo','cambios de mundo']].filter(q=>F[q[0]]).sort((a,b)=>F[b[0]]-F[a[0]]);
+  const hs=[['pica','picar'],['casa','casas'],['cerdo','cerditos añadidos'],['noche','día y noche'],['musica','música'],['deshacer','deshacer'],['zoom','lupa'],['foto','fotos'],['mundo','cambios de mundo']].filter(q=>F[q[0]]).sort((a,b)=>F[b[0]]-F[a[0]]);
   if(hs.length)U.push('Herramientas: '+hs.map(q=>q[1]+' '+F[q[0]]).join(' · ')+'.');
   S.push(['Lo que más usa',U.length?U:['Todavía nada.']]);
   // aventura
   const A=uso.a;
   if(A.n||F.curso){const veces=PERS.map((p,k)=>A.pers[k]||0),fav=veces.indexOf(Math.max.apply(null,veces));
     S.push(['Aventura',['Carreras: '+A.n+' · llega a la bandera en '+A.fin+' ('+pc(A.fin,A.n)+') · con las ocho manzanas: '+A.todas+'.',
-      (F.curso?'Recorridos largos: '+pl(F.curso,'empezado','empezados')+' · '+pl(F.cursoFin||0,'terminado','terminados')+'. ':'')+(A.fin?'Manzanas por carrera terminada: '+(A.manz/A.fin).toFixed(1).replace('.',',')+' de 8. ':'')+'Veces que un muro alto le ha cortado el paso: '+A.muro+'.','Personaje favorito: '+PERS[fav].n.toLowerCase()+' ('+pl(veces[fav],'vez','veces')+').'+(huevos?' Huevos de estrellas abiertos: '+huevos+' de '+PREMIOS.length+'.':'')]])}
+      (F.curso?'Recorridos largos: '+pl(F.curso,'empezado','empezados')+' · '+pl(F.cursoFin||0,'terminado','terminados')+'. ':'')+(A.fin?'Manzanas por carrera terminada: '+(A.manz/A.fin).toFixed(1).replace('.',',')+' de 8. ':'')+'Veces que un muro alto le ha cortado el paso: '+A.muro+'.'+(F.pot?' Potenciadores cogidos: '+F.pot+'.':''),'Personaje favorito: '+PERS[fav].n.toLowerCase()+' ('+pl(veces[fav],'vez','veces')+').'+(huevos?' Huevos de estrellas abiertos: '+huevos+' de '+PREMIOS.length+'.':'')]])}
   // ideas: qué potenciar y qué revisar, con reglas sencillas sobre lo anterior
   const I=[],dom=R.filter(r=>juicio(r)==='🟢'),cue=R.filter(r=>juicio(r)==='🔴'),evi=R.filter(r=>r.n>=3&&r.v/r.n>=.4),nunca=Object.keys(RETO_N).filter(k=>!uso.r[k]||!uso.r[k].n);
   if(cue.length)I.push('Le cuesta: '+cue.map(r=>RETO_N[r.k].toLowerCase()).join(', ')+'. El nivel ya le baja solo; ayuda hacer uno de esos con él al lado.');
@@ -1599,7 +1623,7 @@ function avPaso(dt){const a=av;
   a.muelles.forEach(m=>{if(a.vy<0||Math.abs(a.x-m.x-.5)>.55||a.y<m.y+.5||a.y>m.y+1.01)return;
     a.vy=-SALTO*1.5;a.suelo=false;a.coyote=0;a.plat=null;m.t=Date.now();if(vcfg.son!==2){tono(160,640,.22,'sine',.1);tono(320,960,.18,'triangle',.05,.03)}});
   // potenciadores
-  a.pots.forEach(p=>{if(p.c||Math.abs(p.x+.5-a.x)>(gig?1.2:.8)||Math.abs(p.y+.5-(a.y-.4))>(gig?1.5:.9))return;p.c=true;a.pod={t:p.t,s:POT_S};
+  a.pots.forEach(p=>{if(p.c||Math.abs(p.x+.5-a.x)>(gig?1.2:.8)||Math.abs(p.y+.5-(a.y-.4))>(gig?1.5:.9))return;p.c=true;a.pod={t:p.t,s:POT_S};cu('pot');
     const P=POTS[p.t];say(P.dice);if(vcfg.son!==2)[523,659,784,1047,1319].forEach((f,i)=>tono(f,f*1.02,.09,'square',.05,i*.05));
     for(let i=0;i<16;i++){const g=i/16*6.283;particles.push({x:p.x+.5,y:p.y+.5,vx:Math.cos(g)*.09,vy:Math.sin(g)*.09-.06,life:30,col:P.col})}});
   if(pod==='iman')a.manz.forEach(m=>{if(m.c)return;const dx=a.x-.5-m.x,dy=a.y-.9-m.y,d=Math.hypot(dx,dy);if(d<5&&d>.01){const k=Math.min(1,9*dt/d);m.x+=dx*k;m.y+=dy*k}}); // el imán: las manzanas cercanas vuelan hacia él
@@ -1838,7 +1862,7 @@ function semillaPuesta(i){const s=i+COLS<grid.length?grid[i+COLS]:0,bien=s===1||
   if(!bien&&Date.now()-semillaT>15000){semillaT=Date.now();say('La semilla necesita tierra debajo para crecer.',true,true)}
   else if(bien)avisa('semilla','Una semilla. Cuando pase la noche, crecerá.')}
 // si al volver al juego las plantas han crecido solas, se cuenta en cuanto se toca el mundo (en iOS la voz solo puede arrancar dentro de un toque)
-['touchend','click'].forEach(t=>wrap.addEventListener(t,()=>{if(alVolver){const t=alVolver;alVolver='';say(t,true,true)}}));
+['touchend','click'].forEach(t=>wrap.addEventListener(t,()=>{if(alVolver){const t=alVolver;alVolver='';say(t,true,true)}if(alVolverF){const f=alVolverF;alVolverF=null;f()}}));
 function act(e){
   if(av.on)return;
   let {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
@@ -1915,9 +1939,57 @@ if(window.PointerEvent){
 }
 
 // --- dibujo ---
+// --- calendario: Navidad y cumpleaños ---
+// En Navidad (todo diciembre y hasta Reyes) nieva, los árboles llevan luces y estrella, y los cerditos, gorro. El día del cumpleaños (día y mes los
+// pone el adulto en Ajustes; se guardan en el aparato, con la palabra de la semana) hay globos, gorros de fiesta y canción. Es solo decorado:
+// no toca lo construido. El saludo se dice una vez al día, con el primer toque.
+let fechaFalsa=null,fiesta={nav:false,cumple:false},alVolverF=null,copos=null,globos=null;
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],LUCES=['#ffd43b','#e8414b','#4a9df0','#ffffff'];
+const gorroSpr=[sprite(['.....WW.','....RRW.','...RRR..','..RRRRR.','.RRRRRR.','WWWWWWWW'],{R:'#e8414b',W:'#ffffff'}),sprite(['...YY...','...PP...','..PPPP..','..BBBB..','.PPPPPP.','.BBBBBB.'],{Y:'#ffd43b',P:'#e86fb0',B:'#4a9df0'})];
+const globoSpr=['#e8414b','#ffd43b','#4a9df0','#7ed957','#e86fb0'].map(c=>sprite(['..XXXX..','.XXXXXX.','XXwXXXXX','XXwXXXXX','XXXXXXXX','XXXXXXXX','.XXXXXX.','..XXXX..','...XX...','...s....','....s...','...s....','....s...','...s....'],{X:c,w:'#ffffff',s:'#fff6e0'}));
+const leeCumple=()=>/^(\d{1,2})\/(\d{1,2})$/.exec(palabra.cumple||'');
+function miraFecha(){const d=fechaFalsa||new Date(),m=d.getMonth()+1,dia=d.getDate(),c=leeCumple();
+  const dc=c&&(+c[1]===29&&+c[2]===2&&new Date(d.getFullYear(),1,29).getMonth()!==1?28:+c[1]); // quien nació un 29 de febrero lo celebra el 28 los años que no lo hay
+  fiesta={nav:m===12||(m===1&&dia<=6),cumple:!!c&&dc===dia&&+c[2]===m}}
+function saluda(){miraFecha();const k=fechaK(fechaFalsa||new Date())+(fiesta.cumple?'c':'n'),cumple=fiesta.cumple;
+  if(!(fiesta.nav||cumple)||vcfg.saludo===k)return;
+  const t=cumple?'¡Feliz cumpleaños! Hoy tu mundo está de fiesta.':'¡Es Navidad! Está nevando en tu mundo.';if(alVolver.indexOf(t)<0)alVolver=(alVolver?alVolver+' ':'')+t;
+  alVolverF=()=>{vcfg.saludo=k;saveVoz();if(cumple){cancion();fireworks()}}}
+function cancion(){if(vcfg.son===2)return;let t=2.6; // «Cumpleaños feliz», las dos primeras frases, después del saludo
+  [[392,.3],[392,.15],[440,.45],[392,.45],[523,.45],[494,.9],[392,.3],[392,.15],[440,.45],[392,.45],[587,.45],[523,.9]].forEach(q=>{tono(q[0],q[0],q[1]*.95,'triangle',.1,t);t+=q[1]})}
+function nieva(kt){if(!copos)copos=Array.from({length:46},()=>({x:Math.random(),y:Math.random(),v:.0011+Math.random()*.0016,f:Math.random()*6.28,s:Math.random()<.3?2:1}));
+  const u=Math.max(2,Math.round(S/12));ctx.fillStyle='#ffffff';ctx.globalAlpha=.85;
+  copos.forEach(c=>{c.y+=c.v*kt;if(c.y>1){c.y=-.02;c.x=Math.random()}ctx.fillRect(Math.round((c.x+Math.sin(tf/45+c.f)*.012)*W),Math.round(c.y*H),u*c.s,u*c.s)});ctx.globalAlpha=1}
+function sueltaGlobos(kt){if(!globos)globos=Array.from({length:8},(_,k)=>({x:(k+.3+Math.random()*.4)/8,y:Math.random()*1.2,v:.0009+Math.random()*.0009,f:Math.random()*6.28,k:k%globoSpr.length}));
+  const w=Math.round(S*.7);globos.forEach(g=>{g.y-=g.v*kt;if(g.y<-.3){g.y=1.05;g.x=Math.random()}ctx.drawImage(globoSpr[g.k],Math.round((g.x+Math.sin(tf/60+g.f)*.01)*W),Math.round(g.y*H),w,Math.round(w*14/8))})}
+function pintaCumple(){const c=leeCumple();$('cumD').value=c?c[1]:'';$('cumM').value=c?c[2]:''}
+{const D=$('cumD'),M=$('cumM'),op=(s,v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;s.appendChild(o)};
+  op(D,'','Día');for(let k=1;k<=31;k++)op(D,k,k);op(M,'','Mes');MESES.forEach((m,k)=>op(M,k+1,m));
+  D.onchange=M.onchange=()=>{const antes=palabra.cumple||'';palabra.cumple=D.value&&M.value?D.value+'/'+M.value:'';if(palabra.cumple===antes)return;guardaPalabra();miraFecha();
+    say(palabra.cumple?'Cumpleaños: el '+D.value+' de '+MESES[M.value-1]+'.':'Sin cumpleaños.',false)}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)saluda()}); // si el juego se quedó abierto de un día para otro
+// --- foto del mundo ---
+// 📷 hace una foto de lo que se ve (sin las barras de la vista): destello, clic y la foto en un marco. Guardarla o enviarla es cosa del adulto (💾, con su puerta).
+let fotoPide=false;
+const esIOS=/iP(ad|hone|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+$('fotoBtn').onclick=()=>{if($('foto').hidden)fotoPide=true};
+function hazFoto(){const f=$('fotoCv'),k=Math.min(1,1600/cv.width);f.width=Math.round(cv.width*k);f.height=Math.round(cv.height*k);
+  const c=f.getContext('2d');c.imageSmoothingEnabled=false;c.drawImage(cv,0,0,f.width,f.height);cu('foto');
+  if(vcfg.son!==2){ruido(.05,2400,1.2,'bandpass',.25);ruido(.07,1500,1,'bandpass',.2,.09)}
+  wrap.classList.remove('flash');void wrap.offsetWidth;wrap.classList.add('flash');say('¡Foto!',true,true);
+  setTimeout(()=>{$('fotoAdulto').hidden=true;f.hidden=false;$('fotoGuardar').hidden=false;$('foto').hidden=false},380)}
+$('fotoClose').onclick=()=>{$('foto').hidden=true;$('fotoImg').removeAttribute('src');$('fotoBajar').removeAttribute('href')};
+$('foto').addEventListener('click',e=>{if(e.target===$('foto'))$('fotoClose').onclick()});
+$('fotoGuardar').onclick=()=>{if(!puerta('Guardar la foto (para mayores)'))return;const f=$('fotoCv');let url='';try{url=f.toDataURL('image/jpeg',.92)}catch(e){}
+  if(!url)return;$('fotoImg').src=url;f.hidden=true;$('fotoGuardar').hidden=true;$('fotoAdulto').hidden=false;
+  const baja=$('fotoBajar'),env=$('fotoEnviar');baja.hidden=esIOS||!('download' in baja);if(!baja.hidden)baja.href=url; // en iOS el enlace de descarga abriría la imagen y se saldría del juego
+  env.hidden=true;
+  if(navigator.canShare&&f.toBlob)f.toBlob(b=>{try{const file=new File([b],'mundo-de-bloques.jpg',{type:'image/jpeg'});
+    if(navigator.canShare({files:[file]})){env.hidden=false;env.onclick=()=>{navigator.share({files:[file]}).catch(()=>{})}}}catch(e){}},'image/jpeg',.92)};
 function drawPig(p,asleep,ojoCerrado){ // el dibujo "dormido" es el mismo cerdito con el ojo cerrado: también sirve para el parpadeo
   const x=p.x*S,y=p.y*S+S*.25,quieto=Date.now()<(p.mira||0);
   ctx.drawImage(pigImg(p.vx<0,!asleep&&!quieto&&Math.floor(p.t/8)%2,asleep||ojoCerrado),x,y,S,S*.75);
+  if(fiesta.nav||fiesta.cumple)ctx.drawImage(gorroSpr[fiesta.cumple?1:0],x+(p.vx<0?0:S*.5),y-S*.3125,S*.5,S*.375); // el gorro, encima de la cabeza
   if(p.joy>0){ctx.fillStyle='#e8414b';ctx.font=`${S*.4}px system-ui`;ctx.fillText('❤',x+S*.3,y-S*.2-(40-Math.min(40,p.joy))*.5)}
   else if(asleep){ctx.fillStyle='#fff6e0';ctx.font=`${S*.28}px "Press Start 2P",monospace`;ctx.fillText('z',x+S*.75,y-S*.1-Math.sin((tf+p.t)/25)*3)}
 }
@@ -1938,7 +2010,7 @@ function tick(){
   // Así la nieve tarda un segundo o dos en derretirse y la hierba dos o tres en salir: lo justo para que se vea que ha sido por la antorcha o por el agua.
   if(tAnt&&!reacOff&&!av.mio&&!(reto&&!reto.won)){reacMs+=Math.min(100,Date.now()-tAnt);let n=Math.min(120,reacMs/PASO_REAC|0);reacMs-=n*PASO_REAC;while(n-->0)reacciona()}
   // al volver a un mundo que lleva horas sin tocarse: ha pasado la noche, así que lo plantado crece y el agua ha hecho lo suyo (sin ruido ni saltitos: ya estaba así)
-  if(vuelve&&fr>40){vuelve=false;if(!(reto&&!reto.won)){for(let k=0;k<120000;k++)reacciona(true);if(amanece(true))alVolver='¡Mira! Mientras no estabas, tus plantas han crecido.';save()}}
+  if(vuelve&&fr>40){vuelve=false;if(!(reto&&!reto.won)){for(let k=0;k<120000;k++)reacciona(true);if(amanece(true))alVolver=(alVolver?alVolver+' ':'')+'¡Mira! Mientras no estabas, tus plantas han crecido.';save()}}
   {const t=Date.now();if(tAnt)lento=lento*.95+Math.min(100,t-tAnt)*.05;tAnt=t;
     if(lento>36&&fr-frCal>150&&calidad>1){calidad=Math.max(1,Math.min(calidad,window.devicePixelRatio||1)-.5);frCal=fr;lento=16;resize()}}
   if(av.on){const n=dms>25?2:1;for(let k=0;k<n;k++)avPaso(dms/1000/n); // el personaje, y la vista detrás de él
@@ -1965,6 +2037,7 @@ function tick(){
   if(!clouds.length)clouds=[0,1,2].map(()=>({x:Math.random()*W,y:20+Math.random()*H*.2,w:60+Math.random()*60}));
   clouds.forEach(c=>{c.x+=.15*kt;if(c.x>W+20)c.x=-c.w-20;ctx.fillStyle=`rgba(255,255,255,${.9-.6*na})`;
     ctx.fillRect(c.x,c.y,c.w,S*.5);ctx.fillRect(c.x+c.w*.2,c.y-S*.3,c.w*.5,S*.35)});
+  if(fiesta.cumple)sueltaGlobos(kt);
   pajaros(Date.now(),dms,na);
 
   // mundo
@@ -1981,6 +2054,8 @@ function tick(){
     ctx.globalAlpha=TRANSP[v]||1;ctx.drawImage(v===13?(((Math.floor(tf)>>3)+x*3+y)&1?tex.llama2:tex[13]):v===7?olas:cara(v,i),x*S,y*S,S,S);ctx.globalAlpha=1;
     if(v===7&&y>0&&!grid[i-COLS]){ctx.fillStyle='rgba(214,236,255,.5)';ctx.fillRect(x*S,y*S,S,Math.max(2,Math.round(S/16)))} // la superficie del agua: una línea clara donde encima hay aire
     if(v===11)flores.push([x,y]);
+    if(v===5&&fiesta.nav){const u=Math.max(2,S>>3),k=x*7+y*13+(ahora/650|0);ctx.fillStyle=LUCES[k&3];ctx.fillRect(x*S+Math.round(S*.22),y*S+Math.round(S*.3),u,u);ctx.fillStyle=LUCES[(k+2)&3];ctx.fillRect(x*S+Math.round(S*.62),y*S+Math.round(S*.62),u,u); // luces en las hojas
+      if(y>1&&!grid[i-COLS]&&grid[i+COLS]===5&&grid[i+2*COLS]===4)ctx.drawImage(estrellaSpr,(x+.14)*S,(y-.66)*S,S*.72,S*.72)} // y una estrella en la punta de cada árbol
     if(v===13){lights.push([x,y,3.6]);if(Math.random()<.02*kt)particles.push({x:x+.42+Math.random()*.16,y:y+.2,vx:(Math.random()-.5)*.012,vy:-.05,life:22,col:'#ffd43b'})}
     else if(v===9&&na>.05){ctx.fillStyle=`rgba(255,214,90,${.5*na})`;ctx.fillRect(x*S,y*S,S,S);lights.push([x,y,1.6])}
     else if(v!==11&&v!==7&&v!==9){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(x*S,y*S+S-2,S,2)}}
@@ -2047,6 +2122,7 @@ function tick(){
     if(q.col){ctx.fillStyle=q.col;ctx.fillRect(q.x*S,q.y*S,S/6,S/6)}
     else{if(q.life<8)ctx.globalAlpha=q.life/8;ctx.drawImage(tex[q.id],q.sx,q.sy,8,8,q.x*S,q.y*S,S*.28,S*.28);ctx.globalAlpha=1}return q.life>0});
   ctx.restore();
+  if(fiesta.nav)nieva(kt);
 
   // oscuridad de la noche, con luz de antorchas y ventanas
   if(na>.02){
@@ -2067,13 +2143,14 @@ function tick(){
   // las barras solo aparecen mientras se mueve y se apagan solas
   if(barCam===null)barCam=[camC,camR];
   if(Math.abs(camC-barCam[0])>.002||Math.abs(camR-barCam[1])>.002){barA=2;barCam=[camC,camR]}else if(barA>0)barA-=.03*kt;
-  if(barA>0){ctx.globalAlpha=Math.min(1,barA);
+  if(barA>0&&!fotoPide){ctx.globalAlpha=Math.min(1,barA);
     if(maxC>0){const x0=16,w=W-40,y=H-16,tw=Math.max(28,w*(W/S)/anchoVista);
       ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x0-2,y-2,w+4,10);ctx.fillStyle='#fff6e0';ctx.fillRect(x0+(w-tw)*camC/maxC,y,tw,6)}
     if(maxR>0&&!av.on){const y0=16,hh=H-48,x=W-16,th=Math.max(28,hh*(H/S)/ROWS); // en la aventura solo se deja la de abajo, que hace de "cuánto falta"
       ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x-2,y0-2,10,hh+4);ctx.fillStyle='#fff6e0';ctx.fillRect(x,y0+(hh-th)*camR/maxR,6,th)}
     ctx.globalAlpha=1}
   if(av.fundido){const t=(Date.now()-av.fundido)/500;if(t<1){ctx.globalAlpha=1-t;ctx.fillStyle='#3b2a1e';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}else av.fundido=0} // al cambiar de tramo
+  if(fotoPide){fotoPide=false;hazFoto()}
   requestAnimationFrame(tick);
 }
 
@@ -2081,11 +2158,12 @@ zoomAhora=[0,1,2].includes(vcfg.zoom)?vcfg.zoom:1;
 window.addEventListener('resize',resize);
 resize();
 if(!load())genWorld();
+saluda();
 clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night?'☀️':'🌙';
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),letrasNivel:k=>letrasNivel(k).join(''),elige:v=>{const b=[...$('retoOpc').children].find(e=>e.dataset.v===String(v));if(b)b.click()},autoPal:()=>autoPal,numero:n=>numero(n),letras:()=>palabra.letras,letraSuelta:()=>letraSuelta(),COLS,ROWS,irA:c=>{camC=c;camGoal=null;clampCam()},curso:()=>av.curso&&{tramo:av.curso.tramo,sem:av.curso.sem},cursoPon:(n,s)=>{av.curso.tramo=n;av.curso.sem=s;cargaTramo()},POT_K,POT_S,modo:m=>{av.modo=m},generaTramo:(n,s)=>generaTramo(n,s),huevo:()=>huevo&&Object.assign({visible:hayHuevo()},huevo),huevos:()=>huevos,nacido:()=>nacido,estrellas:n=>{stars=n;$('starN').textContent=stars;save()},ponHuevo:()=>ponHuevo(),vida:()=>({mariposas:bichos.length,luciernagas:luces.length,pajaro:!!pajaro}),pajaroYa:()=>{pajaroT=1},uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),letrasNivel:k=>letrasNivel(k).join(''),elige:v=>{const b=[...$('retoOpc').children].find(e=>e.dataset.v===String(v));if(b)b.click()},autoPal:()=>autoPal,numero:n=>numero(n),letras:()=>palabra.letras,letraSuelta:()=>letraSuelta(),COLS,ROWS,irA:c=>{camC=c;camGoal=null;clampCam()},curso:()=>av.curso&&{tramo:av.curso.tramo,sem:av.curso.sem},fecha:(d,m)=>{fechaFalsa=d?new Date(2026,m-1,d):null;saluda()},fiesta:()=>fiesta,cumple:()=>palabra.cumple||'',decorado:()=>({copos:copos?copos.length:0,globos:globos?globos.length:0}),cursoPon:(n,s)=>{av.curso.tramo=n;av.curso.sem=s;cargaTramo()},POT_K,POT_S,modo:m=>{av.modo=m},generaTramo:(n,s)=>generaTramo(n,s),huevo:()=>huevo&&Object.assign({visible:hayHuevo()},huevo),huevos:()=>huevos,nacido:()=>nacido,estrellas:n=>{stars=n;$('starN').textContent=stars;save()},ponHuevo:()=>ponHuevo(),vida:()=>({mariposas:bichos.length,luciernagas:luces.length,pajaro:!!pajaro}),pajaroYa:()=>{pajaroT=1},uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

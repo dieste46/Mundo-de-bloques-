@@ -22,6 +22,9 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 - **El cerdito músico (🎵).** Un cerdito recorre de izquierda a derecha lo que se ve en pantalla, saltando de columna en columna, y cada una suena al caer en ella: más aguda cuanto más alta, en una escala de cinco notas en la que nada desafina, y con el timbre del bloque de arriba (campanita el cristal y el oro, gota el agua, caja la madera y la piedra). Las columnas se leen en el momento, así que se puede construir por delante de él y oír el cambio: una escalera es una escala. Tocar 🎵 otra vez lo para. Con un reto abierto no suena, para no tapar la voz.
 - **Cerditos con vida.** Parpadean, se giran y dan un saltito cuando se pone o se pica un bloque cerca, y se paran a oler las flores. El cerdito músico lleva un gorro de fiesta para distinguirlo.
 - **Vida en el mundo.** De día revolotean mariposas sobre las flores (más flores, más mariposas, hasta cuatro) y de vez en cuando cruza un pájaro; de noche hay luciérnagas. Al pasar de día a noche el horizonte se tiñe de naranja. Es solo decorado: no toca los bloques ni los retos.
+- **Foto (📷).** Hace una foto de lo que se ve en ese momento, con su destello y su clic, y la enseña en un marco. Guardarla o enviarla es cosa del adulto: el botón 💾 pide la multiplicación y entonces sale la imagen para guardarla (en iPad y iPhone, dedo mantenido sobre ella y «Guardar en Fotos»; en otros aparatos, descargar o compartir).
+- **Navidad.** Del 1 de diciembre al 6 de enero nieva, los árboles llevan luces de colores y una estrella en la punta, y los cerditos, gorro rojo. Es solo decorado: no cambia nada de lo construido.
+- **Cumpleaños.** En ajustes (🗣️) el adulto pone el día y el mes. Ese día suben globos por el cielo, los cerditos llevan gorro de fiesta y, con el primer toque, la voz felicita, suena «Cumpleaños feliz» y hay fuegos artificiales. La fecha se guarda en el aparato (y va en la copia de seguridad); en el código no hay ninguna.
 - **El inventario se ve entero.** Si los catorce bloques no caben en una fila pasan a dos filas de siete (móvil o tableta en vertical); con el móvil tumbado, a una fila de bloques algo más pequeños. Nunca hay que deslizar para encontrar un bloque.
 - **Lo que ya está puesto no se cambia de un toque.** Si el hueco está ocupado suena un golpe sordo y la voz recuerda que para quitarlo está el pico (que se ilumina). Si lo ocupa un cerdito, salta y gruñe.
 - **Tres mundos (🌍).** El botón abre tres huecos con su miniatura; tocar uno entra en él y, si está vacío, lo crea. Cada mundo guarda por separado sus bloques, sus cerditos, su hora y su vista; las estrellas y los niveles son del niño y valen en todos. Cambiar un mundo ya hecho por uno nuevo (🔄) pide la multiplicación del adulto, para que ningún toque suelto borre nada.
@@ -37,18 +40,21 @@ Recorrer el propio mundo con un personaje, de izquierda a derecha, hasta una ban
 - **Se elige personaje** cada vez: cerdito, gato, conejo, gallina, rana o dinosaurio (dibujos propios de 16×16).
 - **La barra se cambia por un mando:** ⬅️ ➡️ para andar (es una sola pieza: el dedo puede deslizar de un lado a otro sin levantarse) y ⬆️ para saltar. Tocar el mundo también salta. Con teclado, flechas y espacio.
 - **Hay ocho manzanas** repartidas por el camino; la voz las va contando y se encienden en el mando. Una de cada tres queda en el aire: hay que saltar para cogerla. Llegar a la bandera con las ocho da una estrella; con menos, la voz dice cuántas de ocho y anima a repetir.
+- **Potenciadores.** Por el camino flotan tres objetos (cada carrera, tres de los cuatro que hay). Al cogerlos, durante diez segundos: ⚡ el **rayo** hace correr mucho más; la **pluma**, saltar casi el doble de alto; la **poción** lo vuelve gigante (sube solo los escalones de dos, alcanza las manzanas altas sin saltar y al caer hace temblar el suelo y brincar a los cerditos); y el **imán** atrae las manzanas cercanas. Encima de la cabeza se ve cuál lleva y una barrita con lo que le queda; parpadea antes de acabarse. Son para divertirse: no hacen falta para llegar ni para la estrella, y se acaban sin castigo.
 - **Pensado para cinco años:** un escalón de un bloque se sube solo, con un salto se suben dos, y no hay enemigos ni forma de perder. Los troncos de los árboles y las casas del botón 🏠 son decorado: se pasa por delante.
 - **Lo que mide tres bloques o más corta el paso.** La voz lo dice y entonces se toca 🎮 para salir, se construye una escalera (o se quita lo que estorba) y al volver a entrar se sigue donde se estaba, con las mismas manzanas. Es la gracia del modo: construir, probar y cambiar.
 - El terreno que genera el juego nunca corta el paso (comprobado recorriendo cientos de mundos recién creados).
 
-El movimiento del personaje va por reloj (bloques por segundo), así que corre igual en un iPad viejo que en uno nuevo. Las constantes están juntas: `ANDA`, `GRAV`, `SALTO` y `NMANZ`. Para añadir un personaje basta otro dibujo en `PERS`.
+El movimiento del personaje va por reloj (bloques por segundo), así que corre igual en un iPad viejo que en uno nuevo. Las constantes están juntas: `ANDA`, `GRAV`, `SALTO` y `NMANZ`. Para añadir un personaje basta otro dibujo en `PERS`; para otro potenciador, una entrada en `POTS` (dibujo, color y frase) y su efecto en `avPaso`.
 
 ### El recorrido largo (🏁)
 
 En el panel de personajes se elige dónde jugar: 🌍 en su mundo, o 🏁 un recorrido largo que hace el juego. El recorrido son tres tramos seguidos (prado, playa y nieve), cada uno de 48 bloques de largo (la mitad que un mundo): al llegar a la flecha del final de un tramo se pasa al siguiente, y en el tercero está la bandera.
 
 - **Qué hay:** escalones de uno (se suben solos) y de dos (hay que saltar), charcos (se saltan; si se cae dentro, se sale saltando) y plataformas en el aire con manzanas encima. No hay nada que construir ni forma de perder.
-- **Manzanas:** cinco por tramo, quince en total; la voz sigue la cuenta de un tramo a otro. Llegar al final da una estrella; con las quince, dos.
+- **Cosas que se mueven:** en algún charco ancho, una **balsa** que va y viene de orilla a orilla (y si se cae al agua, se cruza andando y se sale saltando); **ascensores**, tablas que suben solas con quien esté encima hasta una manzana alta y vuelven a bajar; y **muelles**, que al pisarlos lanzan hasta la manzana que tienen arriba. Las tablas solo sostienen desde arriba: por debajo y por los lados se atraviesan, así que nunca cortan el paso ni aplastan.
+- **Un potenciador por tramo**, distinto en cada uno de los tres.
+- **Manzanas:** cinco por tramo, quince en total; la voz sigue la cuenta de un tramo a otro. Llegar al final da una estrella; con las quince, dos (para alguna hay que subir en ascensor o pisar un muelle).
 - **Su mundo espera aparte** mientras dura el recorrido y vuelve tal como estaba; lo que se guarda nunca es el recorrido.
 - Cada recorrido es distinto (`generaTramo`). Una prueba recorre más de cien para comprobar que siempre se puede llegar al final.
 
@@ -67,11 +73,18 @@ Al cerrar un reto, ganado o no, **el mundo se queda como lo tenía el niño**: s
 | ➕ Que haya N · ➖ Deja solo N | Sumas y restas hasta 10, con la cuenta escrita en la cabecera (3 + ? = 7, 8 - ? = 5) | Dice cuántos hay y cuántos faltan |
 | ➕ Junta | Sumar dos grupos: aparecen dos torres (3 + 2 = ?) y se toca el número. Fácil hasta 5, medio de 4 a 8, difícil de 6 a 10 | Se puede contar tocando cada bloque. Al primer fallo dice qué número ha tocado y anima a contar; al segundo, el juego cuenta los bloques con él en voz alta y marca el número |
 | 🗼 Una torre más alta | Comparar cantidades | — |
-| 🔤 Rellena la letra | Letras en mayúscula, como en infantil: la letra aparece en el cielo como huecos punteados (como las de repasar) y se rellena con los bloques que quiera. Fácil: vocales; medio: vocales y M P L S T N D; difícil: todo el abecedario con Ñ. Al terminar: "Has hecho la pe. Pe, de pato" | No hay fallo posible: vale cualquier bloque |
+| 🔤 Rellena la letra | Letras en mayúscula, como en infantil: la letra aparece en el cielo como huecos punteados (como las de repasar) y se rellena con los bloques que quiera. Qué letras salen va por niveles (ver abajo). Al terminar: "Has hecho la pe. Pe, de pato" | No hay fallo posible: vale cualquier bloque |
+| 🖼️ ¿Con qué letra empieza? | Sonido inicial: sale un dibujo (pato, sol, luna, manzana, iglú…), la voz dice su nombre y se toca su primera letra entre tres | Al primer fallo dice qué letra ha tocado y repite la palabra; al segundo dice la respuesta y la marca |
+| 🔤 Sílabas | Leer y escribir sílabas directas: la voz dice «ma» y se tocan sus dos letras, por orden, entre cuatro | Si empieza por la vocal: «esa va después»; a la segunda marca la que toca |
+| 🔢 Decenas | Números hasta 100, como en clase: filas de diez bloques y unos sueltos; se toca cuántos hay en total (fácil hasta 29, medio hasta 49, difícil hasta 69). Al acertar: «Tres dieces y cuatro: treinta y cuatro» | Las opciones falsas son las confusiones típicas (43 por 34, uno más, diez menos). Al primer fallo recuerda cómo se cuentan (primero las filas llenas, de diez en diez); al segundo las cuenta con él y marca el número |
+| 🌉 Un puente para el cerdito | Conteo con historia: se abre una zanja con agua en su mundo y hay que taparla con N bloques para que el cerdito llegue a la manzana | Los huecos están marcados; vale cualquier bloque |
+| 📶 Una escalera para el cerdito | Series que crecen (1, 2, 3…): la manzana está en alto y se construye la escalera, un bloque, luego dos, luego tres | Los huecos están marcados; al terminar el cerdito sube a por ella |
 | 👀 Copia el modelo | Orientación espacial, atención | Dice qué bloque ha puesto; a la segunda marca el que toca y lo hace parpadear en el modelo |
 | 🐷 Programa al cerdito | Secuencias (tipo Bee-Bot), izquierda/derecha | Explica por qué no ha llegado (choque, faltan pasos); a la segunda marca las flechas del camino |
 
-Las **letras trabajadas en clase** también se ponen en ajustes (🗣️), por el orden en que las van dando; de partida son las vocales y M, P, L, S, D. Sin palabra de la semana, el reto de letras solo saca letras de esa lista: nunca la misma dos veces seguidas, y las tres últimas (las más recientes) salen el doble. Cuando en el cole den una letra nueva, basta añadirla al final. Con la lista vacía salen todas las del nivel.
+Las **letras trabajadas en clase** también se ponen en ajustes (🗣️), por el orden en que las van dando; de partida son las vocales y M, P, L, S, D. Los retos de letras van **por niveles** a partir de esa lista: en fácil salen solo las de clase; al subir a medio se añaden las tres siguientes del orden habitual de enseñanza (`ORDEN`: … T, N, F, R, B, G, C, H, J, V, Z, Q, Y, K, X, W), y en difícil, las ocho siguientes. Así lo conocido da seguridad y lo nuevo va entrando poco a poco, al ritmo que él marca. Nunca sale la misma letra dos veces seguidas, y las tres últimas de clase (las más recientes) salen el doble. Cuando en el cole den una letra nueva, basta añadirla al final. Con la lista vacía salen todas las del nivel (vocales; vocales y consonantes frecuentes; todo el abecedario).
+
+**Palabras con sus letras.** Sin palabra de la semana, la mitad de las veces el reto de letras propone una palabra corta que se escribe solo con las letras que ya le tocan (SOL, OSO, PALA, MESA, LUPA…; la lista es `PALABRAS`) y la va haciendo letra a letra, igual que la de la semana.
 
 La **palabra de la semana** se escribe en ajustes (🗣️). Mientras haya una, el reto de letras va sacando sus letras por orden ("La palabra de esta semana es camión. Vamos a hacer la ce, de camión") y la cabecera enseña la palabra con la letra que toca resaltada; al terminar una letra, la siguiente vez toca la siguiente. Se guarda con sus tildes para que la voz la diga bien; la letra se dibuja sin tilde. Vacía, salen letras sueltas según el nivel.
 
@@ -81,7 +94,7 @@ Dificultad por tramos (nivel 0–3 fácil, 4–7 medio, 8+ difícil): modelos de
 
 ## Copia de seguridad (Ajustes > 💾)
 
-- **Exportar** deja en un cuadro de texto la copia completa: los tres mundos, las estrellas, los niveles, la palabra de la semana y los contadores de «Cómo juega» (los ajustes de voz no, que son de cada aparato). Se puede copiar y, donde el navegador lo permite, guardar como archivo `mundobloque-AAAA-MM-DD.json`. En iOS 12 solo copiar.
+- **Exportar** deja en un cuadro de texto la copia completa: los tres mundos, las estrellas, los niveles, la palabra de la semana (con las letras de clase y el cumpleaños) y los contadores de «Cómo juega» (los ajustes de voz no, que son de cada aparato). Se puede copiar y, donde el navegador lo permite, guardar como archivo `mundobloque-AAAA-MM-DD.json`. En iOS 12 solo copiar.
 - **Importar** acepta la copia pegada o su archivo, comprueba que es válida, dice de cuándo es y qué trae, y pide confirmación: sustituye todo lo guardado en ese aparato. Después el juego se recarga con lo importado.
 - La copia es un JSON con `formato: "mundobloque"` y `version` (ahora la 3: la 2 añadió los huevos de estrellas abiertos y la 3, los mundos de 96 de ancho; las copias anteriores se importan igual y el juego las pone al día). Una copia de una versión más nueva que el juego se rechaza con un aviso.
 - Está en los ajustes, detrás de la multiplicación, para que el niño no llegue por accidente.
@@ -94,8 +107,8 @@ Un panel para el adulto con lo que el juego ha ido contando, para ver por dónde
 
 - **Resumen:** días con juego, tiempo total, media por día, sesiones, minutos de los últimos siete días y cómo se reparte el tiempo entre construir, retos y aventura.
 - **Retos, por tipo:** cuántos empieza, cuántos consigue, cuántos con tropiezo (necesitó la pista), cuántos deja a medias y cuántos cierra sin intentar, el tiempo medio y el nivel en el que está. Cada tipo lleva un color: 🟢 lo domina (consigue el 80 % o más casi sin tropiezos), 🔴 le cuesta (la mitad con tropiezo o a medias, o menos de la mitad conseguidos), 🟡 en su punto, ⚪ menos de tres jugados.
-- **Lo que más usa:** bloques y herramientas.
-- **Aventura:** carreras, banderas, manzanas, veces que un muro le corta el paso y personaje favorito.
+- **Lo que más usa:** bloques y herramientas (también las fotos hechas).
+- **Aventura:** carreras, banderas, manzanas, veces que un muro le corta el paso, potenciadores cogidos y personaje favorito.
 - **Ideas:** unas pocas frases sacadas de lo anterior con reglas sencillas (qué le cuesta, qué cierra sin intentar, qué domina, qué no le ha salido aún).
 
 Los datos se guardan solo en el aparato (la parte `uso` de `guardado.js`) y este juego no los envía a ningún sitio. No se guarda qué hace en cada momento, solo sumas, y de los días se conservan los últimos 120. El tiempo solo cuenta si se ha tocado la pantalla en el último minuto. Desde el panel se pueden copiar como texto o borrar (borrar no toca el mundo, las estrellas ni los niveles). Cada aparato lleva su propia cuenta.
@@ -128,7 +141,7 @@ Las animaciones cortas (el saltito de los bloques) van por reloj, no por fotogra
 
 Las reacciones (`reacciona`) miran unas 1700 casillas al azar por segundo, también por reloj: a cada casilla le toca más o menos una vez por segundo. Para añadir una regla basta un caso más ahí. El crecimiento de lo plantado está en `amanece`; la semilla es el bloque 14 y el arbolito el 15, que no está en el inventario. Cada mundo guarda cuándo se tocó por última vez (`t`) para saber si ha pasado una noche de verdad.
 
-Un tipo de reto nuevo se añade en cuatro sitios de `index.html`: `startReto` (lo prepara), `phrase` (lo que dice la voz), `progress` (cuánto lleva) y `winText` (lo que dice al ganar).
+Un tipo de reto nuevo se añade en cuatro sitios de `index.html`: `startReto` (lo prepara), `phrase` (lo que dice la voz), `progress` (cuánto lleva) y `winText` (lo que dice al ganar). Los de elegir entre opciones (letra inicial, sílabas, decenas, junta) dejan sus botones en `r.opts` y la respuesta se mira en `elige`. La lista de tipos está repetida en `pruebas/lib.js` (`KINDS`): hay que mantenerlas iguales.
 
 Si se añade un archivo al juego, hay que ponerlo en `ASSETS` de `sw.js` y subir el número de `CACHE`.
 
