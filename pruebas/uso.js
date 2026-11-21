@@ -26,9 +26,9 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   await p.click('#rSay'); await p.waitForTimeout(100); await p.click('#rClose'); await p.waitForTimeout(200);
   u = await U(); ok(u.r[k2].n === 1 && u.r[k2].v === 1 && u.r[k2].rep === 1, `reto cerrado sin intentar (${k2}), tras pedir que lo repita: ` + JSON.stringify(u.r[k2]));
   // aventura (en un terreno llano: un reto puede haber dejado una torre, y las torres cortan el paso)
-  await p.evaluate(() => { const g = window.__juego.grid(); for (let x = 0; x < 48; x++) for (let y = 0; y < 32; y++) g[y * 48 + x] = y < 20 ? 0 : y === 20 ? 1 : y < 24 ? 2 : 3; window.__juego.pigs().length = 0; });
+  await p.evaluate(() => { const g = window.__juego.grid(); for (let x = 0; x < 96; x++) for (let y = 0; y < 32; y++) g[y * 96 + x] = y < 20 ? 0 : y === 20 ? 1 : y < 24 ? 2 : 3; window.__juego.pigs().length = 0; });
   await p.click('#jugarBtn'); await p.waitForTimeout(200); await p.click('#persCard .pers:nth-child(5)'); await p.waitForTimeout(300);
-  await p.keyboard.down('ArrowRight'); const t0 = Date.now(); while (Date.now() - t0 < 30000 && !(await p.evaluate(() => window.__juego.av().fin))) { await p.waitForTimeout(300); await p.keyboard.press('Space'); } await p.keyboard.up('ArrowRight');
+  await p.keyboard.down('ArrowRight'); const t0 = Date.now(); while (Date.now() - t0 < 50000 && !(await p.evaluate(() => window.__juego.av().fin))) { await p.waitForTimeout(300); await p.keyboard.press('Space'); } await p.keyboard.up('ArrowRight');
   u = await U(); ok(u.a.n === 1 && u.a.fin === 1 && u.a.pers[4] === 1 && u.a.manz >= 4, 'la aventura: ' + JSON.stringify(u.a));
   const hoy = Object.values(u.dias)[0]; ok(hoy && hoy.t > 10 && hoy.r > 0 && hoy.a > 5 && hoy.s === 1, 'el tiempo de hoy, repartido: ' + JSON.stringify(hoy, (k, v) => typeof v === 'number' ? +v.toFixed(1) : v));
   await p.waitForTimeout(6500);

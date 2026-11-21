@@ -9,8 +9,8 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   // paisaje a medida en lo que se ve: llano, luego una escalera que sube de uno en uno con materiales distintos, y llano otra vez
   const c = await L.cam(p), x0 = Math.ceil(c.camC), x1 = Math.floor(c.camC + c.W / c.S) - 1;
   await p.evaluate(([x0, x1]) => { const g = window.__juego.grid(); window.__juego.pigs().length = 1;
-    for (let x = x0 - 1; x <= x1 + 1; x++) for (let y = 0; y < 32; y++) g[y * 48 + x] = y < 21 ? 0 : y === 21 ? 1 : y < 25 ? 2 : 3;
-    const mat = [4, 3, 9, 10, 7, 8, 12, 6]; for (let k = 0; k < 8; k++) for (let j = 0; j <= k; j++) g[(20 - j) * 48 + x0 + 4 + k] = mat[k]; }, [x0, x1]);
+    for (let x = x0 - 1; x <= x1 + 1; x++) for (let y = 0; y < 32; y++) g[y * 96 + x] = y < 21 ? 0 : y === 21 ? 1 : y < 25 ? 2 : 3;
+    const mat = [4, 3, 9, 10, 7, 8, 12, 6]; for (let k = 0; k < 8; k++) for (let j = 0; j <= k; j++) g[(20 - j) * 96 + x0 + 4 + k] = mat[k]; }, [x0, x1]);
   await p.click('#tMusic'); await p.waitForTimeout(300);
   ok(await p.evaluate(() => document.getElementById('tMusic').getAttribute('aria-pressed')) === 'true', 'el botón queda marcado mientras suena');
   const m = await p.evaluate(() => window.__juego.musica()); ok(m && m.x0 === x0 && m.x1 === x1, `va de la columna ${x0} a la ${x1} (lo que se ve)`);

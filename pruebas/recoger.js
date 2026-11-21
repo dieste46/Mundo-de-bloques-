@@ -27,8 +27,9 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
     await p.waitForTimeout(4600); ok(dif(antes, await G()) === 0, 'y al cerrarse sola, el cielo queda limpio');
   } else ok(false, 'no ha salido ninguna serie en 40 intentos');
   // lo que construye por su cuenta no se toca: los bloques de un reto de "pon tantos bloques" se quedan donde los puso
-  let q = { kind: '' };
-  for (let k = 0; k < 40 && q.kind !== 'pon'; k++) { if (k) { await p.click('#rClose'); await p.waitForTimeout(120); } await p.click('#tReto'); await p.waitForTimeout(300); q = await p.evaluate(() => { const r = window.__juego.retoFull(); return { kind: r.kind, b: r.b, n: r.n }; }); }
+  // se pide el reto de poner bloques fijando el sorteo: el juego elige al azar entre sus tipos, quitando el último que salió
+  const pide = async (kind, ultimo) => { const ks = L.KINDS.filter(k => k !== ultimo), i = ks.indexOf(kind); await p.evaluate(v => { const o = Math.random; Math.random = () => { Math.random = o; return v; }; document.getElementById('tReto').click(); }, (i + .5) / ks.length); await p.waitForTimeout(300); return p.evaluate(() => { const r = window.__juego.retoFull(); return { kind: r.kind, b: r.b, n: r.n }; }); };
+  let q = await pide('torre', 'serie'); await p.click('#rClose'); await p.waitForTimeout(150); q = await pide('pon', q.kind);
   if (q.kind === 'pon') { await L.quieta(p); const antes = await G(); await p.click('#b' + q.b); for (const hq of await L.huecos(p, q.n, 1)) await L.tapCell(p, null, null, hq[0], hq[1]);
     await p.waitForTimeout(5200); const d = dif(antes, await G()); ok(d === q.n && await p.evaluate(() => !window.__juego.retoFull()), `sus ${q.n} bloques siguen en su sitio después del reto (cambios: ${d})`); } else ok(false, 'no ha salido un reto de poner bloques');
   ok(!errs.length, 'sin errores de consola' + (errs.length ? ': ' + errs.join(' | ') : ''));

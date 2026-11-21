@@ -13,7 +13,7 @@ const L = require('./lib');
       while (!a.fin && t < 90) { J.paso(1 / 60); t += 1 / 60;
         if (Math.abs(a.x - xAnt) < 1e-4) { quieto += 1 / 60; if (quieto > .4 && a.suelo) { a.salto = .15; saltos++; quieto = 0; } } else quieto = 0; xAnt = a.x; }
       if (a.fin) { out.llega++; out.manz += a.cog; out.saltos += saltos; out.t += t; }
-      else { const g = J.grid(), cx = Math.floor(a.x), cy = Math.floor(a.y), f = []; for (let y = cy - 6; y <= cy + 2; y++) { let s = ''; for (let x = cx - 4; x <= cx + 5; x++) s += (x === cx && y === cy - 1) ? '@' : (g[y * 48 + x] || 0).toString(16); f.push(s); } out.atasco.push({ n, x: +a.x.toFixed(2), y: +a.y.toFixed(2), mapa: f }); }
+      else { const g = J.grid(), cx = Math.floor(a.x), cy = Math.floor(a.y), f = []; for (let y = cy - 6; y <= cy + 2; y++) { let s = ''; for (let x = cx - 4; x <= cx + 5; x++) s += (x === cx && y === cy - 1) ? '@' : (g[y * 96 + x] || 0).toString(16); f.push(s); } out.atasco.push({ n, x: +a.x.toFixed(2), y: +a.y.toFixed(2), mapa: f }); }
       J.sale();
     }
     return out;

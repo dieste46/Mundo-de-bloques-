@@ -17,7 +17,8 @@
 var Guardado = (function () {
   'use strict';
   // Versión 2: la partida guarda también cuántos huevos de estrellas se han abierto. Las copias de la versión 1 se importan igual (sin huevos abiertos).
-  var FORMATO = 'mundobloque', VERSION = 2;
+  // Versión 3: los mundos miden 96 de ancho (antes 48). Las copias anteriores se importan igual: el juego las ensancha al cargarlas.
+  var FORMATO = 'mundobloque', VERSION = 3;
   var CLAVES = { juego: 'bloques2', palabra: 'bloquesPalabra', uso: 'bloquesUso', voz: 'bloquesVoz' };
   var EN_COPIA = ['juego', 'palabra', 'uso'];
   var cerrado = false; // tras importar no se escribe nada más hasta que la página se recarga, para no pisar lo importado

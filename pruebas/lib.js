@@ -7,7 +7,7 @@ const URL = BASE + '?prueba';   // ?prueba activa window.__juego, con lo que las
 const CAP = process.env.CAPTURAS || path.join(os.tmpdir(), 'mundobloque-capturas');
 try { fs.mkdirSync(CAP, { recursive: true }); } catch (e) {}
 const KINDS = ['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta','letra','letra'];
-const COLS = 48, ROWS = 32;
+const COLS = 96, ROWS = 32;
 async function open(viewport, opts = {}) {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport, deviceScaleFactor: opts.dsf || 1, hasTouch: true, isMobile: !!opts.mobile, serviceWorkers: opts.sw ? 'allow' : 'block' });

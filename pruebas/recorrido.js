@@ -9,7 +9,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   // 1. el generador: cada tramo trae cinco manzanas y sus escalones no pasan de dos
   const gen = await p.evaluate(() => { const J = window.__juego, out = { n: 0, mal: [] };
     for (let s = 1; s <= 150; s++) for (let n = 0; n < 3; n++) { const t = J.generaTramo(n, s); out.n++;
-      const top = x => { let y = 0; while (y < 32 && (!t.g[y * 48 + x] || t.g[y * 48 + x] === 7 || t.g[y * 48 + x] === 11 || [4, 8, 9].includes(t.g[y * 48 + x]) && !t.g[(y + 1) * 48 + x])) y++; return y; };
+      const top = x => { let y = 0; while (y < 32 && (!t.g[y * 96 + x] || t.g[y * 96 + x] === 7 || t.g[y * 96 + x] === 11 || [4, 8, 9].includes(t.g[y * 96 + x]) && !t.g[(y + 1) * 96 + x])) y++; return y; };
       if (t.manz.length !== 5) out.mal.push(`semilla ${s} tramo ${n}: ${t.manz.length} manzanas`);
       for (let x = 1; x < 48; x++) if (Math.abs(top(x) - top(x - 1)) > 2) out.mal.push(`semilla ${s} tramo ${n}: escalón de ${Math.abs(top(x) - top(x - 1))} en la columna ${x}`); }
     return out; });
@@ -19,7 +19,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   const sim = await p.evaluate(() => { const J = window.__juego, out = { fin: 0, manz: 0, t: 0, atasco: [] }, N = 120;
     for (let k = 0; k < N; k++) { J.modo('curso'); J.entra(k % 6); const a = J.av(); a.kD = true; let t = 0, xa = a.x, q = 0;
       while (!a.fin && t < 150) { J.paso(1 / 60); t += 1 / 60; if (Math.abs(a.x - xa) < 1e-4) { q += 1 / 60; if (q > .35 && a.suelo) { a.salto = .15; q = 0; } } else q = 0; xa = a.x; }
-      if (a.fin) { out.fin++; out.manz += a.cog; out.t += t; } else { const c = J.curso(), g = J.grid(), cx = Math.floor(a.x), cy = Math.floor(a.y), f = []; for (let y = cy - 5; y <= cy + 3; y++) { let s = ''; for (let x = cx - 4; x <= cx + 5; x++) s += (x === cx && y === cy - 1) ? '@' : (g[y * 48 + x] || 0).toString(16); f.push(s); } out.atasco.push({ sem: c.sem, tramo: c.tramo, x: +a.x.toFixed(1), mapa: f }); }
+      if (a.fin) { out.fin++; out.manz += a.cog; out.t += t; } else { const c = J.curso(), g = J.grid(), cx = Math.floor(a.x), cy = Math.floor(a.y), f = []; for (let y = cy - 5; y <= cy + 3; y++) { let s = ''; for (let x = cx - 4; x <= cx + 5; x++) s += (x === cx && y === cy - 1) ? '@' : (g[y * 96 + x] || 0).toString(16); f.push(s); } out.atasco.push({ sem: c.sem, tramo: c.tramo, x: +a.x.toFixed(1), mapa: f }); }
       J.sale(); }
     J.modo('mundo'); out.N = N; return out; });
   ok(sim.fin === sim.N, `llega al final en ${sim.fin} de ${sim.N} recorridos (media: ${(sim.t / Math.max(1, sim.fin)).toFixed(0)} s y ${(sim.manz / Math.max(1, sim.fin)).toFixed(1)} manzanas de 15 sin buscarlas)`);

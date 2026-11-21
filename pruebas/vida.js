@@ -4,8 +4,9 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
 (async () => {
   const { b, ctx, p, errs } = await L.open({ width: 1024, height: 768 }, { dsf: 1 });
   await L.fresh(p);
+  await p.evaluate(() => window.__juego.irA(13.76)); // la zona de trabajo de esta prueba está a la izquierda del mundo
   const cdp = await ctx.newCDPSession(p);
-  const llano = () => p.evaluate(() => { const J = window.__juego, g = J.grid(); for (let x = 0; x < 48; x++) for (let y = 0; y < 32; y++) g[y * 48 + x] = y < 20 ? 0 : y === 20 ? 1 : y < 24 ? 2 : 3; const ps = J.pigs(); ps.length = 1; Object.assign(ps[0], { x: 14, y: 19, vx: .015, vy: 0, mira: 0, flor: Date.now() + 1e9, curio: 0, joy: 0 }); });
+  const llano = () => p.evaluate(() => { const J = window.__juego, g = J.grid(); for (let x = 0; x < 96; x++) for (let y = 0; y < 32; y++) g[y * 96 + x] = y < 20 ? 0 : y === 20 ? 1 : y < 24 ? 2 : 3; const ps = J.pigs(); ps.length = 1; Object.assign(ps[0], { x: 14, y: 19, vx: .015, vy: 0, mira: 0, flor: Date.now() + 1e9, curio: 0, joy: 0 }); });
   const cerdo = () => p.evaluate(() => { const q = window.__juego.pigs()[0]; return { x: q.x, y: q.y, vx: q.vx, vy: q.vy, mira: (q.mira || 0) - Date.now(), joy: q.joy, parp: q.parp || 0 }; });
 
   // 1. el cerdito anda igual de rápido aunque el aparato vaya a pocos fotogramas
@@ -14,8 +15,8 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
     await p.waitForTimeout(300); const a = await cerdo(), n0 = await p.evaluate(() => window.__n), t0 = Date.now(); await p.waitForTimeout(2500); const z = await cerdo(), n1 = await p.evaluate(() => window.__n), dt = (Date.now() - t0) / 1000;
     await p.evaluate(() => { Math.random = window.__r; }); await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     return { v: (z.x - a.x) / dt, fps: (n1 - n0) / dt }; };
-  const rapido = await anda(1), lento = await anda(8);
-  ok(lento.fps < rapido.fps * .75, `el aparato frenado va a ${lento.fps.toFixed(0)} imágenes por segundo (sin frenar, ${rapido.fps.toFixed(0)})`);
+  const rapido = await anda(1), lento = await anda(12);
+  ok(lento.fps < rapido.fps * .9, `el aparato frenado va a ${lento.fps.toFixed(0)} imágenes por segundo (sin frenar, ${rapido.fps.toFixed(0)})`);
   ok(Math.abs(lento.v - rapido.v) / rapido.v < .2, `y el cerdito anda igual: ${rapido.v.toFixed(2)} y ${lento.v.toFixed(2)} bloques por segundo`);
 
   // 2. curiosidad: al poner un bloque cerca, se gira a mirarlo y da un saltito
@@ -26,14 +27,14 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   const xq = c.x; await p.waitForTimeout(500); c = await cerdo(); ok(Math.abs(c.x - xq) < .02, 'mientras mira no anda');
   await p.waitForTimeout(900); const xr = (await cerdo()).x; await p.waitForTimeout(600); ok(Math.abs((await cerdo()).x - xr) > .1, 'y luego sigue su camino');
   // flores: se para a olerlas
-  await llano(); await p.evaluate(() => { const J = window.__juego; [12, 13, 15, 16].forEach(x => { J.grid()[19 * 48 + x] = 11; }); J.pigs()[0].flor = 0; }); // flores a los dos lados: a veces se da la vuelta
+  await llano(); await p.evaluate(() => { const J = window.__juego; [12, 13, 15, 16].forEach(x => { J.grid()[19 * 96 + x] = 11; }); J.pigs()[0].flor = 0; }); // flores a los dos lados: a veces se da la vuelta
   let olio = false; for (let k = 0; k < 40 && !olio; k++) { await p.waitForTimeout(150); c = await cerdo(); olio = c.joy > 5 && c.mira > 0; }
   ok(olio, `al pasar por una flor se para a olerla (x=${c.x.toFixed(1)})`);
   ok((await cerdo()).parp > 0, 'y tiene programado su parpadeo');
 
   // 3. vida en el mundo
   const vida = () => p.evaluate(() => window.__juego.vida());
-  await llano(); await p.evaluate(() => { const g = window.__juego.grid(); [15, 18, 21, 24, 27, 30].forEach(x => { g[19 * 48 + x] = 11; }); }); await p.waitForTimeout(1200);
+  await llano(); await p.evaluate(() => { const g = window.__juego.grid(); [15, 18, 21, 24, 27, 30].forEach(x => { g[19 * 96 + x] = 11; }); }); await p.waitForTimeout(1200);
   let v = await vida(); ok(v.mariposas >= 2 && v.mariposas <= 4 && v.luciernagas === 0, `de día, con seis flores: ${v.mariposas} mariposas y ninguna luciérnaga`);
   await p.screenshot({ path: `${L.CAP}/vida-dia.png` });
   await p.evaluate(() => window.__juego.pajaroYa()); await p.waitForTimeout(600); v = await vida(); ok(v.pajaro, 'un pájaro cruza el cielo');

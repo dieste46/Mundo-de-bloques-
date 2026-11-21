@@ -25,7 +25,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   // 2. correr hasta la bandera manteniendo la flecha (el terreno natural no corta el paso: escalones de uno, charca, árboles)
   await p.keyboard.down('ArrowRight');
   await p.waitForTimeout(3000); await p.screenshot({ path: `${L.CAP}/av-2-corriendo.png` });
-  let t0 = Date.now(); while (Date.now() - t0 < 30000) { a = await av(); if (a.fin) break; await p.waitForTimeout(300); if (Math.random() < .5) await p.keyboard.press('Space'); }
+  let t0 = Date.now(); while (Date.now() - t0 < 50000) { a = await av(); if (a.fin) break; await p.waitForTimeout(300); if (Math.random() < .5) await p.keyboard.press('Space'); }
   await p.keyboard.up('ArrowRight');
   ok(a.fin, `llega a la bandera en ${((Date.now() - t0) / 1000 + 3).toFixed(0)} s (x=${a.x.toFixed(1)} de ${a.meta.x})`);
   ok(a.cog >= 4, `ha cogido manzanas por el camino: ${a.cog} de 8`);
@@ -38,7 +38,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   ok(await p.evaluate(() => document.getElementById('world').getBoundingClientRect().height) === h0, 'el mundo mide lo mismo con mando que con barra');
 
   // 3. un muro de tres corta el paso; se sale, se arregla y se sigue donde se estaba
-  await p.evaluate(() => { const g = window.__juego.grid(); for (let x = 0; x < 48; x++) for (let y = 0; y < 32; y++) g[y * 48 + x] = y < 20 ? 0 : y === 20 ? 1 : y < 24 ? 2 : 3; for (let k = 1; k <= 3; k++) g[(20 - k) * 48 + 8] = 8; for (let k = 1; k <= 2; k++) g[(20 - k) * 48 + 20] = 3; window.__juego.pigs().length = 0; });
+  await p.evaluate(() => { const g = window.__juego.grid(); for (let x = 0; x < 96; x++) for (let y = 0; y < 32; y++) g[y * 96 + x] = y < 20 ? 0 : y === 20 ? 1 : y < 24 ? 2 : 3; for (let k = 1; k <= 3; k++) g[(20 - k) * 96 + 8] = 8; for (let k = 1; k <= 2; k++) g[(20 - k) * 96 + 20] = 3; window.__juego.pigs().length = 0; });
   await p.click('#jugarBtn'); await p.waitForTimeout(200); await p.click('#persCard .pers:nth-child(6)'); await p.waitForTimeout(300);
   await p.keyboard.down('ArrowRight'); await p.waitForTimeout(4200);
   a = await av(); ok(a.x > 7 && a.x < 8, `el muro de tres ladrillos lo para (x=${a.x.toFixed(2)})`);
@@ -47,7 +47,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   await p.keyboard.up('ArrowRight'); await p.screenshot({ path: `${L.CAP}/av-4-muro.png` });
   await p.click('#jugarBtn'); await p.waitForTimeout(300);
   ok(await vis('blocks') && (await av()).vivo, 'al salir vuelve la barra y el personaje se queda esperando');
-  await p.evaluate(() => { const g = window.__juego.grid(); g[19 * 48 + 7] = 3; g[19 * 48 + 6] = 3; g[18 * 48 + 7] = 3; }); // una escalera: dos y uno... sube 1, 2 y salta al 3
+  await p.evaluate(() => { const g = window.__juego.grid(); g[19 * 96 + 7] = 3; g[19 * 96 + 6] = 3; g[18 * 96 + 7] = 3; }); // una escalera: dos y uno... sube 1, 2 y salta al 3
   const x1 = (await av()).x;
   await p.click('#jugarBtn'); await p.waitForTimeout(200); await p.click('#persCard .pers:nth-child(2)'); await p.waitForTimeout(300);
   a = await av(); ok(Math.abs(a.x - x1) < .01 && a.pers === 1, 'al volver sigue donde estaba, con el personaje nuevo (gato)');

@@ -1,20 +1,21 @@
 // El mundo hace cosas solo: semillas que crecen al amanecer y reacciones entre bloques.
 const L = require('./lib');
-const COLS = 48, ROWS = 32;
+const COLS = 96, ROWS = 32;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) process.exitCode = 1; };
 (async () => {
   const { b, p, errs } = await L.open({ width: 1024, height: 768 }, { dsf: 2 });
   await L.fresh(p);
+  await p.evaluate(() => window.__juego.irA(13.76)); // la zona de trabajo de esta prueba está a la izquierda del mundo
   const dichos = () => p.evaluate(() => window.__dicho || []);
   await p.evaluate(() => { window.__dicho = []; const s = window.speechSynthesis, o = s.speak.bind(s); s.speak = u => { window.__dicho.push(u.text); try { o(u); } catch (e) {} }; });
   const G = () => p.evaluate(() => window.__juego.grid().slice());
-  const pon = (cells) => p.evaluate(cs => { const g = window.__juego.grid(); cs.forEach(([x, y, v]) => { g[y * 48 + x] = v; }); }, cells);
+  const pon = (cells) => p.evaluate(cs => { const g = window.__juego.grid(); cs.forEach(([x, y, v]) => { g[y * 96 + x] = v; }); }, cells);
   ok(await p.evaluate(() => document.querySelectorAll('#blocks .slot').length) === 14, 'el inventario tiene 14 bloques (con la semilla)');
   ok(await p.evaluate(() => document.getElementById('b14').getAttribute('aria-label')) === 'Semilla', 'el botón nuevo se llama Semilla');
 
   // un trozo de mundo limpio y plano para trabajar: columnas 16..30, suelo de hierba en la fila 20
   await p.evaluate(() => { const g = window.__juego.grid(); window.__juego.pigs().length = 0;
-    for (let x = 14; x <= 32; x++) for (let y = 0; y < 32; y++) g[y * 48 + x] = y < 20 ? 0 : y === 20 ? 1 : y < 24 ? 2 : 3; });
+    for (let x = 8; x <= 38; x++) for (let y = 0; y < 32; y++) g[y * 96 + x] = y < 20 ? 0 : y === 20 ? 1 : y < 24 ? 2 : 3; }); // con margen, para que no haya agua del mundo generado pegada a la zona
   await p.evaluate(() => { const d = JSON.parse(localStorage.getItem('bloques2')); }); 
   // 1. plantar con el dedo
   await p.click('#b14'); await p.waitForTimeout(100);
@@ -73,7 +74,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   await p.evaluate(() => window.__juego.reacOn(false));
 
   // 6. volver horas después: lo plantado ha crecido sin ruido y la voz lo cuenta al primer toque en el mundo
-  await p.evaluate(() => { const g = window.__juego.grid(); g[19 * 48 + 24] = 14; });
+  await p.evaluate(() => { const g = window.__juego.grid(); g[19 * 96 + 24] = 14; });
   await toca(31, 15); // un cambio cualquiera para que se guarde
   await p.evaluate(() => { const d = JSON.parse(localStorage.getItem('bloques2')); d.mundos[d.mundo].t = Date.now() - 7 * 36e5; localStorage.setItem('bloques2', JSON.stringify(d)); });
   await p.reload(); await p.waitForTimeout(1500);

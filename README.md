@@ -27,7 +27,7 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 - **Tres mundos (🌍).** El botón abre tres huecos con su miniatura; tocar uno entra en él y, si está vacío, lo crea. Cada mundo guarda por separado sus bloques, sus cerditos, su hora y su vista; las estrellas y los niveles son del niño y valen en todos. Cambiar un mundo ya hecho por uno nuevo (🔄) pide la multiplicación del adulto, para que ningún toque suelto borre nada.
 - **Tres tamaños de bloque (🔍).** La lupa de la columna izquierda pasa de bloques medianos a grandes, de grandes a pequeños y vuelta; también se cambia pellizcando con dos dedos (un paso por gesto). Los puntos bajo la lupa indican el tamaño actual y se recuerda en cada aparato. Si un reto no cabe en la pantalla, el juego aleja la vista él solo y, al cerrar el reto, vuelve al tamaño elegido.
 - **Deshacer (↩️).** Devuelve el mundo a como estaba justo antes del último cambio: un bloque, un picotazo o una casa. Tocarlo otra vez lo rehace, así que por mucho que se pulse nunca se pierde más de un paso.
-- **El mundo es grande: 48 bloques de ancho por 32 de alto.** El suelo queda hacia la mitad: por encima hay cielo de sobra para construir alto y por debajo, tierra y piedra para picar hondo, con oro escondido (más cuanto más abajo).
+- **El mundo es grande: 96 bloques de ancho por 32 de alto.** (Al principio medía 48 de ancho: los mundos guardados de entonces se ensanchan solos al abrirlos; quedan en el centro, intactos, con terreno nuevo a los dos lados.) El suelo queda hacia la mitad: por encima hay cielo de sobra para construir alto y por debajo, tierra y piedra para picar hondo, con oro escondido (más cuanto más abajo).
 - **Arrastrar mueve el mundo**, no pinta: deslizar el dedo desplaza el paisaje a los lados y también arriba y abajo. Mientras la vista se mueve aparecen dos deslizadores (abajo el de izquierda-derecha, a la derecha el de arriba-abajo) que indican en qué parte del mundo estás; al parar se apagan solos. Cuando empieza un reto, la vista va sola hasta él. No hay flechas ni botones de desplazamiento.
 
 ## Aventura (botón 🎮)
@@ -45,7 +45,7 @@ El movimiento del personaje va por reloj (bloques por segundo), así que corre i
 
 ### El recorrido largo (🏁)
 
-En el panel de personajes se elige dónde jugar: 🌍 en su mundo, o 🏁 un recorrido largo que hace el juego. El recorrido son tres tramos seguidos (prado, playa y nieve), cada uno del ancho de un mundo: al llegar a la flecha del final de un tramo se pasa al siguiente, y en el tercero está la bandera.
+En el panel de personajes se elige dónde jugar: 🌍 en su mundo, o 🏁 un recorrido largo que hace el juego. El recorrido son tres tramos seguidos (prado, playa y nieve), cada uno de 48 bloques de largo (la mitad que un mundo): al llegar a la flecha del final de un tramo se pasa al siguiente, y en el tercero está la bandera.
 
 - **Qué hay:** escalones de uno (se suben solos) y de dos (hay que saltar), charcos (se saltan; si se cae dentro, se sale saltando) y plataformas en el aire con manzanas encima. No hay nada que construir ni forma de perder.
 - **Manzanas:** cinco por tramo, quince en total; la voz sigue la cuenta de un tramo a otro. Llegar al final da una estrella; con las quince, dos.
@@ -81,7 +81,7 @@ Dificultad por tramos (nivel 0–3 fácil, 4–7 medio, 8+ difícil): modelos de
 
 - **Exportar** deja en un cuadro de texto la copia completa: los tres mundos, las estrellas, los niveles, la palabra de la semana y los contadores de «Cómo juega» (los ajustes de voz no, que son de cada aparato). Se puede copiar y, donde el navegador lo permite, guardar como archivo `mundobloque-AAAA-MM-DD.json`. En iOS 12 solo copiar.
 - **Importar** acepta la copia pegada o su archivo, comprueba que es válida, dice de cuándo es y qué trae, y pide confirmación: sustituye todo lo guardado en ese aparato. Después el juego se recarga con lo importado.
-- La copia es un JSON con `formato: "mundobloque"` y `version` (ahora la 2, que añade los huevos de estrellas abiertos; las de la versión 1 se importan igual). Una copia de una versión más nueva que el juego se rechaza con un aviso.
+- La copia es un JSON con `formato: "mundobloque"` y `version` (ahora la 3: la 2 añadió los huevos de estrellas abiertos y la 3, los mundos de 96 de ancho; las copias anteriores se importan igual y el juego las pone al día). Una copia de una versión más nueva que el juego se rechaza con un aviso.
 - Está en los ajustes, detrás de la multiplicación, para que el niño no llegue por accidente.
 
 Sirve para pasar la partida de un aparato a otro o de una dirección web a otra, y como copia por si Safari borra los datos.
