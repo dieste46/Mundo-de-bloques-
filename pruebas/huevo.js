@@ -41,7 +41,10 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   // con un reto abierto, el huevo se esconde y no cuenta toques
   await p.click('#tReto'); await p.waitForTimeout(400); ok((await H()).visible === false, 'con un reto abierto, el huevo espera escondido');
   await p.click('#rClose'); await p.waitForTimeout(300);
-  h = await H(); for (let k = 0; k < 4; k++) await toca(h.x, h.y); await p.waitForTimeout(300);
+  // el reto puede haberse llevado la vista lejos (busca sitio donde lo haya) y ahí se queda: se vuelve hasta el huevo antes de tocarlo
+  h = await H(); await p.evaluate(h => { const J = window.__juego, c = J.cam(); J.irA(h.x - c.W / c.S / 2, h.y - c.H / c.S / 2); }, h); await p.waitForTimeout(250);
+  ok(JSON.stringify(await H()) === JSON.stringify(h), 'al cerrar el reto el huevo está en su sitio, sobre el suelo, sin quedarse flotando');
+  for (let k = 0; k < 4; k++) await toca(h.x, h.y); await p.waitForTimeout(300);
   ok(await p.evaluate(() => window.__juego.huevos()) === 2 && (await p.evaluate(() => window.__juego.nacido())).k === 7 && (await dichos()).some(t => /¡Cuatro! ¡Es un perro!/.test(t)), 'el segundo huevo da el perro, al cuarto toque');
   await p.reload(); await p.waitForTimeout(600);
   ok(await p.evaluate(() => window.__juego.huevos()) === 2, 'al recargar se acuerda de los huevos abiertos');
