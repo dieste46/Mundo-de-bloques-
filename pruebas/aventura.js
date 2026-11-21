@@ -40,6 +40,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   // 3. un muro de tres corta el paso; se sale, se arregla y se sigue donde se estaba
   await p.evaluate(() => { const g = window.__juego.grid(); for (let x = 0; x < 96; x++) for (let y = 0; y < 32; y++) g[y * 96 + x] = y < 20 ? 0 : y === 20 ? 1 : y < 24 ? 2 : 3; for (let k = 1; k <= 3; k++) g[(20 - k) * 96 + 8] = 8; for (let k = 1; k <= 2; k++) g[(20 - k) * 96 + 20] = 3; window.__juego.pigs().length = 0; });
   await p.click('#jugarBtn'); await p.waitForTimeout(200); await p.click('#persCard .pers:nth-child(6)'); await p.waitForTimeout(300);
+  await p.evaluate(() => { window.__juego.av().pots.length = 0; }); // sin potenciadores: aquí se miden los muros con el paso y el salto normales (los potenciadores tienen su prueba)
   await p.keyboard.down('ArrowRight'); await p.waitForTimeout(4200);
   a = await av(); ok(a.x > 7 && a.x < 8, `el muro de tres ladrillos lo para (x=${a.x.toFixed(2)})`);
   await p.keyboard.press('Space'); await p.waitForTimeout(900); a = await av(); ok(a.x < 8, 'ni saltando lo pasa');

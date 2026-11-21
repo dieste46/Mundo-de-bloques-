@@ -1442,7 +1442,7 @@ const bandera=sprite(['....pP..........','....pPRRRRRR....','....pPRRRRRRRR..','
   '....pP..........','....pP..........','....pP..........','....pP..........','....pP..........','....pP..........','....pP..........','...pppPP........'],
   {P:'#f1ead8',p:'#a89f88',R:'#e8414b',Y:'#ffd43b'});
 const ANDA=4.6,GRAV=26,SALTO=11,NMANZ=8; // bloques por segundo, bloques por segundo al cuadrado... El salto sube algo más de dos bloques y cruza tres.
-const av={on:false,vivo:false,fin:false,pers:0,x:0,y:0,vy:0,suelo:false,cara:1,pI:false,pD:false,kI:false,kD:false,salto:0,coyote:0,paso:0,yc:0,manz:[],cog:0,meta:null,empuje:0,avisoT:0,tronco:null};
+const av={on:false,vivo:false,fin:false,pers:0,x:0,y:0,vy:0,suelo:false,cara:1,pI:false,pD:false,kI:false,kD:false,salto:0,coyote:0,paso:0,yc:0,manz:[],cog:0,meta:null,empuje:0,avisoT:0,tronco:null,pots:[],pod:null,tam:1,plats:[],muelles:[],plat:null};
 // el personaje ocupa una caja de 0,6 de ancho por 0,8 de alto; (x, y) es el centro de sus pies
 function solidoP(x,y){if(x<0||x>=COLS||y>=ROWS)return true;if(y<0)return false;const i=y*COLS+x,v=grid[i];return !!v&&!NOSOLID[v]&&!av.tronco[i]}
 function chocaP(x,y){const x1=Math.floor(x+.299),y1=Math.floor(y-.001);
@@ -1467,11 +1467,36 @@ function pisoDe(x){for(let y=0;y<ROWS;y++){const v=grid[y*COLS+x];if(v&&!NOSOLID
 const TRAMOS=3,MANZ_TRAMO=5;
 const flecha=sprite(['................','................','..........Y.....','..YYYYYYYYYY....','..YYYYYYYYYYY...','..YYYYYYYYYYYY..','..YYYYYYYYYYY...','..YYYYYYYYYY....','..........Y.....','......Bb........','......Bb........','......Bb........','......Bb........','......Bb........','......Bb........','.....BBbb.......'],
   {Y:'#ffd43b',B:'#8a5a36',b:'#6b4626'});
+// Potenciadores: cuatro objetos que flotan en el camino. Al cogerlos, durante diez segundos el personaje corre más (rayo), salta más alto (pluma),
+// se hace gigante (poción: sube solo los escalones de dos, alcanza las manzanas altas y hace temblar el suelo) o atrae las manzanas (imán).
+// Son solo para divertirse: no hacen falta para llegar ni para ganar la estrella, y se acaban sin castigo.
+const POT_S=10;
+const POTS={
+  rayo:{dice:'¡Un rayo! ¡Ahora corres muchísimo!',col:'#ffd43b',spr:sprite(['................','.........YYYY...','........YYYY....','.......YYYY.....','......YYYY......','.....YYYYYYYY...','....YYYYYYYY....','........yYYY....','.......yYYY.....','......yYYY......','.....yYYY.......','.....yYY........','....yYY.........','....yY..........','................','................'],{Y:'#ffd43b',y:'#f2a51e'})},
+  pluma:{dice:'¡Una pluma! ¡Ahora saltas altísimo!',col:'#dfeaff',spr:sprite(['................','...........WW...','.........WWWWW..','........WWWbWW..','.......WWWbWWW..','......WWWbWWW...','.....WWWbWWWW...','.....WWbWWWW....','....WWbWWWW.....','....WbWWWW......','...WbWWW........','...bWW..........','..b.............','.b..............','................','................'],{W:'#ffffff',b:'#8fa6c9'})},
+  pocion:{dice:'¡Una poción! ¡Ahora eres gigante!',col:'#7ed957',spr:sprite(['................','......CCCC......','......CCCC......','.......gg.......','.......gg.......','......gggg......','.....gGGGGg.....','....gGGGGGGg....','...gGGGwGGGGg...','...gGGwGGGGGg...','...gGGGGGGGGg...','...gGGGGGGGGg...','....gGGGGGGg....','.....gggggg.....','................','................'],{C:'#b9793f',g:'#d9f0f5',G:'#7ed957',w:'#ffffff'})},
+  iman:{dice:'¡Un imán! ¡Las manzanas vienen solas!',col:'#ff7a85',spr:sprite(['................','....RRRRRRRR....','...RRRRRRRRRR...','..RRRRRRRRRRRR..','..RRRR....RRRR..','..RRR......RRR..','..RRR......RRR..','..RRR......RRR..','..RRR......RRR..','..RRR......RRR..','..GGG......GGG..','..GGG......GGG..','..GGG......GGG..','................','................','................'],{R:'#e8414b',G:'#d9d9e0'})}};
+const POT_K=Object.keys(POTS);
+// Lo que se mueve en el recorrido largo: tablas (balsas que cruzan los charcos anchos y ascensores que suben hasta una manzana) y muelles.
+// Las tablas solo sostienen desde arriba: por debajo y por los lados se atraviesan, así que nunca cortan el paso ni aplastan.
+const tabla=sprite(['DDDDDDDDDDDDDDDD','DMMMmMMMMMMmMMMD','DMMMMMMMmMMMMMMD','DmMMMMMMMMMMMmMD','DDDDDDDDDDDDDDDD','..d..........d..','................','................','................','................','................','................','................','................','................','................'],{M:'#e0a04a',m:'#c98a35',D:'#7a4a22',d:'#5c3817'});
+const muelleSpr=[['................','................','................','................','................','................','..RRRRRRRRRRRR..','..rrrrrrrrrrrr..','....G......G....','.....GGGGGG.....','....G......G....','.....GGGGGG.....','....G......G....','.....GGGGGG.....','...DDDDDDDDDD...','...DDDDDDDDDD...'],['................','..RRRRRRRRRRRR..','..rrrrrrrrrrrr..','....G......G....','.....G....G.....','......GGGG......','.....G....G.....','....G......G....','.....G....G.....','......GGGG......','.....G....G.....','....G......G....','.....GGGGGG.....','.....GGGGGG.....','...DDDDDDDDDD...','...DDDDDDDDDD...']].map(f=>sprite(f,{R:'#e8414b',r:'#b02a35',G:'#c9ced6',D:'#5b616e'}));
+function avMueve(dt){const a=av;
+  a.plats.forEach(p=>{if(p.q>0){p.q-=dt;return}
+    const ant=p.eje?p.y:p.x;let n=ant+p.v*dt*p.dir;
+    if(n>=p.b){n=p.b;p.dir=-1;p.q=.9}else if(n<=p.a){n=p.a;p.dir=1;p.q=.9}
+    if(p.eje){ // ascensor: al subir recoge al personaje si lo encuentra de pie en su camino
+      if(a.plat!==p&&n<ant&&!a.fin&&a.vy>=0&&a.x>p.x-.3&&a.x<p.x+p.w+.3&&a.y<=ant+.02&&a.y>=n-.001)a.plat=p;
+      p.y=n;
+      if(a.plat===p){if(n<ant&&chocaP(a.x,n))a.plat=null;else{a.y=n;a.vy=0;a.suelo=true}}}
+    else{p.x=n;if(a.plat===p&&!chocaP(a.x+n-ant,a.y))a.x+=n-ant}}); // balsa: se lleva al personaje con ella
+}
 function generaTramo(n,semilla){
   const r=rng(semilla*7919+n*104729+13),g=new Array(COLS*ROWS).fill(0),TOP=[1,6,12][n%3],SUB=[2,6,12][n%3],PLAT=[4,8,9][n%3];
-  const alt=new Array(COLS).fill(20),charco=new Array(COLS).fill(false),plat=[];let manz=[],x=4,a=20;
+  const alt=new Array(COLS).fill(20),charco=new Array(COLS).fill(false),plat=[],balsas=[];let manz=[],x=4,a=20;
   while(x<TRAMO-6){const t=r(),queda=TRAMO-6-x;
-    if(t<.2&&queda>=4){const w=2+(r()<.4?1:0);for(let k=0;k<w;k++){alt[x+k]=a+2;charco[x+k]=true}   // charco
+    if(t<.2&&queda>=4){const ancho=!balsas.length&&queda>=8&&r()<(n?.4:.25),w=ancho?5:2+(r()<.4?1:0);for(let k=0;k<w;k++){alt[x+k]=a+2;charco[x+k]=true}   // charco; el ancho no se salta: se cruza en balsa (o mojándose)
+      if(ancho)balsas.push([x,a,w]);
       if(r()<.6)manz.push({x:x+(w>>1),y:a-2});x+=w;alt[x]=a;x++}
     else if(t<.4&&queda>=5){for(let k=0;k<5;k++)alt[x+k]=a;plat.push([x+1,a-2,3]);manz.push({x:x+2,y:a-3});           // plataforma, y a veces otra más alta detrás
       if(n>0&&r()<.5&&queda>=7){plat.push([x+4,a-4,2]);manz.push({x:x+4,y:a-5});alt[x+5]=alt[x+6]=a;x+=2}x+=5}
@@ -1487,16 +1512,30 @@ function generaTramo(n,semilla){
   for(let k=0;manz.length<MANZ_TRAMO&&k<400;k++){const cx=5+(r()*(TRAMO-11)|0);if(!charco[cx]&&!manz.some(m=>Math.abs(m.x-cx)<3)&&!g[(alt[cx]-1)*COLS+cx])manz.push({x:cx,y:alt[cx]-1})}
   manz.sort((p,q)=>p.x-q.x);
   if(TOP===1)for(let cx=4;cx<TRAMO-4;cx++)if(!charco[cx]&&r()<.1&&!g[(alt[cx]-1)*COLS+cx]&&!manz.some(m=>m.x===cx))g[(alt[cx]-1)*COLS+cx]=11; // unas flores en el prado
-  return{g,manz:manz.map(m=>({x:m.x,y:m.y,c:false})),ini:alt[1],fin:alt[TRAMO-2]};
+  // lo que se mueve: una balsa en cada charco ancho; hasta dos manzanas del suelo se suben arriba, una con un muelle debajo y otra con un ascensor
+  const plats=balsas.map(q=>({x:q[0],y:q[1],w:2,eje:0,a:q[0],b:q[0]+q[2]-2,v:1.5,dir:1,q:.6})),muelles=[],pots=[];
+  const libre=(cx,alto)=>{for(let dx=-1;dx<=1;dx++){if(alt[cx+dx]!==alt[cx]||charco[cx+dx])return false;for(let k=1;k<=alto;k++){const v=g[(alt[cx]-k)*COLS+cx+dx];if(v&&v!==11)return false}}return true};
+  const limpia=cx=>{for(let dx=-1;dx<=1;dx++)if(g[(alt[cx]-1)*COLS+cx+dx]===11)g[(alt[cx]-1)*COLS+cx+dx]=0};
+  let hechos=0;
+  manz.forEach(m=>{if(hechos>=2||m.y!==alt[m.x]-1||!libre(m.x,8)||manz.some(o=>o!==m&&Math.abs(o.x-m.x)<3)||r()<.25)return;const s=alt[m.x];limpia(m.x);
+    if((hechos+n)%2===0){muelles.push({x:m.x,y:s-1,t:0});m.y=s-5}
+    else{plats.push({x:m.x-.5,y:s,w:2,eje:1,a:s-4.6,b:s,v:2,dir:-1,q:.8});m.y=s-6}
+    hechos++});
+  const hueco=cx=>!charco[cx]&&(!g[(alt[cx]-1)*COLS+cx]||g[(alt[cx]-1)*COLS+cx]===11)&&!manz.some(m=>Math.abs(m.x-cx)<2&&m.y>=alt[cx]-2)&&!muelles.some(m=>Math.abs(m.x-cx)<2)&&!plats.some(q=>q.eje&&Math.abs(q.x+.5-cx)<3);
+  const ponPot=cx=>{limpia(cx);pots.push({x:cx,y:alt[cx]-1,t:POT_K[(semilla+n)%POT_K.length],c:false})};
+  for(let k=0;k<300&&!pots.length;k++){const cx=5+(r()*(TRAMO-10)|0);if(hueco(cx)&&libre(cx,3))ponPot(cx)}
+  for(let cx=5;cx<TRAMO-4&&!pots.length;cx++)if(hueco(cx))ponPot(cx); // un tramo sin apenas llanos: en la primera columna firme
+  for(let cx=5;cx<TRAMO-4&&!pots.length;cx++)if(!charco[cx]&&!g[(alt[cx]-1)*COLS+cx])ponPot(cx);
+  return{g,manz:manz.map(m=>({x:m.x,y:m.y,c:false})),ini:alt[1],fin:alt[TRAMO-2],plats,muelles,pots};
 }
 function cargaTramo(){const c=av.curso,t=generaTramo(c.tramo,c.sem);
-  grid=t.g;troncos();av.manz=t.manz;av.x=1.5;av.y=t.ini;av.vy=0;av.cara=1;av.yc=av.y;av.suelo=false;av.meta={x:TRAMO-2,y:t.fin};
+  grid=t.g;troncos();av.manz=t.manz;av.plats=t.plats;av.muelles=t.muelles;av.pots=t.pots;av.plat=null;av.x=1.5;av.y=t.ini;av.vy=0;av.cara=1;av.yc=av.y;av.suelo=false;av.meta={x:TRAMO-2,y:t.fin};
   camC=0;camR=av.y-H/S*.62;clampCam();pintaManz();av.fundido=Date.now()}
 function entraCurso(){
   av.mio={grid,pigs,night,camC,camR};pigs=[];night=false;nightAmt=0;particles=[];anchoVista=TRAMO;
-  av.curso={tramo:0,sem:(Date.now()&0xffff)+1};av.cog=0;av.fin=false;av.vivo=true;cu('curso');cargaTramo();
+  av.curso={tramo:0,sem:(Date.now()&0xffff)+1};av.cog=0;av.fin=false;av.vivo=true;av.pod=null;av.tam=1;cu('curso');cargaTramo();
 }
-function saleCurso(){const m=av.mio;if(!m)return;grid=m.grid;pigs=m.pigs;night=m.night;nightAmt=night?1:0;camC=m.camC;camR=m.camR;av.mio=av.curso=null;av.vivo=false;particles=[];anchoVista=COLS;clampCam();
+function saleCurso(){const m=av.mio;if(!m)return;grid=m.grid;pigs=m.pigs;night=m.night;nightAmt=night?1:0;camC=m.camC;camR=m.camR;av.mio=av.curso=null;av.vivo=false;av.plats=[];av.muelles=[];av.pots=[];av.pod=av.plat=null;av.tam=1;particles=[];anchoVista=COLS;clampCam();
   $('tNight').textContent=night?'☀️':'🌙'}
 function nuevaCarrera(){
   av.x=1.5;av.y=pisoDe(1);av.vy=0;av.cara=1;av.cog=0;av.fin=false;av.vivo=true;av.yc=av.y;uso.a.n++;usoSucio=true;
@@ -1505,6 +1544,9 @@ function nuevaCarrera(){
   for(let k=1;k<=NMANZ;k++){const x=Math.round(3+k*(COLS-8)/(NMANZ+1)),p=pisoDe(x);
     const alta=k%3===0&&p>=4&&!solidoP(x,p-2)&&!solidoP(x,p-3); // una de cada tres queda en el aire: hay que saltar para cogerla
     av.manz.push({x,y:alta?p-3:p-1,c:false})}
+  const tipos=POT_K.slice().sort(()=>Math.random()-.5);
+  av.pots=[0,3,6].map((k,i)=>{const x=Math.round(3+(k+.5)*(COLS-8)/(NMANZ+1));return{x,y:pisoDe(x)-1,t:tipos[i],c:false}}).filter(p=>p.y>=1);
+  av.pod=av.plat=null;av.tam=1;av.plats=[];av.muelles=[];
   pintaManz();
 }
 function pintaManz(){const e=$('avManz');e.textContent='';av.manz.forEach(m=>{const c=lienzo(16,16);c.getContext('2d').drawImage(tex.manzana,0,0);if(!m.c)c.className='no';e.appendChild(c)})}
@@ -1521,31 +1563,49 @@ function saleAventura(){
   $('blocks').hidden=$('tools').hidden=false;$('mando').hidden=true;$('jugarBtn').setAttribute('aria-pressed',false);padPinta();resize();save();
 }
 function avPaso(dt){const a=av;
+  if(a.pod&&!a.fin){a.pod.s-=dt;if(a.pod.s<=0){a.pod=null;if(vcfg.son!==2)tono(660,330,.25,'sine',.07)}} // se acaba sin más: un sonido que baja
+  const pod=a.pod?a.pod.t:'',gig=pod==='pocion';a.tam+=((gig?1.8:1)-a.tam)*Math.min(1,dt*9);
   const dir=a.fin?0:((a.pD||a.kD)?1:0)-((a.pI||a.kI)?1:0);if(dir)a.cara=dir;
   a.coyote=a.suelo?.1:a.coyote-dt;
-  if(a.salto>0){a.salto-=dt;if(a.coyote>0&&!a.fin){a.vy=-SALTO;a.suelo=false;a.coyote=0;a.salto=0;if(vcfg.son!==2)tono(420,760,.12,'sine',.09)}}
+  if(a.salto>0){a.salto-=dt;if(a.coyote>0&&!a.fin){a.vy=-SALTO*(pod==='pluma'?1.3:1);a.suelo=false;a.plat=null;a.coyote=0;a.salto=0;if(vcfg.son!==2)tono(420,pod==='pluma'?1100:760,.12,'sine',.09)
+      if(pod==='pluma'&&particles.length<300)for(let k=0;k<6;k++)particles.push({x:a.x-.3+Math.random()*.6,y:a.y-.2,vx:(Math.random()-.5)*.05,vy:-.02-Math.random()*.03,life:26,col:'#ffffff'})}}
   a.vy=Math.min(a.vy+GRAV*dt,20);
-  // de lado: si choca con un escalón de un bloque, lo sube solo con un saltito; con algo más alto, se para
-  if(dir){const nx=a.x+dir*ANDA*dt;
+  if(a.plats.length)avMueve(dt);
+  // de lado: si choca con un escalón de un bloque, lo sube solo con un saltito; con algo más alto, se para (el gigante sube solo también los de dos)
+  if(dir){const nx=a.x+dir*ANDA*(pod==='rayo'?1.65:1)*dt;
+    if(pod==='rayo'&&a.suelo&&particles.length<300&&Math.random()<dt*30)particles.push({x:a.x-dir*.4,y:a.y-.25-Math.random()*.4,vx:-dir*.05,vy:-.03,life:14,col:'#ffd43b'});
     if(!chocaP(nx,a.y)){a.x=nx;a.paso+=dt;a.empuje=0}
     else{const fx=Math.floor(nx+dir*.3),r=Math.floor(a.y-.001),pegado=(dir>0?fx-.3:fx+1.3)-dir*.001; // fx: la columna con la que choca
       if(!chocaP(pegado,a.y))a.x=pegado;
       if(a.suelo){let alto=0;while(alto<4&&solidoP(fx,r-alto))alto++;
         if(alto===1&&!solidoP(Math.floor(a.x),r-1)){a.vy=-8.2;a.suelo=false}
+        else if(gig&&alto===2&&!solidoP(Math.floor(a.x),r-1)&&!solidoP(Math.floor(a.x),r-2)){a.vy=-11.6;a.suelo=false}
         else if(alto>=2){a.empuje+=dt;if(a.empuje>1.1&&Date.now()-a.avisoT>(alto>2?25000:15000)){a.avisoT=Date.now();a.empuje=0;
           if(alto===2)say('Para subir ahí, salta.');
           else if(a.curso)say('Por ahí no se puede. Prueba a saltar desde un poco más atrás.');
           else{uso.a.muro++;usoSucio=true;say('Es muy alto para saltar. Toca el mando y construye una escalera.');const b=$('jugarBtn');b.classList.add('ask');setTimeout(()=>b.classList.remove('ask'),2500)}}}}}}
   // de arriba abajo
   const ny=a.y+a.vy*dt;
-  if(!chocaP(a.x,ny)){a.y=ny;a.suelo=false}
-  else if(a.vy>0){a.y=Math.floor(ny-.001);a.vy=0;a.suelo=true} // cae sobre un bloque: los pies quedan justo encima
+  a.plat=null;
+  if(!chocaP(a.x,ny)){const p=a.vy>=0&&a.plats.find(p=>a.x>p.x-.3&&a.x<p.x+p.w+.3&&a.y<=p.y+.15&&ny>=p.y); // sobre una tabla solo se cae desde arriba
+    if(p){a.y=p.y;a.vy=0;a.suelo=true;a.plat=p}else{a.y=ny;a.suelo=false}}
+  else if(a.vy>0){const golpe=a.vy;a.y=Math.floor(ny-.001);a.vy=0;a.suelo=true // cae sobre un bloque: los pies quedan justo encima
+    if(gig&&golpe>7){if(vcfg.son!==2){ruido(.2,90,1,'lowpass',.3);tono(110,50,.22,'sine',.16)}pigs.forEach(p=>{if(Math.abs(p.x-a.x)<8)p.vy=-.11}); // el gigante hace temblar el suelo
+      if(particles.length<300)for(let k=0;k<10;k++)particles.push({x:a.x-.8+Math.random()*1.6,y:a.y-.15,vx:(Math.random()-.5)*.1,vy:-.03-Math.random()*.05,life:22,col:'#e6d5bb'})}}
   else{a.y=Math.floor(ny-.8)+1.8;a.vy=0}                       // se da en la cabeza
   if(a.suelo)a.yc=a.y;else if(Math.abs(a.y-a.yc)>4)a.yc=a.y;
   if(a.fin)return;
-  // manzanas: cada una, su número en voz alta y flotando
-  a.manz.forEach(m=>{if(m.c||Math.abs(m.x+.5-a.x)>.75||Math.abs(m.y+.5-(a.y-.4))>.8)return;m.c=true;a.cog++;
-    ult={x:m.x,y:m.y};cifra(a.cog);say(a.cog===1?'Una':NUM[a.cog][0].toUpperCase()+NUM[a.cog].slice(1),false);if(vcfg.son!==2){tono(880,1320,.1,'triangle',.1);tono(1320,1760,.12,'triangle',.07,.08)}
+  // muelles: pisarlos (o caerles encima) lanza al personaje bien alto
+  a.muelles.forEach(m=>{if(a.vy<0||Math.abs(a.x-m.x-.5)>.55||a.y<m.y+.5||a.y>m.y+1.01)return;
+    a.vy=-SALTO*1.5;a.suelo=false;a.coyote=0;a.plat=null;m.t=Date.now();if(vcfg.son!==2){tono(160,640,.22,'sine',.1);tono(320,960,.18,'triangle',.05,.03)}});
+  // potenciadores
+  a.pots.forEach(p=>{if(p.c||Math.abs(p.x+.5-a.x)>(gig?1.2:.8)||Math.abs(p.y+.5-(a.y-.4))>(gig?1.5:.9))return;p.c=true;a.pod={t:p.t,s:POT_S};
+    const P=POTS[p.t];say(P.dice);if(vcfg.son!==2)[523,659,784,1047,1319].forEach((f,i)=>tono(f,f*1.02,.09,'square',.05,i*.05));
+    for(let i=0;i<16;i++){const g=i/16*6.283;particles.push({x:p.x+.5,y:p.y+.5,vx:Math.cos(g)*.09,vy:Math.sin(g)*.09-.06,life:30,col:P.col})}});
+  if(pod==='iman')a.manz.forEach(m=>{if(m.c)return;const dx=a.x-.5-m.x,dy=a.y-.9-m.y,d=Math.hypot(dx,dy);if(d<5&&d>.01){const k=Math.min(1,9*dt/d);m.x+=dx*k;m.y+=dy*k}}); // el imán: las manzanas cercanas vuelan hacia él
+  // manzanas: cada una, su número en voz alta y flotando (el gigante llega más lejos)
+  a.manz.forEach(m=>{if(m.c||Math.abs(m.x+.5-a.x)>(gig?1.3:.75)||Math.abs(m.y+.5-(a.y-(gig?.9:.4)))>(gig?1.7:.8))return;m.c=true;a.cog++;
+    ult={x:Math.round(m.x),y:Math.round(m.y)};cifra(a.cog);say(a.cog===1?'Una':NUM[a.cog][0].toUpperCase()+NUM[a.cog].slice(1),false);if(vcfg.son!==2){tono(880,1320,.1,'triangle',.1);tono(1320,1760,.12,'triangle',.07,.08)}
     const e=$('avManz').children[a.manz.indexOf(m)];if(e)e.className=''});
   // la bandera
   if(a.x>a.meta.x-.3&&a.curso&&a.curso.tramo<TRAMOS-1){ // fin de un tramo del recorrido: se pasa al siguiente sin parar la cuenta de manzanas
@@ -1564,9 +1624,19 @@ function avPaso(dt){const a=av;
     save();setTimeout(()=>{if(av.on&&av.fin)saleAventura()},6000)}
 }
 function avDibuja(ahora){const a=av;
+  a.plats.forEach(p=>{if(p.eje){ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect((p.x+.12)*S,p.a*S,S*.06,(p.b-p.a)*S);ctx.fillRect((p.x+p.w-.18)*S,p.a*S,S*.06,(p.b-p.a)*S)} // los raíles del ascensor
+    for(let k=0;k<p.w;k++)ctx.drawImage(tabla,(p.x+k)*S,p.y*S,S,S)});
+  a.muelles.forEach(m=>ctx.drawImage(muelleSpr[ahora-m.t<220?1:0],m.x*S,m.y*S,S,S));
+  a.pots.forEach(p=>{if(p.c)return;const P=POTS[p.t],y=(p.y+.05+Math.sin(ahora/260+p.x)*.08)*S;
+    ctx.globalAlpha=.3+.14*Math.sin(ahora/200);ctx.fillStyle=P.col;ctx.beginPath();ctx.arc((p.x+.5)*S,y+S*.45,S*.62,0,6.283);ctx.fill();ctx.globalAlpha=1;
+    ctx.drawImage(P.spr,(p.x+.05)*S,y,S*.9,S*.9)});
   a.manz.forEach(m=>{if(!m.c)ctx.drawImage(tex.manzana,(m.x+.1)*S,(m.y+.1+Math.sin(ahora/300+m.x)*.06)*S,S*.8,S*.8)});
   ctx.drawImage(a.curso&&a.curso.tramo<TRAMOS-1?flecha:bandera,a.meta.x*S,(a.meta.y-1.5)*S,S*1.5,S*1.5);
-  const p=PERS[a.pers];ctx.drawImage((a.cara>0?p.der:p.izq)[a.suelo?Math.floor(a.paso*7)%2:1],(a.x-.5)*S,(a.y-1)*S,S,S);
+  const p=PERS[a.pers],k=a.tam;ctx.drawImage((a.cara>0?p.der:p.izq)[a.suelo?Math.floor(a.paso*7)%2:1],(a.x-.5*k)*S,(a.y-k)*S,S*k,S*k);
+  // el potenciador que lleva: su dibujo encima de la cabeza (parpadea cuando se va a acabar) y una barrita con lo que le queda
+  if(a.pod){const P=POTS[a.pod.t],by=(a.y-k-.8)*S;
+    if(a.pod.s>2.5||Math.floor(ahora/160)%2)ctx.drawImage(P.spr,(a.x-.3)*S,by,S*.6,S*.6);
+    ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect((a.x-.5)*S,by+S*.64,S,S*.12);ctx.fillStyle=P.col;ctx.fillRect((a.x-.5)*S,by+S*.64,S*a.pod.s/POT_S,S*.12)}
 }
 // el mando: una sola pieza para izquierda y derecha (así el dedo puede deslizar de un lado a otro sin levantarse) y un botón de salto.
 // Varios dedos a la vez: uno anda y otro salta.
@@ -2015,7 +2085,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),letrasNivel:k=>letrasNivel(k).join(''),elige:v=>{const b=[...$('retoOpc').children].find(e=>e.dataset.v===String(v));if(b)b.click()},autoPal:()=>autoPal,numero:n=>numero(n),letras:()=>palabra.letras,letraSuelta:()=>letraSuelta(),COLS,ROWS,irA:c=>{camC=c;camGoal=null;clampCam()},curso:()=>av.curso&&{tramo:av.curso.tramo,sem:av.curso.sem},modo:m=>{av.modo=m},generaTramo:(n,s)=>generaTramo(n,s),huevo:()=>huevo&&Object.assign({visible:hayHuevo()},huevo),huevos:()=>huevos,nacido:()=>nacido,estrellas:n=>{stars=n;$('starN').textContent=stars;save()},ponHuevo:()=>ponHuevo(),vida:()=>({mariposas:bichos.length,luciernagas:luces.length,pajaro:!!pajaro}),pajaroYa:()=>{pajaroT=1},uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),letrasNivel:k=>letrasNivel(k).join(''),elige:v=>{const b=[...$('retoOpc').children].find(e=>e.dataset.v===String(v));if(b)b.click()},autoPal:()=>autoPal,numero:n=>numero(n),letras:()=>palabra.letras,letraSuelta:()=>letraSuelta(),COLS,ROWS,irA:c=>{camC=c;camGoal=null;clampCam()},curso:()=>av.curso&&{tramo:av.curso.tramo,sem:av.curso.sem},cursoPon:(n,s)=>{av.curso.tramo=n;av.curso.sem=s;cargaTramo()},POT_K,POT_S,modo:m=>{av.modo=m},generaTramo:(n,s)=>generaTramo(n,s),huevo:()=>huevo&&Object.assign({visible:hayHuevo()},huevo),huevos:()=>huevos,nacido:()=>nacido,estrellas:n=>{stars=n;$('starN').textContent=stars;save()},ponHuevo:()=>ponHuevo(),vida:()=>({mariposas:bichos.length,luciernagas:luces.length,pajaro:!!pajaro}),pajaroYa:()=>{pajaroT=1},uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
