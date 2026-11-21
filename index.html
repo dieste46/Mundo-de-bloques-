@@ -188,7 +188,11 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #avManz canvas.no{opacity:.25}
 #salta{flex:0 0 28%;background:var(--panel-2);border:4px solid var(--slot);font-size:44px;font-family:system-ui;padding:0;touch-action:none}
 #pers{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
-#persCard{background:var(--panel);border:4px solid var(--sel);padding:8px;display:flex;flex-wrap:wrap;justify-content:center;max-width:336px;max-height:100%;overflow-y:auto;box-sizing:border-box}
+#persCaja{display:flex;flex-direction:column;align-items:center;max-height:100%}
+#persModo{background:var(--panel);border:4px solid var(--sel);border-bottom:0;padding:8px 8px 4px;display:flex;justify-content:center}
+.pers.modo{width:112px;height:64px;font-size:34px;font-family:system-ui}
+.pers.modo[aria-pressed="true"]{background:var(--sel);border-color:var(--sel-edge)}
+#persCard{background:var(--panel);border:4px solid var(--sel);padding:8px;display:flex;flex-wrap:wrap;justify-content:center;max-width:336px;min-height:0;overflow-y:auto;box-sizing:border-box}
 .pers{width:96px;height:96px;margin:4px;background:var(--panel-2);border:4px solid var(--slot);padding:0}
 .pers canvas{width:72px;height:72px;image-rendering:pixelated}
 .tool{flex:1;min-width:0;height:52px;background:var(--panel-2);border:4px solid var(--slot);padding:0;font-size:24px;font-family:system-ui}
@@ -237,7 +241,13 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
     </div>
   </div>
   <div id="pers" hidden>
-    <div id="persCard" role="dialog" aria-label="Elige un personaje"></div>
+    <div id="persCaja">
+      <div id="persModo" role="group" aria-label="Dónde jugar">
+        <button class="pers modo" id="modoMundo" aria-label="En mi mundo" aria-pressed="true">🌍</button>
+        <button class="pers modo" id="modoCurso" aria-label="Un recorrido largo" aria-pressed="false">🏁</button>
+      </div>
+      <div id="persCard" role="dialog" aria-label="Elige un personaje"></div>
+    </div>
   </div>
   <div id="copia" hidden>
     <div id="copiaCard" role="dialog" aria-label="Copia de seguridad">
@@ -494,7 +504,8 @@ function addPig(x,y){
 // Hay tres mundos, cada uno con sus bloques, sus cerditos, su hora y su vista. Las estrellas y los niveles son del niño, no del mundo.
 // El mundo en el que se está vive en grid/pigs/night/camC; los otros esperan guardados en `mundos`.
 let mundo=0,mundos=[null,null,null],vuelve=false,alVolver=false,huevos=0; // huevos: cuántos huevos de estrellas se han abierto ya
-const empaqueta=()=>({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,camC,camR,t:Date.now()}); // t: cuándo se guardó, para saber si ha pasado una noche de verdad
+const empaqueta=()=>{const m=av.mio||{grid,pigs,night,camC,camR}; // durante un recorrido largo, lo que se guarda es el mundo del niño, que espera aparte
+  return{grid:m.grid,pigs:m.pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night:m.night,camC:m.camC,camR:m.camR,t:Date.now()}}; // t: cuándo se guardó, para saber si ha pasado una noche de verdad
 const valido=w=>!!w&&Array.isArray(w.grid)&&w.grid.length===COLS*ROWS;
 function crece(w){ // un mundo de cuando el mapa tenía 16 filas: se le añade cielo por arriba y piedra (con algo de oro) por abajo, sin tocar lo construido
   if(!w||!Array.isArray(w.grid)||w.grid.length!==COLS*16)return w;
@@ -1114,7 +1125,7 @@ function estado(){return{grid:grid.slice(),pigs:pigs.map(p=>({...p})),reto,dug:r
 function foto(){antes=estado();rehecho=true;$('undoBtn').classList.remove('off')}
 function undo(){
   if(!antes){say('No hay nada que deshacer.');return}
-  cu('deshacer');const a=antes;antes=estado();
+  if(av.on)return;cu('deshacer');const a=antes;antes=estado();
   grid=a.grid;pigs=a.pigs;
   if(reto&&reto===a.reto){reto.dug=a.dug;reto.added=a.added}
   rehecho=!rehecho;beep(rehecho?440:330,.08,'triangle',.07);say(rehecho?'Rehacer':'Deshacer',true,true);
@@ -1183,9 +1194,9 @@ function usoResumen(){
   S.push(['Lo que más usa',U.length?U:['Todavía nada.']]);
   // aventura
   const A=uso.a;
-  if(A.n){const veces=PERS.map((p,k)=>A.pers[k]||0),fav=veces.indexOf(Math.max.apply(null,veces));
+  if(A.n||F.curso){const veces=PERS.map((p,k)=>A.pers[k]||0),fav=veces.indexOf(Math.max.apply(null,veces));
     S.push(['Aventura',['Carreras: '+A.n+' · llega a la bandera en '+A.fin+' ('+pc(A.fin,A.n)+') · con las ocho manzanas: '+A.todas+'.',
-      (A.fin?'Manzanas por carrera terminada: '+(A.manz/A.fin).toFixed(1).replace('.',',')+' de 8. ':'')+'Veces que un muro alto le ha cortado el paso: '+A.muro+'.','Personaje favorito: '+PERS[fav].n.toLowerCase()+' ('+pl(veces[fav],'vez','veces')+').'+(huevos?' Huevos de estrellas abiertos: '+huevos+' de '+PREMIOS.length+'.':'')]])}
+      (F.curso?'Recorridos largos: '+pl(F.curso,'empezado','empezados')+' · '+pl(F.cursoFin||0,'terminado','terminados')+'. ':'')+(A.fin?'Manzanas por carrera terminada: '+(A.manz/A.fin).toFixed(1).replace('.',',')+' de 8. ':'')+'Veces que un muro alto le ha cortado el paso: '+A.muro+'.','Personaje favorito: '+PERS[fav].n.toLowerCase()+' ('+pl(veces[fav],'vez','veces')+').'+(huevos?' Huevos de estrellas abiertos: '+huevos+' de '+PREMIOS.length+'.':'')]])}
   // ideas: qué potenciar y qué revisar, con reglas sencillas sobre lo anterior
   const I=[],dom=R.filter(r=>juicio(r)==='🟢'),cue=R.filter(r=>juicio(r)==='🔴'),evi=R.filter(r=>r.n>=3&&r.v/r.n>=.4),nunca=Object.keys(RETO_N).filter(k=>!uso.r[k]||!uso.r[k].n);
   if(cue.length)I.push('Le cuesta: '+cue.map(r=>RETO_N[r.k].toLowerCase()).join(', ')+'. El nivel ya le baja solo; ayuda hacer uno de esos con él al lado.');
@@ -1306,6 +1317,46 @@ function troncos(){const t=av.tronco=new Uint8Array(COLS*ROWS);
     if(n>=17)HOUSE.forEach((row,ry)=>row.forEach((v,rx)=>{if(v>0&&grid[(y+ry)*COLS+x+rx]===v)t[(y+ry)*COLS+x+rx]=1}))}} // 17 de sus 22 bloques: aunque le falte o le sobre alguno, sigue siendo una casa
 // la fila del suelo en una columna (sin contar copas ni troncos): ahí se apoyan los pies
 function pisoDe(x){for(let y=0;y<ROWS;y++){const v=grid[y*COLS+x];if(v&&!NOSOLID[v]&&v!==5&&!av.tronco[y*COLS+x])return y}return ROWS}
+// Recorrido largo: tres tramos del ancho de un mundo, uno detrás de otro. Cada tramo se genera al llegar a él (generaTramo) y se pone en el
+// sitio del mundo mientras dura; al salir, vuelve el mundo del niño tal como estaba. No hay nada que construir ni forma de perder:
+//  · escalones de uno (se suben solos) y de dos (hay que saltar);
+//  · charcos: dos o tres columnas más bajas con agua; se saltan, y si se cae dentro se sale saltando;
+//  · plataformas en el aire, a las que se sube saltando, con manzanas encima.
+// Cinco manzanas por tramo, quince en total. Llegar al final da una estrella; con las quince, dos.
+const TRAMOS=3,MANZ_TRAMO=5;
+const flecha=sprite(['................','................','..........Y.....','..YYYYYYYYYY....','..YYYYYYYYYYY...','..YYYYYYYYYYYY..','..YYYYYYYYYYY...','..YYYYYYYYYY....','..........Y.....','......Bb........','......Bb........','......Bb........','......Bb........','......Bb........','......Bb........','.....BBbb.......'],
+  {Y:'#ffd43b',B:'#8a5a36',b:'#6b4626'});
+function generaTramo(n,semilla){
+  const r=rng(semilla*7919+n*104729+13),g=new Array(COLS*ROWS).fill(0),TOP=[1,6,12][n%3],SUB=[2,6,12][n%3],PLAT=[4,8,9][n%3];
+  const alt=new Array(COLS).fill(20),charco=new Array(COLS).fill(false),plat=[];let manz=[],x=4,a=20;
+  while(x<COLS-6){const t=r(),queda=COLS-6-x;
+    if(t<.2&&queda>=4){const w=2+(r()<.4?1:0);for(let k=0;k<w;k++){alt[x+k]=a+2;charco[x+k]=true}   // charco
+      if(r()<.6)manz.push({x:x+(w>>1),y:a-2});x+=w;alt[x]=a;x++}
+    else if(t<.4&&queda>=5){for(let k=0;k<5;k++)alt[x+k]=a;plat.push([x+1,a-2,3]);manz.push({x:x+2,y:a-3});           // plataforma, y a veces otra más alta detrás
+      if(n>0&&r()<.5&&queda>=7){plat.push([x+4,a-4,2]);manz.push({x:x+4,y:a-5});alt[x+5]=alt[x+6]=a;x+=2}x+=5}
+    else if(t<.55){a=Math.max(16,Math.min(22,a+((r()<.5&&a>17)||a>=21?-2:2)));alt[x]=alt[x+1]=a;x+=2}                    // escalón de dos: hay que saltar
+    else if(t<.72){a=Math.max(16,Math.min(22,a+((r()<.5&&a>16)||a>=22?-1:1)));alt[x]=alt[x+1]=a;x+=2}                    // escalón de uno
+    else{const w=2+(r()*3|0);for(let k=0;k<w;k++)alt[x+k]=a;if(r()<.45)manz.push({x:x+(w>>1),y:a-1});x+=w}}             // llano
+  for(;x<COLS;x++)alt[x]=a;
+  for(let cx=0;cx<COLS;cx++){const s=alt[cx];for(let y=s;y<ROWS;y++)g[y*COLS+cx]=y===s?(charco[cx]?6:TOP):y<s+3?SUB:3;if(charco[cx])g[(s-1)*COLS+cx]=7}
+  plat.forEach(q=>{for(let k=0;k<q[2];k++)g[q[1]*COLS+q[0]+k]=PLAT});
+  // siempre cinco manzanas: si sobran se quitan del medio; si faltan se ponen en el suelo, en columnas firmes
+  manz=manz.filter(m=>m.x>3&&m.x<COLS-4);
+  while(manz.length>MANZ_TRAMO)manz.splice(1+(r()*(manz.length-2)|0),1);
+  for(let k=0;manz.length<MANZ_TRAMO&&k<400;k++){const cx=5+(r()*(COLS-11)|0);if(!charco[cx]&&!manz.some(m=>Math.abs(m.x-cx)<3)&&!g[(alt[cx]-1)*COLS+cx])manz.push({x:cx,y:alt[cx]-1})}
+  manz.sort((p,q)=>p.x-q.x);
+  if(TOP===1)for(let cx=4;cx<COLS-4;cx++)if(!charco[cx]&&r()<.1&&!g[(alt[cx]-1)*COLS+cx]&&!manz.some(m=>m.x===cx))g[(alt[cx]-1)*COLS+cx]=11; // unas flores en el prado
+  return{g,manz:manz.map(m=>({x:m.x,y:m.y,c:false})),ini:alt[1],fin:alt[COLS-2]};
+}
+function cargaTramo(){const c=av.curso,t=generaTramo(c.tramo,c.sem);
+  grid=t.g;troncos();av.manz=t.manz;av.x=1.5;av.y=t.ini;av.vy=0;av.cara=1;av.yc=av.y;av.suelo=false;av.meta={x:COLS-2,y:t.fin};
+  camC=0;camR=av.y-H/S*.62;clampCam();pintaManz();av.fundido=Date.now()}
+function entraCurso(){
+  av.mio={grid,pigs,night,camC,camR};pigs=[];night=false;nightAmt=0;particles=[];
+  av.curso={tramo:0,sem:(Date.now()&0xffff)+1};av.cog=0;av.fin=false;av.vivo=true;cu('curso');cargaTramo();
+}
+function saleCurso(){const m=av.mio;if(!m)return;grid=m.grid;pigs=m.pigs;night=m.night;nightAmt=night?1:0;camC=m.camC;camR=m.camR;av.mio=av.curso=null;av.vivo=false;particles=[];clampCam();
+  $('tNight').textContent=night?'☀️':'🌙'}
 function nuevaCarrera(){
   av.x=1.5;av.y=pisoDe(1);av.vy=0;av.cara=1;av.cog=0;av.fin=false;av.vivo=true;av.yc=av.y;uso.a.n++;usoSucio=true;
   let fx=COLS-2;av.meta={x:fx,y:pisoDe(fx)};
@@ -1318,13 +1369,14 @@ function nuevaCarrera(){
 function pintaManz(){const e=$('avManz');e.textContent='';av.manz.forEach(m=>{const c=lienzo(16,16);c.getContext('2d').drawImage(tex.manzana,0,0);if(!m.c)c.className='no';e.appendChild(c)})}
 function entraAventura(k){
   paraMusica();av.pers=k;troncos();uso.a.pers[k]=(uso.a.pers[k]||0)+1;usoSucio=true;
-  if(!av.vivo||av.fin)nuevaCarrera();else{while(chocaP(av.x,av.y)&&av.y>1)av.y-=1;pintaManz()} // si al construir se le ha tapado, sale por arriba
+  if(av.modo==='curso')entraCurso();
+  else if(!av.vivo||av.fin)nuevaCarrera();else{while(chocaP(av.x,av.y)&&av.y>1)av.y-=1;pintaManz()} // si al construir se le ha tapado, sale por arriba
   av.on=true;av.pI=av.pD=av.kI=av.kD=false;av.salto=0;av.empuje=0;camGoal=camGoalR=null;
   $('blocks').hidden=$('tools').hidden=true;$('mando').hidden=false;$('jugarBtn').setAttribute('aria-pressed',true);resize();
-  say('¡A correr! Coge las manzanas y llega a la bandera.');
+  say(av.curso?'¡Un recorrido largo! Sigue las flechas, coge las manzanas y llega a la bandera.':'¡A correr! Coge las manzanas y llega a la bandera.');
 }
 function saleAventura(){
-  av.on=false;av.pI=av.pD=av.kI=av.kD=false;if(av.fin)av.vivo=false;
+  av.on=false;av.pI=av.pD=av.kI=av.kD=false;if(av.fin)av.vivo=false;saleCurso();
   $('blocks').hidden=$('tools').hidden=false;$('mando').hidden=true;$('jugarBtn').setAttribute('aria-pressed',false);padPinta();resize();save();
 }
 function avPaso(dt){const a=av;
@@ -1341,6 +1393,7 @@ function avPaso(dt){const a=av;
         if(alto===1&&!solidoP(Math.floor(a.x),r-1)){a.vy=-8.2;a.suelo=false}
         else if(alto>=2){a.empuje+=dt;if(a.empuje>1.1&&Date.now()-a.avisoT>(alto>2?25000:15000)){a.avisoT=Date.now();a.empuje=0;
           if(alto===2)say('Para subir ahí, salta.');
+          else if(a.curso)say('Por ahí no se puede. Prueba a saltar desde un poco más atrás.');
           else{uso.a.muro++;usoSucio=true;say('Es muy alto para saltar. Toca el mando y construye una escalera.');const b=$('jugarBtn');b.classList.add('ask');setTimeout(()=>b.classList.remove('ask'),2500)}}}}}}
   // de arriba abajo
   const ny=a.y+a.vy*dt;
@@ -1354,6 +1407,14 @@ function avPaso(dt){const a=av;
     ult={x:m.x,y:m.y};cifra(a.cog);say(a.cog===1?'Una':NUM[a.cog][0].toUpperCase()+NUM[a.cog].slice(1),false);if(vcfg.son!==2){tono(880,1320,.1,'triangle',.1);tono(1320,1760,.12,'triangle',.07,.08)}
     const e=$('avManz').children[a.manz.indexOf(m)];if(e)e.className=''});
   // la bandera
+  if(a.x>a.meta.x-.3&&a.curso&&a.curso.tramo<TRAMOS-1){ // fin de un tramo del recorrido: se pasa al siguiente sin parar la cuenta de manzanas
+    a.curso.tramo++;cargaTramo();if(vcfg.son!==2){tono(523,1047,.18,'triangle',.1);tono(784,1568,.2,'triangle',.07,.1)}
+    say(a.curso.tramo===TRAMOS-1?'¡Ya casi estás! El último trozo.':'¡Muy bien! Seguimos.');return}
+  if(a.x>a.meta.x-.3&&a.curso){a.fin=true;const total=TRAMOS*MANZ_TRAMO,todas=a.cog===total,gana=todas?2:1; // fin del recorrido: una estrella, y dos si lleva todas las manzanas
+    cu('cursoFin');stars+=gana;$('starN').textContent=stars;{const e=$('stars');e.classList.remove('gana');void e.offsetWidth;e.classList.add('gana')}
+    fanfare();fireworks();a.vy=-SALTO*.8;
+    say('¡Has llegado al final del recorrido! '+(todas?'¡Y con las quince manzanas! ¡Dos estrellas!':(a.cog===1?'Has cogido una manzana':'Has cogido '+NUM[a.cog]+' manzanas')+' de quince. ¡Una estrella!'));
+    save();setTimeout(()=>{if(av.on&&av.fin)saleAventura()},6000);return}
   if(a.x>a.meta.x-.3){a.fin=true; // llegar a su columna cuenta, aunque sea pasando por encima en pleno salto
     const todas=a.cog===NMANZ;uso.a.fin++;uso.a.manz+=a.cog;if(todas)uso.a.todas++;usoSucio=true; // la estrella es para quien llega con todas: para las altas hay que saltar
     if(todas){stars++;$('starN').textContent=stars;const e=$('stars');e.classList.remove('gana');void e.offsetWidth;e.classList.add('gana');fireworks()}
@@ -1363,7 +1424,7 @@ function avPaso(dt){const a=av;
 }
 function avDibuja(ahora){const a=av;
   a.manz.forEach(m=>{if(!m.c)ctx.drawImage(tex.manzana,(m.x+.1)*S,(m.y+.1+Math.sin(ahora/300+m.x)*.06)*S,S*.8,S*.8)});
-  ctx.drawImage(bandera,a.meta.x*S,(a.meta.y-1.5)*S,S*1.5,S*1.5);
+  ctx.drawImage(a.curso&&a.curso.tramo<TRAMOS-1?flecha:bandera,a.meta.x*S,(a.meta.y-1.5)*S,S*1.5,S*1.5);
   const p=PERS[a.pers];ctx.drawImage((a.cara>0?p.der:p.izq)[a.suelo?Math.floor(a.paso*7)%2:1],(a.x-.5)*S,(a.y-1)*S,S,S);
 }
 // el mando: una sola pieza para izquierda y derecha (así el dedo puede deslizar de un lado a otro sin levantarse) y un botón de salto.
@@ -1392,7 +1453,10 @@ function padPinta(){let i=false,d=false;padT.forEach(v=>{if(v<0)i=true;else d=tr
   const card=$('persCard');
   const pintaPers=()=>{card.textContent='';personajes().forEach(k=>{const p=PERS[k],b=document.createElement('button');b.className='pers';b.setAttribute('aria-label',p.n);const c=lienzo(16,16);c.getContext('2d').drawImage(p.der[0],0,0);b.appendChild(c);
     b.onclick=()=>{$('pers').hidden=true;beep(660,.06);entraAventura(k)};card.appendChild(b)})};
-  $('pers').addEventListener('click',e=>{if(e.target===$('pers'))$('pers').hidden=true});
+  $('pers').addEventListener('click',e=>{if(e.target===$('pers')||e.target===$('persCaja'))$('pers').hidden=true});
+  const ponModo=(m,habla)=>{av.modo=m;$('modoMundo').setAttribute('aria-pressed',m!=='curso');$('modoCurso').setAttribute('aria-pressed',m==='curso');
+    if(habla){beep(m==='curso'?784:523,.06);say(m==='curso'?'Un recorrido largo.':'En tu mundo.',true,true)}};
+  $('modoMundo').onclick=()=>ponModo('mundo',true);$('modoCurso').onclick=()=>ponModo('curso',true);
   $('jugarBtn').onclick=()=>{if(av.on){saleAventura();beep(440,.06);say('A construir',true,true);return}
     pintaPers();$('pers').hidden=false;beep(660,.06);say('¿Con quién quieres jugar?',true,true)};
 }
@@ -1660,7 +1724,7 @@ function tick(){
   // (El umbral queda por debajo de 30 a propósito: un móvil en modo de bajo consumo va a 30 clavados y bajarle la resolución no le ayudaría.)
   // el mundo reacciona: unas 1700 casillas al azar por segundo (a cada una le toca más o menos una vez por segundo), medido por reloj. Con un reto abierto, nada.
   // Así la nieve tarda un segundo o dos en derretirse y la hierba dos o tres en salir: lo justo para que se vea que ha sido por la antorcha o por el agua.
-  if(tAnt&&!reacOff&&!(reto&&!reto.won)){reacMs+=Math.min(100,Date.now()-tAnt);let n=Math.min(60,reacMs/.6|0);reacMs-=n*.6;while(n-->0)reacciona()}
+  if(tAnt&&!reacOff&&!av.mio&&!(reto&&!reto.won)){reacMs+=Math.min(100,Date.now()-tAnt);let n=Math.min(60,reacMs/.6|0);reacMs-=n*.6;while(n-->0)reacciona()}
   // al volver a un mundo que lleva horas sin tocarse: ha pasado la noche, así que lo plantado crece y el agua ha hecho lo suyo (sin ruido ni saltitos: ya estaba así)
   if(vuelve&&fr>40){vuelve=false;if(!(reto&&!reto.won)){for(let k=0;k<60000;k++)reacciona(true);if(amanece(true))alVolver=true;save()}}
   {const t=Date.now();if(tAnt)lento=lento*.95+Math.min(100,t-tAnt)*.05;tAnt=t;
@@ -1791,6 +1855,7 @@ function tick(){
     if(maxR>0&&!av.on){const y0=16,hh=H-48,x=W-16,th=Math.max(28,hh*(H/S)/ROWS); // en la aventura solo se deja la de abajo, que hace de "cuánto falta"
       ctx.fillStyle='rgba(42,29,20,.6)';ctx.fillRect(x-2,y0-2,10,hh+4);ctx.fillStyle='#fff6e0';ctx.fillRect(x,y0+(hh-th)*camR/maxR,6,th)}
     ctx.globalAlpha=1}
+  if(av.fundido){const t=(Date.now()-av.fundido)/500;if(t<1){ctx.globalAlpha=1-t;ctx.fillStyle='#3b2a1e';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}else av.fundido=0} // al cambiar de tramo
   requestAnimationFrame(tick);
 }
 
@@ -1802,7 +1867,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),huevo:()=>huevo&&Object.assign({visible:hayHuevo()},huevo),huevos:()=>huevos,nacido:()=>nacido,estrellas:n=>{stars=n;$('starN').textContent=stars;save()},ponHuevo:()=>ponHuevo(),vida:()=>({mariposas:bichos.length,luciernagas:luces.length,pajaro:!!pajaro}),pajaroYa:()=>{pajaroT=1},uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),curso:()=>av.curso&&{tramo:av.curso.tramo,sem:av.curso.sem},modo:m=>{av.modo=m},generaTramo:(n,s)=>generaTramo(n,s),huevo:()=>huevo&&Object.assign({visible:hayHuevo()},huevo),huevos:()=>huevos,nacido:()=>nacido,estrellas:n=>{stars=n;$('starN').textContent=stars;save()},ponHuevo:()=>ponHuevo(),vida:()=>({mariposas:bichos.length,luciernagas:luces.length,pajaro:!!pajaro}),pajaroYa:()=>{pajaroT=1},uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

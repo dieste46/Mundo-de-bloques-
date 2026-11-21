@@ -4,7 +4,7 @@ Juego de construir con bloques en 2D, con retos por voz, para un niño de unos 5
 
 ## Cómo está organizado
 
-- `index.html`: todo el juego (HTML, CSS y un único script). Dentro del script, por este orden: texturas dibujadas por código, estado y mundo, sonido y voz, ajustes, mundos, retos, «Cómo juega» (contadores de uso), copia de seguridad, aventura, cerdito músico, reacciones y semillas, toques, y el bucle de dibujo `tick`.
+- `index.html`: todo el juego (HTML, CSS y un único script). Dentro del script, por este orden: texturas dibujadas por código, estado y mundo, sonido y voz, ajustes, mundos, retos, «Cómo juega» (contadores de uso), copia de seguridad, aventura (en su mundo y el recorrido largo), huevo de las estrellas, vida en el mundo, cerdito músico, reacciones y semillas, toques, y el bucle de dibujo `tick`.
 - `guardado.js`: lo único que toca el almacenamiento. Interfaz: `Guardado.cargar(parte)`, `Guardado.guardar(estado, parte)`, `Guardado.exportar()` y `Guardado.importar(texto, aplicar)`.
 - `sw.js` y `manifest.json`: PWA que funciona sin conexión. Al añadir un archivo al juego, ponlo en `ASSETS` de `sw.js` y sube `CACHE`.
 - `pruebas/`: pruebas automáticas con Playwright y un servidor local.
@@ -16,6 +16,7 @@ Juego de construir con bloques en 2D, con retos por voz, para un niño de unos 5
 - El niño no lee: nada de lo que él usa depende de texto. Todo se dice por voz y se enseña con dibujos.
 - Sin cronómetro, sin penalización y sin forma de perder. El error se explica y a la segunda aparece una pista.
 - Lo que es para el adulto (ajustes, copia de seguridad, «Cómo juega») va detrás de la multiplicación de `puerta()`.
+- Todo lo que se mueve va por reloj, no por fotogramas: dentro de `tick`, `kt` es el tiempo pasado en fotogramas de 60 por segundo y `dms` en milisegundos.
 - Rutas siempre relativas: el juego se sirve desde la raíz, pero no debe depender de ello.
 - Estilo propio: no imitar personajes, gráficos ni niveles de juegos existentes.
 - Nada de datos personales en el repositorio. Los mensajes de commit y los comentarios, en español.

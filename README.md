@@ -20,6 +20,9 @@ Sin registro, sin anuncios, sin dependencias ni build: un solo `index.html`. Se 
 - **El mundo hace cosas solo.** La nieve que tiene una antorcha pegada se derrite y queda agua; la tierra con aire encima y agua al lado se cubre de hierba; y en la hierba junto al agua acaba saliendo alguna flor. Nadie lo explica de antemano: se descubre jugando, y la voz lo cuenta las dos primeras veces. Con un reto abierto no pasa nada de esto, para no cambiar lo que se está contando o copiando.
 - **Semillas (🌱 en el inventario).** Plantada sobre tierra o hierba, la semilla crece un paso cada vez que amanece: primero un arbolito y, a la noche siguiente, un árbol de verdad con su tronco y su copa. Amanece al pasar de 🌙 a ☀️ con el botón, y también cuenta como noche volver a un mundo que lleva más de seis horas sin tocarse ("mientras no estabas, tus plantas han crecido"). El árbol solo ocupa huecos vacíos; si no tiene sitio encima, espera.
 - **El cerdito músico (🎵).** Un cerdito recorre de izquierda a derecha lo que se ve en pantalla, saltando de columna en columna, y cada una suena al caer en ella: más aguda cuanto más alta, en una escala de cinco notas en la que nada desafina, y con el timbre del bloque de arriba (campanita el cristal y el oro, gota el agua, caja la madera y la piedra). Las columnas se leen en el momento, así que se puede construir por delante de él y oír el cambio: una escalera es una escala. Tocar 🎵 otra vez lo para. Con un reto abierto no suena, para no tapar la voz.
+- **Cerditos con vida.** Parpadean, se giran y dan un saltito cuando se pone o se pica un bloque cerca, y se paran a oler las flores. El cerdito músico lleva un gorro de fiesta para distinguirlo.
+- **Vida en el mundo.** De día revolotean mariposas sobre las flores (más flores, más mariposas, hasta cuatro) y de vez en cuando cruza un pájaro; de noche hay luciérnagas. Al pasar de día a noche el horizonte se tiñe de naranja. Es solo decorado: no toca los bloques ni los retos.
+- **El inventario se ve entero.** Si los catorce bloques no caben en una fila pasan a dos filas de siete (móvil o tableta en vertical); con el móvil tumbado, a una fila de bloques algo más pequeños. Nunca hay que deslizar para encontrar un bloque.
 - **Lo que ya está puesto no se cambia de un toque.** Si el hueco está ocupado suena un golpe sordo y la voz recuerda que para quitarlo está el pico (que se ilumina). Si lo ocupa un cerdito, salta y gruñe.
 - **Tres mundos (🌍).** El botón abre tres huecos con su miniatura; tocar uno entra en él y, si está vacío, lo crea. Cada mundo guarda por separado sus bloques, sus cerditos, su hora y su vista; las estrellas y los niveles son del niño y valen en todos. Cambiar un mundo ya hecho por uno nuevo (🔄) pide la multiplicación del adulto, para que ningún toque suelto borre nada.
 - **Tres tamaños de bloque (🔍).** La lupa de la columna izquierda pasa de bloques medianos a grandes, de grandes a pequeños y vuelta; también se cambia pellizcando con dos dedos (un paso por gesto). Los puntos bajo la lupa indican el tamaño actual y se recuerda en cada aparato. Si un reto no cabe en la pantalla, el juego aleja la vista él solo y, al cerrar el reto, vuelve al tamaño elegido.
@@ -40,7 +43,22 @@ Recorrer el propio mundo con un personaje, de izquierda a derecha, hasta una ban
 
 El movimiento del personaje va por reloj (bloques por segundo), así que corre igual en un iPad viejo que en uno nuevo. Las constantes están juntas: `ANDA`, `GRAV`, `SALTO` y `NMANZ`. Para añadir un personaje basta otro dibujo en `PERS`.
 
+### El recorrido largo (🏁)
+
+En el panel de personajes se elige dónde jugar: 🌍 en su mundo, o 🏁 un recorrido largo que hace el juego. El recorrido son tres tramos seguidos (prado, playa y nieve), cada uno del ancho de un mundo: al llegar a la flecha del final de un tramo se pasa al siguiente, y en el tercero está la bandera.
+
+- **Qué hay:** escalones de uno (se suben solos) y de dos (hay que saltar), charcos (se saltan; si se cae dentro, se sale saltando) y plataformas en el aire con manzanas encima. No hay nada que construir ni forma de perder.
+- **Manzanas:** cinco por tramo, quince en total; la voz sigue la cuenta de un tramo a otro. Llegar al final da una estrella; con las quince, dos.
+- **Su mundo espera aparte** mientras dura el recorrido y vuelve tal como estaba; lo que se guarda nunca es el recorrido.
+- Cada recorrido es distinto (`generaTramo`). Una prueba recorre más de cien para comprobar que siempre se puede llegar al final.
+
+### El huevo de las estrellas
+
+Por cada cinco estrellas aparece un huevo en el mundo. Se abre tocándolo, mientras la voz cuenta los toques (tres el primero, uno más cada vez), y de él sale un personaje nuevo para la aventura: pato, perro, oveja, pingüino y unicornio, por ese orden. Con un reto abierto o durante la aventura, el huevo espera escondido.
+
 ## Retos (botón ⭐)
+
+Al cerrar un reto, ganado o no, **el mundo se queda como lo tenía el niño**: se retira la ficha del reto (lo que plantó el juego y lo que él puso dentro de ella) con una nubecilla de trocitos. Lo que construye por su cuenta, como sus torres, no se toca.
 
 | Reto | Qué trabaja | Fallo y pista |
 |---|---|---|
@@ -63,7 +81,7 @@ Dificultad por tramos (nivel 0–3 fácil, 4–7 medio, 8+ difícil): modelos de
 
 - **Exportar** deja en un cuadro de texto la copia completa: los tres mundos, las estrellas, los niveles, la palabra de la semana y los contadores de «Cómo juega» (los ajustes de voz no, que son de cada aparato). Se puede copiar y, donde el navegador lo permite, guardar como archivo `mundobloque-AAAA-MM-DD.json`. En iOS 12 solo copiar.
 - **Importar** acepta la copia pegada o su archivo, comprueba que es válida, dice de cuándo es y qué trae, y pide confirmación: sustituye todo lo guardado en ese aparato. Después el juego se recarga con lo importado.
-- La copia es un JSON con `formato: "mundobloque"` y `version`. Una copia de una versión más nueva que el juego se rechaza con un aviso.
+- La copia es un JSON con `formato: "mundobloque"` y `version` (ahora la 2, que añade los huevos de estrellas abiertos; las de la versión 1 se importan igual). Una copia de una versión más nueva que el juego se rechaza con un aviso.
 - Está en los ajustes, detrás de la multiplicación, para que el niño no llegue por accidente.
 
 Sirve para pasar la partida de un aparato a otro o de una dirección web a otra, y como copia por si Safari borra los datos.
@@ -138,6 +156,7 @@ El juego está escrito para funcionar desde iOS 12 y se juega en un iPad Air de 
 - Sin eventos de puntero (antes de iOS 13) los toques sobre el mundo usan eventos táctiles.
 - Sin `gap` en flex (antes de iOS 14.5) el script lo detecta y separa botones y casillas con márgenes (`.sin-gap`).
 - La resolución de dibujo baja sola si el aparato no llega a unos 28 fotogramas por segundo; al ser pixelado apenas se nota.
+- Todo se mueve por reloj y no por fotogramas (cerditos, nubes, trocitos, la aventura, las animaciones): a 30 imágenes por segundo las cosas van a la misma velocidad real que a 60, solo que menos suaves.
 - En los ajustes (🗣️), debajo de la versión, se ve a cuántas imágenes por segundo va el juego en ese aparato y con qué detalle está dibujando. Es la forma de comprobar en el aparato de verdad si un cambio gráfico le pesa: lo ideal es 60; por debajo de 30 se nota.
 - El código no usa sintaxis posterior a ES2018.
 
