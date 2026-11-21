@@ -6,7 +6,7 @@ const BASE = process.env.JUEGO || 'http://localhost:8765/';
 const URL = BASE + '?prueba';   // ?prueba activa window.__juego, con lo que las pruebas miran dentro del juego
 const CAP = process.env.CAPTURAS || path.join(os.tmpdir(), 'mundobloque-capturas');
 try { fs.mkdirSync(CAP, { recursive: true }); } catch (e) {}
-const KINDS = ['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta','letra','letra'];
+const KINDS = ['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta','letra','letra','inicial','inicial','silaba','decenas']; // tiene que ser la misma lista que usa startReto en el juego
 const COLS = 96, ROWS = 32;
 async function open(viewport, opts = {}) {
   const b = await chromium.launch();
@@ -69,4 +69,11 @@ async function huecos(p, n = 1, alto = 3) {
   if (out.length < n) throw new Error('no hay ' + n + ' huecos a la vista');
   return out;
 }
-module.exports = { BASE, URL, CAP, open, fresh, state, startKind, toast, starsN, geom, cam, quieta, tapCell, huecos, cell, topOf, COLS, ROWS, KINDS };
+// Pide un reto de un tipo concreto fijando el sorteo: el juego elige al azar entre sus tipos, quitando el último que salió (ultimo).
+async function pide(p, kind, ultimo) {
+  const ks = KINDS.filter(k => k !== ultimo), i = ks.indexOf(kind);
+  await p.evaluate(v => { const o = Math.random; Math.random = () => { Math.random = o; return v; }; document.getElementById('tReto').click(); }, (i + .5) / ks.length);
+  await p.waitForTimeout(300);
+  return p.evaluate(() => { const r = window.__juego.retoFull(); return r && JSON.parse(JSON.stringify(r, (k, v) => k === 'base' || k === 'puesto' || typeof v === 'function' ? undefined : v)); });
+}
+module.exports = { BASE, URL, CAP, pide, open, fresh, state, startKind, toast, starsN, geom, cam, quieta, tapCell, huecos, cell, topOf, COLS, ROWS, KINDS };
