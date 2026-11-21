@@ -1394,7 +1394,7 @@ function mariposas(ahora,kt,flores,na){
   const quiero=na>.55?0:Math.min(4,1+(flores.length>>1)),t=ahora/1000,c0=camC-1,c1=camC+W/S+1;
   const sitio=()=>flores.length?flores[Math.random()*flores.length|0]:[c0+1+Math.random()*(c1-c0-2),topOf(Math.max(0,Math.min(COLS-1,Math.floor(camC+W/S/2))))-1];
   while(bichos.length<quiero){const f=sitio();bichos.push({x:f[0]+.5,y:f[1]-1.5,ax:f[0]+.5,ay:f[1],f:Math.random()*6.283,col:['#ffd43b','#fff6e0','#f2a0b0','#9fd0ff'][bichos.length%4],cambio:ahora+3000+Math.random()*5000})}
-  if(bichos.length>quiero&&Math.random()<.02*kt)bichos.pop();
+  if(bichos.length>quiero&&(na>.75||Math.random()<.02*kt))bichos.pop(); // de noche ya no se ven: fuera
   if(!bichos.length)return;
   const u=S/16,a=Math.max(0,Math.min(1,1.4-na*2.4));
   bichos.forEach(m=>{
@@ -1408,7 +1408,7 @@ function mariposas(ahora,kt,flores,na){
 function luciernagas(ahora,kt,na){ // se pintan encima de la oscuridad, en coordenadas de pantalla, para que brillen
   const quiero=na>.6?5:0,t=ahora/1000,c0=camC,c1=camC+W/S;
   while(luces.length<quiero){const x=Math.max(0,Math.min(COLS-1,Math.floor(c0+Math.random()*(c1-c0))));luces.push({ax:x+.5,ay:topOf(x)-.2-Math.random()*1.3,f:Math.random()*6.283,cambio:ahora+5000+Math.random()*7000})}
-  if(luces.length>quiero&&Math.random()<.03*kt)luces.pop();
+  if(luces.length>quiero&&(na<.15||Math.random()<.03*kt))luces.pop(); // de día ya no se ven: fuera
   luces.forEach(m=>{
     if(ahora>m.cambio||m.ax<c0-2||m.ax>c1+2){const x=Math.max(0,Math.min(COLS-1,Math.floor(c0+Math.random()*(c1-c0))));m.ax=x+.5;m.ay=topOf(x)-.2-Math.random()*1.3;m.cambio=ahora+5000+Math.random()*7000;m.x=undefined}
     const ox=m.ax+Math.sin(t*.6+m.f)*.9,oy=m.ay+Math.sin(t*.9+m.f*2)*.4;if(m.x===undefined){m.x=ox;m.y=oy}const v=Math.min(1,.03*kt);m.x+=(ox-m.x)*v;m.y+=(oy-m.y)*v;
