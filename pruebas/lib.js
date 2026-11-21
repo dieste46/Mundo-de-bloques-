@@ -6,7 +6,7 @@ const BASE = process.env.JUEGO || 'http://localhost:8765/';
 const URL = BASE + '?prueba';   // ?prueba activa window.__juego, con lo que las pruebas miran dentro del juego
 const CAP = process.env.CAPTURAS || path.join(os.tmpdir(), 'mundobloque-capturas');
 try { fs.mkdirSync(CAP, { recursive: true }); } catch (e) {}
-const KINDS = ['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta','letra','letra','inicial','inicial','silaba','decenas']; // tiene que ser la misma lista que usa startReto en el juego
+const KINDS = ['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta','letra','letra','inicial','inicial','silaba','decenas','puente','escalera']; // tiene que ser la misma lista que usa startReto en el juego
 const COLS = 96, ROWS = 32;
 async function open(viewport, opts = {}) {
   const b = await chromium.launch();

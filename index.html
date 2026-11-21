@@ -472,7 +472,7 @@ const pops=new Map(),POP=170;
 // Dificultad: cada familia de retos lleva su propio nivel. Parte de `base` (lo elige el adulto en ajustes) y luego sube o baja solo.
 // niv[familia]=[nivel, tropiezos seguidos]
 let base=0,niv={};
-const FAM={pon:'contar',torre:'contar',pica:'contar',cerdos:'contar'}; // el resto de retos (serie, suma, junta, resta, alta, copia, programa) son cada uno su familia
+const FAM={pon:'contar',torre:'contar',pica:'contar',cerdos:'contar',puente:'contar'}; // el resto de retos (serie, suma, junta, resta, alta, copia, programa) son cada uno su familia
 const nivel=k=>{const f=FAM[k]||k;return niv[f]?niv[f][0]:base};
 const tier=k=>{const l=nivel(k);return l<4?0:l<8?1:2}; // tramo de dificultad: fácil, medio, difícil
 const skyStars=(()=>{const r=rng(77);return Array.from({length:40},()=>({x:r(),y:r()*.6,s:r()<.2?3:2,p:r()*6}))})();
@@ -774,6 +774,15 @@ function findGround(k){ // columna con suelo firme y sitio para una torre de k
     const d=Math.abs(c-centre);if(!best||d<best.d)best={c,t,d}}
   return best;
 }
+// Para los encargos del cerdito: w columnas seguidas de hierba a la misma altura, sin nada encima ni cerditos, lo más cerca posible de lo que se ve.
+function findLlano(w,alto){
+  if(alto+3>H/S-hudFilas())return null;
+  const centro=camC+W/S/2-w/2;let best=null;
+  for(let cs=2;cs<=COLS-w-2;cs++){const t=topOf(cs);if(t<alto+2||t>=ROWS-2)continue;let llano=true;
+    for(let x=cs;x<cs+w&&llano;x++)if(topOf(x)!==t||grid[idx(x,t)]!==1||pigIn(x,t-1))llano=false;
+    if(llano){const d=Math.abs(cs-centro);if(!best||d<best.d)best={cs,t,d}}}
+  return best;
+}
 function lookAt(cs,w,fila){ // lleva la vista a las columnas cs..cs+w y, en vertical, deja la fila `fila` justo debajo de la cabecera del reto
   camGoal=Math.max(0,Math.min(COLS-W/S,cs+w/2-W/S/2));camFila=fila} // la altura se fija en startReto, cuando ya se sabe cuánto ocupa la cabecera
 function stampFrame(spot,count,b,rows){for(let i=0;i<count;i++)grid[idx(spot.cs+i%5,spot.base-(rows-1)+Math.floor(i/5))]=b}
@@ -959,7 +968,7 @@ document.querySelectorAll('#flechas [data-d]').forEach(b=>b.onclick=()=>progAdd(
 $('fDel').onclick=progDel;$('fGo').onclick=progGo;
 
 function startReto(){
-  const kinds=['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta','letra','letra','inicial','inicial','silaba','decenas'].filter(k=>k!==lastKind);
+  const kinds=['pon','torre','pica','cerdos','serie','serie','suma','suma','resta','alta','copia','copia','programa','programa','junta','junta','letra','letra','inicial','inicial','silaba','decenas','puente','escalera'].filter(k=>k!==lastKind);
   let kind=pick(kinds),level=nivel(kind);
   const base=grid.slice();
   let r=crea(kind,level);
@@ -968,7 +977,7 @@ function startReto(){
   if(!r&&zoomAuto)ponZoom(vcfg.zoom,false); // ni así: se vuelve al tamaño elegido y sale un reto de los de siempre
   return startReto2(kind,level,base,r);
 }
-const ZONA=['serie','suma','resta','alta','copia','junta','letra','decenas']; // retos que necesitan un sitio en la pantalla
+const ZONA=['serie','suma','resta','alta','copia','junta','letra','decenas','puente','escalera']; // retos que necesitan un sitio en la pantalla
 function crea(kind,level){ // prepara el reto de ese tipo; null si no hay sitio para él
   let r=null;
   if(kind==='serie'){
@@ -1011,6 +1020,18 @@ function crea(kind,level){ // prepara el reto de ese tipo; null si no hay sitio 
       pat.forEach((row,ry)=>[...row].forEach((ch,rx)=>{if(ch==='X')ghost.push({x:spot.cs+rx,y:y0+ry,b:0,miss:0})})); // b:0 = vale cualquier bloque
       r={kind,b:0,n:ghost.length,ghost,L,pal:conPal?P.txt:'',pos,auto:conPal&&P===autoPal};
       lookAt(spot.cs,w,y0)}
+  }else if(kind==='puente'){
+    // el cerdito quiere la manzana del otro lado del agua: se abre una zanja con agua en un llano y hay que taparla con n bloques
+    const n=Math.min(5,2+Math.floor(level/3)),g=findLlano(n+2,3);
+    if(g){const ghost=[],ruta=[[g.cs,g.t-1]];
+      for(let i=1;i<=n;i++){grid[idx(g.cs+i,g.t)]=0;grid[idx(g.cs+i,g.t+1)]=7;ghost.push({x:g.cs+i,y:g.t,b:0,miss:0});ruta.push([g.cs+i,g.t-1])}
+      ruta.push([g.cs+n+1,g.t-1]);r={kind,b:0,n,ghost,ruta,manz:[g.cs+n+1,g.t-1]};lookAt(g.cs,n+2,g.t-4)}
+  }else if(kind==='escalera'){
+    // la manzana está en alto: hay que hacer una escalera de k escalones (un bloque, luego dos, luego tres...)
+    const k=2+tier('escalera'),g=findLlano(k+2,k+2);
+    if(g){const ghost=[],ruta=[[g.cs,g.t-1]];
+      for(let i=0;i<k;i++){for(let j=1;j<=i+1;j++)ghost.push({x:g.cs+1+i,y:g.t-j,b:0,miss:0});ruta.push([g.cs+1+i,g.t-2-i])}
+      r={kind,b:0,n:ghost.length,k,ghost,ruta,manz:[g.cs+k,g.t-k-1]};lookAt(g.cs,k+2,g.t-k-4)}
   }else if(kind==='inicial'){
     // un dibujo, la voz dice su nombre y hay que tocar la letra por la que empieza, entre tres
     const ls=letrasNivel('inicial'),vale=DIBUJOS.filter(d=>ls.includes(d[1])&&d[0]!==ultDibujo);
@@ -1070,6 +1091,8 @@ function phrase(r){
     return (r.auto?(r.pos?`Seguimos con ${r.pal.toLowerCase()}. Ahora la ${d}.`:`Vamos a escribir ${r.pal.toLowerCase()}. Primero la ${d}, de ${r.pal.toLowerCase()}.`)
       :r.pal?`La palabra de esta semana es ${r.pal.toLowerCase()}. Vamos a hacer la ${d}, de ${r.pal.toLowerCase()}.`:(esNueva(r.L)?'Una letra nueva. ':'')+`Vamos a hacer la ${d}, de ${PALLETRA[r.L]}.`)+' Rellena la letra con bloques.'}
   if(r.kind==='programa')return p+'llevar al cerdito hasta la manzana. Pon las flechas y toca el botón verde.';
+  if(r.kind==='puente')return `El cerdito quiere llegar a la manzana, pero hay agua. Hazle un puente: tapa el agua con ${NUM[r.n]} bloques.`;
+  if(r.kind==='escalera')return `El cerdito quiere la manzana de ahí arriba. Hazle una escalera: ${Array.from({length:r.k},(_,i)=>i?'luego '+NUM[i+1]:'un bloque').join(', ')}.`;
   if(r.kind==='inicial')return `¿Con qué letra empieza ${r.pal}?`;
   if(r.kind==='silaba')return `Vamos a escribir ${r.sil.toLowerCase()}. Toca sus dos letras: primero una y luego la otra.`;
   if(r.kind==='decenas')return 'Cada fila llena tiene diez bloques. ¿Cuántos bloques hay en total? Toca el número.';
@@ -1085,6 +1108,8 @@ function winText(r){
   if(r.kind==='alta')return `Tu torre tiene ${NUM[r.n]} y la otra ${NUM[r.k]}. ${cap(NUM[r.n])} es más que ${NUM[r.k]}.`;
   if(r.kind==='copia')return `Las dos construcciones son iguales: ${NUM[r.n]} bloques, cada uno en su sitio.`;
   if(r.kind==='programa')return `El cerdito ha llegado a la manzana con ${r.used===1?'una flecha':NUM[r.used]+' flechas'}.`;
+  if(r.kind==='puente')return `Un puente de ${NUM[r.n]} bloques. ¡El cerdito ya puede cruzar!`;
+  if(r.kind==='escalera')return `Una escalera de ${NUM[r.k]} escalones: ${Array.from({length:r.k},(_,i)=>NUM[i+1]).join(', ')}. ¡El cerdito ha llegado a la manzana!`;
   if(r.kind==='inicial')return `${cap(r.pal)} empieza por la ${DILETRA[r.L]}.`;
   if(r.kind==='silaba')return `La ${DILETRA[r.sil[0]]} con la ${DILETRA[r.sil[1]]}: ${r.sil.toLowerCase()}.`;
   if(r.kind==='decenas')return `${r.dz===1?'Un diez':cap(NUM[r.dz])+' dieces'}${r.u?' y '+NUM[r.u]:''}: ${numero(r.t)}.`;
@@ -1103,7 +1128,7 @@ function progress(r){
 function drawSlots(){
   const r=reto,sl=$('retoSlots'),raw=progress(r);sl.textContent='';
   for(let i=0;i<r.slots;i++){const s=document.createElement('div');let on=i<raw;
-    if(r.ghost){const g=r.ghost[i];on=lleno(g);if(r.kind==='letra'){if(on)s.appendChild(texCanvas(grid[idx(g.x,g.y)]))}else if(on||r.kind==='copia')s.appendChild(texCanvas(g.b));else s.textContent='❓'}
+    if(r.ghost){const g=r.ghost[i];on=lleno(g);if(!g.b){if(on)s.appendChild(texCanvas(grid[idx(g.x,g.y)]))}else if(on||r.kind==='copia')s.appendChild(texCanvas(g.b));else s.textContent='❓'}
     else if(r.kind==='cerdos')s.textContent='🐷';else s.appendChild(texCanvas(r.kind==='programa'?'manzana':r.b));
     s.className='s'+(on?' on':'')+(r.kind==='serie'&&!on?' ask':'')+(r.kind==='resta'&&i>=r.n?' quita':'');sl.appendChild(s)}
 }
@@ -1159,9 +1184,9 @@ function cuentaJunta(r){ // pista: el juego cuenta los bloques en voz alta, uno 
 const enJunta=(x,y)=>!!(reto&&!reto.won&&reto.kind==='junta'&&reto.cells.some(c=>c.x===x&&c.y===y));
 function renderReto(){
   const el=$('reto');el.hidden=false;el.classList.remove('done');
-  $('retoIco').textContent={pon:'🧱',torre:'🗼',pica:'⛏️',cerdos:'🐷',serie:'➡️',suma:'➕',resta:'➖',alta:'🗼',copia:'👀',programa:'🐷',junta:'➕',letra:'🔤',inicial:'',silaba:'🔤',decenas:'🔢'}[reto.kind];
+  $('retoIco').textContent={pon:'🧱',torre:'🗼',pica:'⛏️',cerdos:'🐷',serie:'➡️',suma:'➕',resta:'➖',alta:'🗼',copia:'👀',programa:'🐷',junta:'➕',letra:'🔤',inicial:'',silaba:'🔤',decenas:'🔢',puente:'🌉',escalera:'📶'}[reto.kind];
   if(reto.kind==='inicial'){const c=lienzo(16,16),im=reto.img();c.getContext('2d').drawImage(im,(16-im.width)>>1,(16-im.height)>>1);c.className='dibujo';$('retoIco').appendChild(c)}
-  $('retoNum').hidden=!['pon','torre','pica','cerdos','letra'].includes(reto.kind)||!!reto.pal;$('retoNum').textContent=reto.kind==='letra'?reto.L:reto.n;$('retoNum').className=reto.kind==='letra'?'letra':'';
+  $('retoNum').hidden=!['pon','torre','pica','cerdos','letra','puente'].includes(reto.kind)||!!reto.pal;$('retoNum').textContent=reto.kind==='letra'?reto.L:reto.n;$('retoNum').className=reto.kind==='letra'?'letra':'';
   $('retoEq').hidden=!ecuacion(reto);$('retoEq').innerHTML=ecuacion(reto)||''; // en la letra: la palabra de la semana, con la letra que toca resaltada
   const op=$('retoOpc');op.textContent='';op.hidden=!reto.opts;
   if(reto.opts)reto.opts.forEach(v=>{const b=document.createElement('button');b.className='opc'+(typeof v==='string'?' letra':'');b.textContent=v;b.dataset.v=v;b.setAttribute('aria-label',typeof v==='string'?DILETRA[v]:numero(v));b.onclick=()=>elige(v,b);op.appendChild(b)});
@@ -1284,7 +1309,7 @@ function usoTiempo(ms){const t=Date.now();if(t-tocoT>60000)return;const d=hoyUso
   if(t-usoT>15000){usoT=t;usoGuarda()}}
 ['touchstart','touchend','mousedown','keydown'].forEach(n=>document.addEventListener(n,()=>{const t=Date.now();if(t-tocoT>6e5){hoyUso().s++;usoSucio=true}tocoT=t},true)); // diez minutos sin tocar: sesión nueva
 ['pagehide','visibilitychange'].forEach(n=>window.addEventListener(n,usoGuarda));
-const RETO_N={inicial:'Letra inicial',silaba:'Sílabas',decenas:'Decenas',pon:'Poner bloques',torre:'Torre',pica:'Picar',cerdos:'Contar cerditos',serie:'Series',suma:'Sumas',resta:'Restas',alta:'Torre más alta',copia:'Copiar el modelo',programa:'Programar al cerdito',junta:'Juntar y contar',letra:'Rellenar la letra'};
+const RETO_N={puente:'Puente para el cerdito',escalera:'Escalera para el cerdito',inicial:'Letra inicial',silaba:'Sílabas',decenas:'Decenas',pon:'Poner bloques',torre:'Torre',pica:'Picar',cerdos:'Contar cerditos',serie:'Series',suma:'Sumas',resta:'Restas',alta:'Torre más alta',copia:'Copiar el modelo',programa:'Programar al cerdito',junta:'Juntar y contar',letra:'Rellenar la letra'};
 // el resumen, en secciones de líneas de texto: sirve igual para pintarlo que para copiarlo
 function usoResumen(){
   const S=[],mm=s=>{const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'},pc=(a,b)=>b?Math.round(100*a/b)+' %':'—';
@@ -1905,6 +1930,12 @@ function tick(){
     // pista: en el modelo parpadea el bloque que toca copiar
     r.ghost.forEach(g=>{if(g.miss<2||grid[idx(g.x,g.y)]===g.b)return;
       ctx.globalAlpha=.55+.45*Math.sin(tf/8);ctx.strokeStyle='#ffd43b';ctx.lineWidth=4;ctx.strokeRect(g.mx*S+2,g.my*S+2,S-4,S-4);ctx.globalAlpha=1})}
+  if(reto&&reto.ruta){const r=reto,pts=r.ruta,ult=pts.length-1;let px=pts[0][0],py=pts[0][1],llega=false;
+    if(r.won){if(!r.cruza)r.cruza=ahora;const u=Math.min(ult,(ahora-r.cruza)/380),i=Math.min(ult-1,Math.floor(u)),f=u-i;
+      px=pts[i][0]+(pts[i+1][0]-pts[i][0])*f;py=pts[i][1]+(pts[i+1][1]-pts[i][1])*f-Math.sin(Math.PI*f)*.45;llega=u>=ult}
+    if(!llega)ctx.drawImage(tex.manzana,(r.manz[0]+.1)*S,(r.manz[1]+.1+Math.sin(ahora/300)*.05)*S,S*.8,S*.8);
+    ctx.drawImage(pigImg(false,r.won&&!llega&&Math.floor(ahora/140)%2,false),px*S,py*S+S*.25,S,S*.75);
+    if(llega){ctx.fillStyle='#e8414b';ctx.font=`${S*.4}px system-ui`;ctx.fillText('❤',px*S+S*.3,py*S-S*.05)}}
   // huecos de la serie, de la copia o de la letra por rellenar
   if(reto&&reto.ghost&&!reto.won)reto.ghost.forEach(g=>{if(lleno(g))return;
     if(reto.kind==='letra'){ctx.fillStyle='rgba(255,246,224,.5)';ctx.fillRect(g.x*S,g.y*S,S,S)} // la letra, en blanco suave: como las de repasar
