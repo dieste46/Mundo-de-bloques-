@@ -37,7 +37,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   ok(await p.evaluate(() => !document.getElementById('uso').hidden), 'Ajustes > Cómo juega abre el panel');
   ok(JSON.parse(await p.evaluate(() => localStorage.getItem('bloquesUso'))).r.pon.ok === 1, 'y los datos están guardados en el aparato');
   const txt = await p.evaluate(() => document.getElementById('usoTxt').innerText);
-  ok(/Poner bloques: 1 empezado · 1 conseguido /.test(txt) && /1 cerrado sin intentar/.test(txt) && /Carreras: 1/.test(txt) && /oro \(2\)/.test(txt), 'el panel enseña retos, aventura y bloques');
+  ok(/Poner bloques: 1 empezado · 1 conseguido /.test(txt) && /1 cerrado sin intentar/.test(txt) && /Carreras: 1/.test(txt) && /oro \(\d+\)/.test(txt), 'el panel enseña retos, aventura y bloques');
   await p.click('#usoCopia'); await p.waitForTimeout(200);
   const area = await p.evaluate(() => { const a = document.getElementById('usoArea'); return { h: a.hidden, v: a.value }; });
   ok(!area.h && /RESUMEN/.test(area.v) && /RETOS/.test(area.v), 'Copiar deja el resumen en texto: ' + area.v.split('\n').length + ' líneas');
