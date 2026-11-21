@@ -188,7 +188,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #avManz canvas.no{opacity:.25}
 #salta{flex:0 0 28%;background:var(--panel-2);border:4px solid var(--slot);font-size:44px;font-family:system-ui;padding:0;touch-action:none}
 #pers{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(20,12,6,.7);display:grid;place-items:center;padding:16px;z-index:5}
-#persCard{background:var(--panel);border:4px solid var(--sel);padding:8px;display:flex;flex-wrap:wrap;justify-content:center;max-width:336px;box-sizing:border-box}
+#persCard{background:var(--panel);border:4px solid var(--sel);padding:8px;display:flex;flex-wrap:wrap;justify-content:center;max-width:336px;max-height:100%;overflow-y:auto;box-sizing:border-box}
 .pers{width:96px;height:96px;margin:4px;background:var(--panel-2);border:4px solid var(--slot);padding:0}
 .pers canvas{width:72px;height:72px;image-rendering:pixelated}
 .tool{flex:1;min-width:0;height:52px;background:var(--panel-2);border:4px solid var(--slot);padding:0;font-size:24px;font-family:system-ui}
@@ -493,7 +493,7 @@ function addPig(x,y){
 // --- guardado (solo en este navegador) ---
 // Hay tres mundos, cada uno con sus bloques, sus cerditos, su hora y su vista. Las estrellas y los niveles son del niño, no del mundo.
 // El mundo en el que se está vive en grid/pigs/night/camC; los otros esperan guardados en `mundos`.
-let mundo=0,mundos=[null,null,null],vuelve=false,alVolver=false;
+let mundo=0,mundos=[null,null,null],vuelve=false,alVolver=false,huevos=0; // huevos: cuántos huevos de estrellas se han abierto ya
 const empaqueta=()=>({grid,pigs:pigs.map(p=>[Math.round(p.x),Math.floor(p.y)]),night,camC,camR,t:Date.now()}); // t: cuándo se guardó, para saber si ha pasado una noche de verdad
 const valido=w=>!!w&&Array.isArray(w.grid)&&w.grid.length===COLS*ROWS;
 function crece(w){ // un mundo de cuando el mapa tenía 16 filas: se le añade cielo por arriba y piedra (con algo de oro) por abajo, sin tocar lo construido
@@ -503,7 +503,7 @@ function crece(w){ // un mundo de cuando el mapa tenía 16 filas: se le añade c
   for(let i=COLS*(16+SUBE);i<g.length;i++)g[i]=r()<.08?10:3;
   return{grid:g,pigs:(w.pigs||[]).map(p=>[p[0],p[1]+SUBE]),night:w.night,camC:w.camC};
 }
-function save(){try{mundos[mundo]=empaqueta();Guardado.guardar({mundo,mundos,stars,base,niv})}catch(e){}} // dónde y cómo se guarda lo decide guardado.js
+function save(){try{mundos[mundo]=empaqueta();Guardado.guardar({mundo,mundos,stars,base,niv,huevos})}catch(e){}} // dónde y cómo se guarda lo decide guardado.js
 function abre(w){if(av.on)saleAventura();av.vivo=false;grid=w.grid;pigs=[];(w.pigs||[]).slice(0,MAXPIGS).forEach(p=>addPig(p[0],p[1]));night=!!w.night;nightAmt=night?1:0;if(typeof w.camC==='number')camC=w.camC;camR=typeof w.camR==='number'?w.camR:vista();
   vuelve=typeof w.t==='number'&&Date.now()-w.t>6*36e5} // seis horas sin tocar este mundo cuentan como una noche (ver tick)
 function load(){try{const d=Guardado.cargar();if(!d)return false;
@@ -511,7 +511,7 @@ function load(){try{const d=Guardado.cargar();if(!d)return false;
   else if(valido(crece(d))){mundos=[crece({grid:d.grid,pigs:d.pigs,night:d.night,camC:d.camC}),null,null];mundo=0} // guardado de antes, con un solo mundo
   else return false;
   if(mundo<0){mundo=0;return false}
-  stars=d.stars|0;
+  stars=d.stars|0;huevos=Math.max(0,d.huevos|0);
   if(d.niv&&typeof d.niv==='object'){niv=d.niv;base=d.base|0}
   else{const l=d.level|0;base=l<4?0:l<8?4:8;niv={};if(l!==base)['contar','serie','suma','resta','alta','copia','programa'].forEach(f=>niv[f]=[l,0])} // partidas guardadas con el nivel único de antes
   abre(mundos[mundo]);return true}catch(e){}return false}
@@ -1183,9 +1183,9 @@ function usoResumen(){
   S.push(['Lo que más usa',U.length?U:['Todavía nada.']]);
   // aventura
   const A=uso.a;
-  if(A.n){const fav=A.pers.indexOf(Math.max.apply(null,A.pers));
+  if(A.n){const veces=PERS.map((p,k)=>A.pers[k]||0),fav=veces.indexOf(Math.max.apply(null,veces));
     S.push(['Aventura',['Carreras: '+A.n+' · llega a la bandera en '+A.fin+' ('+pc(A.fin,A.n)+') · con las ocho manzanas: '+A.todas+'.',
-      (A.fin?'Manzanas por carrera terminada: '+(A.manz/A.fin).toFixed(1).replace('.',',')+' de 8. ':'')+'Veces que un muro alto le ha cortado el paso: '+A.muro+'.','Personaje favorito: '+PERS[fav].n.toLowerCase()+' ('+pl(A.pers[fav],'vez','veces')+').']])}
+      (A.fin?'Manzanas por carrera terminada: '+(A.manz/A.fin).toFixed(1).replace('.',',')+' de 8. ':'')+'Veces que un muro alto le ha cortado el paso: '+A.muro+'.','Personaje favorito: '+PERS[fav].n.toLowerCase()+' ('+pl(veces[fav],'vez','veces')+').'+(huevos?' Huevos de estrellas abiertos: '+huevos+' de '+PREMIOS.length+'.':'')]])}
   // ideas: qué potenciar y qué revisar, con reglas sencillas sobre lo anterior
   const I=[],dom=R.filter(r=>juicio(r)==='🟢'),cue=R.filter(r=>juicio(r)==='🔴'),evi=R.filter(r=>r.n>=3&&r.v/r.n>=.4),nunca=Object.keys(RETO_N).filter(k=>!uso.r[k]||!uso.r[k].n);
   if(cue.length)I.push('Le cuesta: '+cue.map(r=>RETO_N[r.k].toLowerCase()).join(', ')+'. El nivel ya le baja solo; ayuda hacer uno de esos con él al lado.');
@@ -1271,7 +1271,20 @@ const PERS=(()=>{
       {G:'#5cb83a',g:'#3f8a28',d:'#3f8a28',Y:'#d4eb8f',W:'#ffffff',K:'#2a1d14'}),
     haz('Dinosaurio',[V,V,'.........DDDDD..','........sDDDDDD.','........DDDWKDD.','.......sDDDDDDDD','........DDDDdddd','......sDDDDD....','.......DDDDDD...','DD....DDDDbbDa..','.DDD.DDDDbbbD...','..DDDDDDDbbbD...','...DDDDDDDbb....'],
       [['....DD..DD......','....DD..DD......','...DDD.DDD......'],['....DD..DD......','...DD....DD.....','..DDD....DDD....']],
-      {D:'#3fa7c9',d:'#2c7f9c',b:'#d9f0f5',a:'#2c7f9c',s:'#ffd43b',W:'#ffffff',K:'#2a1d14'})];
+      {D:'#3fa7c9',d:'#2c7f9c',b:'#d9f0f5',a:'#2c7f9c',s:'#ffd43b',W:'#ffffff',K:'#2a1d14'}),
+    // a partir de aquí, los que salen de los huevos de estrellas (ver PREMIOS)
+    haz('Pato',[V,V,V,'..........YYYY..','.........YYYYYY.','.........YYKYYOO','.........YYYYYOO','..........YYYY..','.Y......YYYYY...','.YYYYYYYYYYYYY..','.YYYyyyyYYYYYY..','..YYYyyyYYYYY...','...YYYYYYYYY....'],
+      [['.....O...O......','.....O...O......','....OO..OO......'],['.....O...O......','....O.....O.....','...OO.....OO....']],
+      {Y:'#ffd43b',y:'#f2b01e',O:'#f2901e',K:'#2a1d14'}),
+    haz('Perro',[V,V,V,'..........BBBB..','B........dBBBBB.','B........dBKBBBB','B........dBBBBnn','BB.......ddBBBB.','.BBBBBBBBBBBBB..','.BBBBBBBBBWWWB..','.BBBBBBBBBBWB...','.BBBBBBBBBBBB...','..BBBBBBBBBBB...'],
+      cuad,{B:'#b9793f',d:'#7a4a22',W:'#f3e3c8',n:'#2a1d14',K:'#2a1d14',L:'#b9793f',l:'#95602f',D:'#f3e3c8'}),
+    haz('Oveja',[V,V,V,'...WWW.WWW.WW...','..WWWWWWWWWWWfff','.WWWWWWWWWWWfEff','.WWWWWWWWWWWffff','.WWWWWWWWWWWWff.','.WWWWWWWWWWWWW..','.WWwWWWWwWWWWW..','.WWWWWWWWWWWWW..','..WWWwWWWWWwW...','...WWWWWWWWW....'],
+      cuad,{W:'#f6f3ee',w:'#d9d4ca',f:'#4a4350',E:'#ffffff',L:'#4a4350',l:'#36303b',D:'#2a2530',d:'#201c26'}),
+    haz('Pingüino',[V,V,'......NNNNN.....','.....NNNNNNN....','.....NNWKWNNOO..','.....NNWWWNNO...','.....NNNNNNN....','....NNNWWWWN....','...NNNWWWWWWN...','...NNNWWWWWWN...','...NNNWWWWWWN...','....NNWWWWWWN...','.....NNWWWWN....'],
+      [['......O..O......','......O..O......','.....OO.OO......'],['......O..O......','.....O....O.....','....OO....OO....']],
+      {N:'#2a3140',W:'#f6f8fb',O:'#f2901e',K:'#2a1d14'}),
+    haz('Unicornio',['.............A..','............AA..','..........WWWW..','.........mWWWWW.','........mmWKWWWW','........mmWWWWWW','p.......mWWWWW..','pp......mWWWW...','.pWWWWWWWWWWW...','.pWWWWWWWWWWW...','..WWWWWWWWWWW...','..WWWWWWWWWWW...','..WWWWWWWWWWW...'],
+      cuad,{W:'#fbf7ff',m:'#e86fb0',p:'#7fb6f0',A:'#ffd43b',K:'#2a1d14',L:'#fbf7ff',l:'#ddd6ea',D:'#c9a0e8',d:'#a983cc'})];
 })();
 const bandera=sprite(['....pP..........','....pPRRRRRR....','....pPRRRRRRRR..','....pPRRYYRRRRR.','....pPRRYYRRRR..','....pPRRRRRRR...','....pPRRRRR.....','....pP..........',
   '....pP..........','....pP..........','....pP..........','....pP..........','....pP..........','....pP..........','....pP..........','...pppPP........'],
@@ -1377,11 +1390,52 @@ function padPinta(){let i=false,d=false;padT.forEach(v=>{if(v<0)i=true;else d=tr
   window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft')av.kI=false;else if(e.key==='ArrowRight')av.kD=false});
   // el panel de personajes
   const card=$('persCard');
-  PERS.forEach((p,k)=>{const b=document.createElement('button');b.className='pers';b.setAttribute('aria-label',p.n);const c=lienzo(16,16);c.getContext('2d').drawImage(p.der[0],0,0);b.appendChild(c);
-    b.onclick=()=>{$('pers').hidden=true;beep(660,.06);entraAventura(k)};card.appendChild(b)});
+  const pintaPers=()=>{card.textContent='';personajes().forEach(k=>{const p=PERS[k],b=document.createElement('button');b.className='pers';b.setAttribute('aria-label',p.n);const c=lienzo(16,16);c.getContext('2d').drawImage(p.der[0],0,0);b.appendChild(c);
+    b.onclick=()=>{$('pers').hidden=true;beep(660,.06);entraAventura(k)};card.appendChild(b)})};
   $('pers').addEventListener('click',e=>{if(e.target===$('pers'))$('pers').hidden=true});
   $('jugarBtn').onclick=()=>{if(av.on){saleAventura();beep(440,.06);say('A construir',true,true);return}
-    $('pers').hidden=false;beep(660,.06);say('¿Con quién quieres jugar?',true,true)};
+    pintaPers();$('pers').hidden=false;beep(660,.06);say('¿Con quién quieres jugar?',true,true)};
+}
+// --- el huevo de las estrellas ---
+// Las estrellas sirven para algo: por cada cinco aparece un huevo en el mundo. Se abre tocándolo varias veces (tres el primero, una más cada vez),
+// y la voz va contando los toques. De cada huevo sale un personaje nuevo para la aventura, siempre en el mismo orden (PREMIOS). Cuando ya han
+// salido todos, no aparecen más huevos. Lo que se guarda es solo cuántos se han abierto (huevos); el huevo a medio abrir no se guarda.
+const PREMIOS=[6,7,8,9,10],ARTICULO={6:'un pato',7:'un perro',8:'una oveja',9:'un pingüino',10:'un unicornio'};
+const huevoSpr=sprite(['................','......WWWW......','.....WWWWWW.....','....WWWWWWWW....','....WWsWWWWW....','...WWWWWWWsWW...','...WWWWWWWWWW...','...WsWWWWWWWW...','...WWWWWsWWWW...','...WWWWWWWWWg...','...WWWWWWWWgg...','....WWWWWWgg....','....WWWWWggg....','.....WWgggg.....','......gggg......','................'],
+  {W:'#fff6e0',g:'#e6d3a8',s:'#f2a0b0'});
+let huevo=null,nacido=null;
+const personajes=()=>[0,1,2,3,4,5].concat(PREMIOS.slice(0,huevos)); // los que se pueden elegir en la aventura
+const hayHuevo=()=>!!huevo&&!av.on&&!(reto&&!reto.won);              // con un reto abierto o en la aventura, el huevo espera escondido
+function ponHuevo(){
+  if(huevo||nacido||av.on||(reto&&!reto.won)||Math.min(PREMIOS.length,Math.floor(stars/5))<=huevos)return;
+  const c=Math.floor(camC+W/S/2);let x=-1;
+  for(let d=0;d<12&&x<0;d++)for(const s of [1,-1]){const cx=c+s*d;if(cx<1||cx>=COLS-1)continue;const t=topOf(cx);if(t>2&&t<ROWS&&!NOSOLID[grid[idx(cx,t)]]&&!pigIn(cx,t-1)){x=cx;break}}
+  if(x<0)return;
+  huevo={x,y:topOf(x)-1,n:0,hacen:3+huevos,t0:Date.now(),golpe:0};
+  if(vcfg.son!==2){tono(660,990,.12,'triangle',.1);tono(990,1320,.16,'triangle',.08,.1)}
+  say('¡Has ganado un huevo! Tócalo para abrirlo.');
+}
+function tocaHuevo(){const e=huevo;e.n++;e.golpe=Date.now();ult={x:e.x,y:e.y};cifra(e.n);
+  if(vcfg.son!==2){tono(520+e.n*60,380,.06,'triangle',.16);ruido(.03,2600,1,'highpass',.08)}
+  if(e.n<e.hacen){say(e.n===1?'Uno':NUM[e.n][0].toUpperCase()+NUM[e.n].slice(1),false);return}
+  // se abre: trocitos de cáscara, fiesta, y el personaje nuevo sale dando saltos
+  const k=PREMIOS[huevos];huevos++;cu('huevo');huevo=null;nacido={k,x:e.x,y:e.y,t0:Date.now()};
+  for(let i=0;i<14;i++)particles.push({x:e.x+.3+Math.random()*.4,y:e.y+.3+Math.random()*.4,vx:(Math.random()-.5)*.14,vy:-.05-Math.random()*.12,life:40,col:i%3?'#fff6e0':'#f2a0b0'});
+  fanfare();pigs.forEach(p=>{p.vy=-.15;p.joy=50});
+  say('¡'+NUM[e.n][0].toUpperCase()+NUM[e.n].slice(1)+'! ¡Es '+ARTICULO[k]+'! Ya puedes jugar con '+(k===8?'ella':'él')+' en la aventura.');
+  save();setTimeout(()=>{nacido=null},6000);
+}
+function dibujaHuevo(ahora){
+  if(nacido){const p=PERS[nacido.k],t=(ahora-nacido.t0)/1000,salto=Math.abs(Math.sin(t*5))*.5*Math.max(0,1-t/5);
+    ctx.drawImage(p.der[Math.floor(t*6)%2],(nacido.x)*S,(nacido.y-salto)*S,S,S);return}
+  if(!hayHuevo())return;
+  const e=huevo,g=ahora-e.golpe,fuerte=g<350?1-g/350:0,ang=Math.sin(ahora/260)*.07+Math.sin(ahora/28)*.22*fuerte,salto=Math.abs(Math.sin((ahora-e.t0)/420))*.06;
+  ctx.save();ctx.translate((e.x+.5)*S,(e.y+1-salto)*S);ctx.rotate(ang);ctx.drawImage(huevoSpr,-S/2,-S,S,S);
+  const u=S/16,parte=e.n/e.hacen;ctx.fillStyle='#6b4626'; // las grietas avanzan con los toques
+  if(parte>0){[[7,-12],[8,-11],[7,-10],[6,-9],[7,-8]].forEach(q=>ctx.fillRect((q[0]-8)*u,q[1]*u,u,u))}
+  if(parte>=.5){[[9,-7],[10,-6],[9,-5],[4,-7],[5,-6],[4,-5]].forEach(q=>ctx.fillRect((q[0]-8)*u,q[1]*u,u,u))}
+  if(parte>=.75){[[6,-4],[7,-3],[8,-4],[9,-3],[10,-4]].forEach(q=>ctx.fillRect((q[0]-8)*u,q[1]*u,u,u))}
+  ctx.restore();
 }
 // --- vida en el mundo ---
 // Solo es decorado: no toca los bloques ni los retos, va por reloj y son muy pocas cosas a la vez (pensando en el iPad viejo).
@@ -1512,6 +1566,7 @@ function semillaPuesta(i){const s=i+COLS<grid.length?grid[i+COLS]:0,bien=s===1||
 function act(e){
   if(av.on)return;
   let {x,y}=cellAt(e);if(x<0||y<0||x>=COLS||y>=ROWS)return;
+  if(hayHuevo()&&x===huevo.x&&(y===huevo.y||y===huevo.y+1)){tocaHuevo();return}
   if(enJunta(x,y)){const r=reto;if(r.contando)return; // contar tocando: cada bloque nuevo dice el número siguiente
     const k=x+','+y;if(r.cont.includes(k)){beep(300,.05);return}
     r.cont.push(k);ult={x,y};const n=r.cont.length;cifra(n);say(NUM[n],false);beep(500+n*50,.07);return}
@@ -1616,6 +1671,7 @@ function tick(){
   if(camGoalR!==null){camR+=(camGoalR-camR)*(1-Math.pow(.88,kt));if(Math.abs(camGoalR-camR)<.02){camR=camGoalR;camGoalR=null}}
   clampCam();
   if(fr%30===0&&!document.getElementById('voz').hidden)pintaVer();
+  if(fr%45===0){if(huevo)huevo.y=topOf(huevo.x)-1;else if(fr>90)ponHuevo()}
   const maxC=COLS-W/S,maxR=ROWS-H/S;
   nightAmt+=((night?1:0)-nightAmt)*(1-Math.pow(.972,kt));const na=nightAmt; // anochece en un par de segundos, para que dé tiempo a ver el atardecer
   // cielo
@@ -1698,6 +1754,7 @@ function tick(){
     if(ahora>p.parp+140)p.parp=ahora+2200+Math.random()*4200;
     drawPig(p,asleep&&p.joy<=0,ahora>=p.parp)});
   mariposas(ahora,kt,flores,na);
+  dibujaHuevo(ahora);
   if(musica)pasoMusica(ahora);
   if(av.vivo)avDibuja(ahora);
   // trocitos y fuegos artificiales
@@ -1745,7 +1802,7 @@ clampCam();marcaSon();$('starN').textContent=stars;$('tNight').textContent=night
 requestAnimationFrame(tick);
 
 // para las pruebas automáticas (abriendo la página con ?prueba): dónde está mirando la vista
-if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),vida:()=>({mariposas:bichos.length,luciernagas:luces.length,pajaro:!!pajaro}),pajaroYa:()=>{pajaroT=1},uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
+if(/[?&]prueba/.test(location.search))window.__juego={cam:()=>({camC,camR,S,W,H,offY,zoom:zoomAhora,auto:zoomAuto}),reto:()=>reto&&{kind:reto.kind,cont:(reto.cont||[]).length,err:reto.err||0},retoFull:()=>reto,suena,pops:()=>pops.size,audio0:()=>{ac=null},partes:()=>particles.length,texV:()=>texV,agua:()=>agua,amanece:c=>amanece(c),reac:n=>{for(let k=0;k<n;k++)reacciona()},grid:()=>grid,reacOn:v=>{reacOff=!v},pigs:()=>pigs,musica:()=>musica&&{x0:musica.x0,x1:musica.x1,ult:musica.ult},av:()=>av,PERS,bandera,entra:k=>entraAventura(k),sale:()=>saleAventura(),paso:dt=>avPaso(dt),huevo:()=>huevo&&Object.assign({visible:hayHuevo()},huevo),huevos:()=>huevos,nacido:()=>nacido,estrellas:n=>{stars=n;$('starN').textContent=stars;save()},ponHuevo:()=>ponHuevo(),vida:()=>({mariposas:bichos.length,luciernagas:luces.length,pajaro:!!pajaro}),pajaroYa:()=>{pajaroT=1},uso:()=>uso,usoPon:u=>{uso=u;usoSucio=true;usoGuarda()},usoResumen:()=>usoResumen(),genera:()=>{av.vivo=false;genWorld()},ultNotas:()=>ultNotas};
 
 // sin conexión: el service worker guarda el juego entero (página, fuente e iconos)
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

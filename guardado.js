@@ -16,7 +16,8 @@
 // y la subida irá por detrás. Sin sintaxis posterior a ES2018 (iPad con iOS 12).
 var Guardado = (function () {
   'use strict';
-  var FORMATO = 'mundobloque', VERSION = 1;
+  // Versión 2: la partida guarda también cuántos huevos de estrellas se han abierto. Las copias de la versión 1 se importan igual (sin huevos abiertos).
+  var FORMATO = 'mundobloque', VERSION = 2;
   var CLAVES = { juego: 'bloques2', palabra: 'bloquesPalabra', uso: 'bloquesUso', voz: 'bloquesVoz' };
   var EN_COPIA = ['juego', 'palabra', 'uso'];
   var cerrado = false; // tras importar no se escribe nada más hasta que la página se recarga, para no pisar lo importado

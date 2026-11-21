@@ -23,7 +23,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FALLO ') + m); if (!c) pr
   ok(await p.evaluate(() => typeof Guardado === 'object' && ['cargar', 'guardar', 'exportar', 'importar'].every(f => typeof Guardado[f] === 'function')), 'el módulo Guardado tiene cargar, guardar, exportar e importar');
   await abre(); ok(await p.evaluate(() => !document.getElementById('copia').hidden), 'Ajustes > Copia de seguridad abre el panel (tras la multiplicación)');
   const texto = await p.evaluate(() => document.getElementById('copiaSal').value), c = JSON.parse(texto);
-  ok(c.formato === 'mundobloque' && c.version === 1 && !isNaN(new Date(c.exportado)), `la copia dice su formato y versión: ${c.formato} v${c.version}, ${c.exportado}`);
+  ok(c.formato === 'mundobloque' && c.version === 2 && !isNaN(new Date(c.exportado)), `la copia dice su formato y versión: ${c.formato} v${c.version}, ${c.exportado}`);
   ok(c.juego.stars === 1 && c.juego.mundos.filter(Boolean).length === 1 && c.juego.mundos[c.juego.mundo].grid.length === L.COLS * L.ROWS, 'lleva el mundo, las estrellas y los niveles');
   ok(c.palabra.txt === 'PATO' && c.uso && c.uso.v === 1 && !('voz' in c), 'lleva la palabra y los contadores, y no los ajustes de voz');
   ok(texto.length < 40000, `ocupa ${(texto.length / 1024).toFixed(1)} KB de texto`);
