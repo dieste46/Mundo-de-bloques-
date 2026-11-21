@@ -71,6 +71,8 @@ Al cerrar un reto, ganado o no, **el mundo se queda como lo tenía el niño**: s
 | 👀 Copia el modelo | Orientación espacial, atención | Dice qué bloque ha puesto; a la segunda marca el que toca y lo hace parpadear en el modelo |
 | 🐷 Programa al cerdito | Secuencias (tipo Bee-Bot), izquierda/derecha | Explica por qué no ha llegado (choque, faltan pasos); a la segunda marca las flechas del camino |
 
+Las **letras trabajadas en clase** también se ponen en ajustes (🗣️), por el orden en que las van dando; de partida son las vocales y M, P, L, S, D. Sin palabra de la semana, el reto de letras solo saca letras de esa lista: nunca la misma dos veces seguidas, y las tres últimas (las más recientes) salen el doble. Cuando en el cole den una letra nueva, basta añadirla al final. Con la lista vacía salen todas las del nivel.
+
 La **palabra de la semana** se escribe en ajustes (🗣️). Mientras haya una, el reto de letras va sacando sus letras por orden ("La palabra de esta semana es camión. Vamos a hacer la ce, de camión") y la cabecera enseña la palabra con la letra que toca resaltada; al terminar una letra, la siguiente vez toca la siguiente. Se guarda con sus tildes para que la voz la diga bien; la letra se dibuja sin tilde. Vacía, salen letras sueltas según el nivel.
 
 En **Copia el modelo** aparece una construcción en un marco y hay que hacerla igual en el cuadro amarillo de al lado; el modelo no se puede tocar. En **Programa al cerdito** la barra de bloques se cambia por flechas: se colocan en fila, se toca el botón verde y el cerdito las sigue una a una hasta la manzana.
